@@ -23,11 +23,11 @@ test.describe('Kilo Entry Form', () => {
   });
 
   test.afterAll(async () => {
-    // Clean up test user from the database
-    await db.deleteFrom('users').where('id', '=', testUser.id).execute();
-
     // Clean up kilo entry
     await db.deleteFrom('kilo').where('user_id', '=', testUser.id).execute();
+
+    // Clean up test user from the database
+    await db.deleteFrom('users').where('id', '=', testUser.id).execute();
   });
 
   test('allows a user to submit a kilo entry with audio & skip questions', async ({ page }) => {
