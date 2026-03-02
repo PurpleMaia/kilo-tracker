@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,13 @@ export default function SurveyForm() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Revoke blob URL on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    };
+  }, [photoPreview]);
+
   const selectedOrgName = ORGANIZATIONS.find((o) => o.id === selectedOrg)?.name;
 
   function handleOrgContinue() {
@@ -58,12 +65,10 @@ export default function SurveyForm() {
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     setSurvey((prev) => ({ ...prev, kiloPhoto: file }));
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setPhotoPreview(url);
-    } else {
-      setPhotoPreview(null);
-    }
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -259,7 +264,10 @@ export default function SurveyForm() {
                     input.onchange = (e) => {
                       const file = (e.target as HTMLInputElement).files?.[0] ?? null;
                       setSurvey((prev) => ({ ...prev, kiloPhoto: file }));
-                      if (file) setPhotoPreview(URL.createObjectURL(file));
+                      setPhotoPreview((prev) => {
+                        if (prev) URL.revokeObjectURL(prev);
+                        return file ? URL.createObjectURL(file) : null;
+                      });
                     };
                     input.click();
                   }}
@@ -283,7 +291,10 @@ export default function SurveyForm() {
                     className="absolute top-2 right-2 h-6 w-6 p-0 bg-white/80 hover:bg-white"
                     onClick={() => {
                       setSurvey((prev) => ({ ...prev, kiloPhoto: null }));
-                      setPhotoPreview(null);
+                      setPhotoPreview((prev) => {
+                        if (prev) URL.revokeObjectURL(prev);
+                        return null;
+                      });
                       if (fileInputRef.current) fileInputRef.current.value = "";
                     }}
                   >
