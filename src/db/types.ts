@@ -42,7 +42,7 @@ export interface LoginAttempts {
 export interface Members {
   created_at: Generated<Timestamp | null>;
   id: Generated<string>;
-  org_id: string | null;
+  tenant_id: string | null;
   user_id: string | null;
   user_role: Role;
 }

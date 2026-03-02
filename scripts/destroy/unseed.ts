@@ -18,7 +18,7 @@ async function unseed() {
         .executeTakeFirst();
 
     if (org) {
-        await db.deleteFrom("members").where("org_id", "=", org.id).execute();
+        await db.deleteFrom("members").where("tenant_id", "=", org.id).execute();
     }
 
     // Delete test organization

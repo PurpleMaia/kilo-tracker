@@ -178,7 +178,7 @@ test.describe('Registration Flow', () => {
       .selectFrom('members')
       .selectAll()
       .where('user_id', '=', createdUser!.id)
-      .where('org_id', '=', orgId!)
+      .where('tenant_id', '=', orgId!)
       .executeTakeFirst();
 
     expect(membership).toBeDefined();

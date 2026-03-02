@@ -125,7 +125,7 @@ const activeUsers = await db
 // Joins
 const usertenants = await db
   .selectFrom('members')
-  .innerJoin('tenants', 'tenants.id', 'members.org_id')
+  .innerJoin('tenants', 'tenants.id', 'members.tenant_id')
   .where('members.user_id', '=', userId)
   .select(['tenants.name', 'tenants.slug', 'members.member_role'])
   .execute();

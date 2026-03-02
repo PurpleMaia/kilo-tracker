@@ -92,7 +92,7 @@ describe('Session Validation Tests', () => {
          await db.insertInto('members').values({
             id: randomUUID(),
             user_id: testUser.id,
-            org_id: testOrg.id,
+            tenant_id: testOrg.id,
             user_role: 'member' as const,
          }).execute();
 

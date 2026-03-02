@@ -79,7 +79,7 @@ describe('Registration Tests', () => {
 
    // Teardown: Clean up database after all tests
    afterAll(async () => {
-      await db.deleteFrom('members').where('org_id', '=', testOrg.id).execute();
+      await db.deleteFrom('members').where('tenant_id', '=', testOrg.id).execute();
       await db.deleteFrom('sessions').execute();
       await db.deleteFrom('login_attempts').where('identifier', '=', 'REGISTRATION').execute();
       await db.deleteFrom('users').where('email', '=', registerTestUser.email).execute();
@@ -91,7 +91,7 @@ describe('Registration Tests', () => {
 
    // Clean up registered test users after each test to avoid conflicts
    afterEach(async () => {
-      await db.deleteFrom('members').where('org_id', '=', testOrg.id).execute();
+      await db.deleteFrom('members').where('tenant_id', '=', testOrg.id).execute();
       await db.deleteFrom('sessions').execute();
       await db.deleteFrom('users').where('email', '=', registerTestUser.email).execute();
    });
@@ -167,7 +167,7 @@ describe('Registration Tests', () => {
             .selectFrom('members')
             .selectAll()
             .where('user_id', '=', dbUser!.id)
-            .where('org_id', '=', testOrg.id)
+            .where('tenant_id', '=', testOrg.id)
             .executeTakeFirst();
 
          expect(memberRecord).toBeDefined();

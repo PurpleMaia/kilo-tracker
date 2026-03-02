@@ -15,7 +15,7 @@ CREATE TYPE role AS ENUM (
 CREATE TABLE IF NOT EXISTS members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    org_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     user_role role NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

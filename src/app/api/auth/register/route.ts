@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         .insertInto('members')
         .values({
           user_id: newUser.id,
-          org_id: organizationId,
+          tenant_id: organizationId,
           user_role: 'member', // Default role for new members
         })
         .execute();

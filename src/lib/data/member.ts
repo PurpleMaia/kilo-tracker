@@ -19,7 +19,7 @@ export type MemberDashboardData = {
 export async function fetchMemberDashboardData(userId: string): Promise<MemberDashboardData> {
   const orgMembership = await db
     .selectFrom("members as m")
-    .innerJoin("tenants as o", "m.org_id", "o.id")
+    .innerJoin("tenants as o", "m.tenant_id", "o.id")
     .select(({ ref }) => [
       ref("o.id").as("orgId"),
       ref("o.name").as("orgName"),
@@ -39,7 +39,7 @@ export async function fetchMemberDashboardData(userId: string): Promise<MemberDa
   const teamCountResult = await db
     .selectFrom("members")
     .select(({ fn }) => fn.count<number>("id").as("count"))
-    .where("org_id", "=", orgMembership.orgId)
+    .where("tenant_id", "=", orgMembership.orgId)
     .executeTakeFirst();
 
   return {
