@@ -1,6 +1,8 @@
 'use client';
 
 import { useAuth } from "@/hooks/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +10,14 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Separator } from "@/components/ui/separator";
 
 export default function Home() {
-  const { user, isLoading, isAuthenticated, logout } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      router.replace("/dashboard");
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading) {
     return (
@@ -21,6 +30,8 @@ export default function Home() {
   if (!isAuthenticated || !user) {
     return <LandingPage />;
   }
+
+  return null;
 }
 
 function LandingPage() {
