@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AuthUser } from "@/types/auth";
-import Link from "next/link";
 
 type GuestDashboardClientProps = {
   user: AuthUser;
