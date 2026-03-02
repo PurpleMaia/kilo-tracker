@@ -42,13 +42,13 @@ const MEMBERS: NewMember[] = [
     {
         id: randomUUID() as string,
         user_id: memberID,
-        org_id: orgID,
+        tenant_id: orgID,
         user_role: "member" as Role,
     },
     {
         id: randomUUID() as string,
         user_id: orgAdminID,
-        org_id: orgID,
+        tenant_id: orgID,
         user_role: "admin" as Role,
     }
 ];
@@ -67,7 +67,7 @@ async function seed() {
         
     // Insert test organization
     console.log("Seeding test organization...");
-    await db.insertInto("orgs").values(TEST_ORG).execute();
+    await db.insertInto("tenants").values(TEST_ORG).execute();
 
     // Insert members
     console.log("Seeding organization members...");

@@ -52,7 +52,7 @@ describe('Session Validation Tests', () => {
         }).execute();
 
         // Create test organization
-        await db.insertInto('orgs').values({
+        await db.insertInto('tenants').values({
             id: testOrg.id,
             name: testOrg.name,
             slug: testOrg.slug,
@@ -64,7 +64,7 @@ describe('Session Validation Tests', () => {
    afterAll(async () => {
         await db.deleteFrom('sessions').where('user_id', '=', testUser.id).execute();
         await db.deleteFrom('users').where('id', '=', testUser.id).execute();
-        await db.deleteFrom('orgs').where('id', '=', testOrg.id).execute();
+        await db.deleteFrom('tenants').where('id', '=', testOrg.id).execute();
 
         await db.destroy();
    });
@@ -92,7 +92,7 @@ describe('Session Validation Tests', () => {
          await db.insertInto('members').values({
             id: randomUUID(),
             user_id: testUser.id,
-            org_id: testOrg.id,
+            tenant_id: testOrg.id,
             user_role: 'member' as const,
          }).execute();
 

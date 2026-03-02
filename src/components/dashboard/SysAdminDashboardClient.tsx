@@ -78,7 +78,7 @@ export default function SysAdminDashboardClient({ user, data }: SysAdminDashboar
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCount(data.totalOrgs)}</div>
+            <div className="text-2xl font-bold">{formatCount(data.totaltenants)}</div>
             <p className="text-xs text-muted-foreground">
               Active organizations
             </p>

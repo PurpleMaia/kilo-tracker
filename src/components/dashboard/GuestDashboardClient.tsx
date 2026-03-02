@@ -4,9 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AudioRecorder } from "@/components/kilo/audio-recorder";
-import AudioPlayer from "@/components/kilo/audio-player";
 import { AuthUser } from "@/types/auth";
+import Link from "next/link";
 
 type GuestDashboardClientProps = {
   user: AuthUser;
@@ -25,9 +24,11 @@ export default function GuestDashboardClient({ user }: GuestDashboardClientProps
         <Badge variant="outline" className="text-sm">Guest</Badge>
       </div>
 
-      <AudioPlayer />
-
-      <AudioRecorder />
+      <Button asChild variant="outline" className="w-full md:w-auto">
+        <Link href="/kilo" className="block">
+          Try the KILO Entry Form
+        </Link>
+      </Button>
 
       <Alert>
         <svg

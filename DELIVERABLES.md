@@ -37,7 +37,7 @@ Google OAuth → Create/fetch user → Auto-join default org → Profile setup
 
 ### Tables Involved
 - `users` (from migration 000001)
-- `orgs` / `members` (from migration 000002)
+- `tenants` / `members` (from migration 000002)
 - `profiles` (from migration 000003)
 
 ### Implementation
@@ -53,7 +53,7 @@ Google OAuth → Create/fetch user → Auto-join default org → Profile setup
 
 ### Seed Data Needed
 ```sql
-INSERT INTO orgs (name, slug) VALUES ('Kilo Pilot', 'kilo-pilot');
+INSERT INTO tenants (name, slug) VALUES ('Kilo Pilot', 'kilo-pilot');
 ```
 
 ---
@@ -190,7 +190,7 @@ src/
 ## Migration Checklist
 
 - [x] 000001: users table
-- [x] 000002: orgs, members (multi-tenant)
+- [x] 000002: tenants, members (multi-tenant)
 - [x] 000003: profiles, kilo, olelo_noeau
 - [ ] Seed: default org "Kilo Pilot"
 - [ ] Seed: initial olelo_noeau entries

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { Mic, Square } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /** Ask browser what audio format it supports */
 function getSupportedMimeType(): string {
@@ -8,10 +10,14 @@ function getSupportedMimeType(): string {
   return types.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
 }
 
-export function AudioRecorder() {
+interface AudioRecorderProps {
+  onTranscription?: (text: string) => void;
+  onRecordingStateChange?: (isRecording: boolean) => void;
+}
+
+export function AudioRecorder({ onTranscription, onRecordingStateChange }: AudioRecorderProps) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
-  const [transcript, setTranscript] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -20,38 +26,32 @@ export function AudioRecorder() {
       setTranscribing(true);
       const formData = new FormData();
 
-      // Ensure the file has the correct extension based on its MIME type
       const ext = mimeType.includes("mp4") ? "mp4" : mimeType.includes("ogg") ? "ogg" : "webm";
-      formData.append('file', fileBlob, `audio.${ext}`);
+      formData.append("file", fileBlob, `audio.${ext}`);
 
-      console.log("Sending audio blob to server:", fileBlob);
-      console.log("FormData contents:", formData);
-      
-      const resp = await fetch('/api/audio/transcribe', {
-        method: 'POST',
+      const resp = await fetch("/api/audio/transcribe", {
+        method: "POST",
         body: formData,
       });
 
-      if (!resp.ok) throw new Error('Server responded with ' + resp.status);
+      if (!resp.ok) throw new Error("Server responded with " + resp.status);
 
       const data = await resp.json();
-      setTranscript(data.text ?? JSON.stringify(data));
+      const transcriptText = data.text ?? JSON.stringify(data);
+      onTranscription?.(transcriptText);
       setTranscribing(false);
     } catch (e) {
       console.error(e);
-      setTranscript('Error processing audio');
       setTranscribing(false);
     }
   };
 
   const startRecording = async () => {
     try {
-      // Request microphone access and start recording
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = getSupportedMimeType();
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
 
-      // Store references to the recorder and audio chunks
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
 
@@ -67,13 +67,13 @@ export function AudioRecorder() {
 
       recorder.start();
       setRecording(true);
+      onRecordingStateChange?.(true);
     } catch (e: any) {
       if (e?.name === "NotAllowedError") {
         alert("Microphone permission was denied. Please allow access in your browser settings.");
       } else if (e?.name === "NotFoundError") {
         alert("No microphone found on this device.");
       } else {
-        // Last resort fallback for browsers that truly can't do getUserMedia
         alert("Audio capture is not supported. Try opening this page in Safari 14.3+ and ensure the site is served over HTTPS.");
         console.error(e);
       }
@@ -83,38 +83,52 @@ export function AudioRecorder() {
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
     setRecording(false);
+    onRecordingStateChange?.(false);
   };
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {recording ? (
-        <button
-          className="px-4 py-2 bg-red-500 text-white rounded"
-          onClick={stopRecording}
-        >
-          Stop Recording
-        </button>
-      ) : transcribing ? (
-        <button
-          className="px-4 py-2 bg-yellow-500 text-white rounded"
-          disabled
-        >
-          Transcribing...
-        </button>
-      ) : (
-        <button
-          className="px-4 py-2 bg-green-500 text-white rounded"
-          onClick={startRecording}
-        >
-          Start Recording
-        </button>
-      )}
-      {transcript && (
-        <div className="max-w-md w-full p-4 border rounded bg-gray-50">
-          <h3 className="font-medium mb-2">Transcription:</h3>
-          <p>{transcript}</p>
-        </div>
-      )}
+      {/* Recording button */}
+      <button
+        id='audio-recorder-button'
+        onClick={recording ? stopRecording : startRecording}
+        disabled={transcribing}
+        className={cn(
+          "cursor-pointer relative flex items-center justify-center w-20 h-20 rounded-full transition-all duration-200",
+          "focus:outline-none focus:ring-4 focus:ring-offset-2",
+          recording
+            ? "bg-red-500 hover:bg-red-600 focus:ring-red-300"
+            : transcribing
+            ? "bg-yellow-500 cursor-not-allowed"
+            : "bg-linear-to-br from-green-500 to-lime-800 hover:from-green-600 hover:to-lime-900 focus:ring-lime-300 transition-colors",          
+        )}
+      >
+        {recording ? (
+          <Square className="h-8 w-8 text-white fill-white" />
+        ) : transcribing ? (
+          <div className="flex gap-1">
+            <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+          </div>
+        ) : (
+          <Mic className="h-8 w-8 text-white" />
+        )}
+
+        {/* Pulse ring when recording */}
+        {recording && (
+          <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-25" />
+        )}
+      </button>
+
+      {/* Status text */}
+      <p className="text-sm text-muted-foreground">
+        {recording
+          ? "Recording... Tap to stop"
+          : transcribing
+          ? "Transcribing your audio..."
+          : "Tap to start recording"}
+      </p>
     </div>
   );
 }

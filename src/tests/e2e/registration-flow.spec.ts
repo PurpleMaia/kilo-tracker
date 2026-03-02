@@ -57,7 +57,7 @@ test.describe('Registration Flow', () => {
       .where('email', '=', newUser.email)
       .execute();
 
-    await db.deleteFrom('orgs')
+    await db.deleteFrom('tenants')
       .where('name', 'like', `TestOrg%${randomSuffix}`)
       .execute();
 
@@ -114,7 +114,7 @@ test.describe('Registration Flow', () => {
     // First create an organization in the database
     const orgName = `TestOrg${randomSuffix}`;
     const orgResult = await db
-      .insertInto('orgs')
+      .insertInto('tenants')
       .values({
         name: orgName,
         slug: `testorg-${randomSuffix}`
@@ -178,7 +178,7 @@ test.describe('Registration Flow', () => {
       .selectFrom('members')
       .selectAll()
       .where('user_id', '=', createdUser!.id)
-      .where('org_id', '=', orgId!)
+      .where('tenant_id', '=', orgId!)
       .executeTakeFirst();
 
     expect(membership).toBeDefined();

@@ -101,7 +101,7 @@ Runs initial database migrations and seeds test data.
 
 **What it does:**
 1. Runs first migration (users, sessions, login_attempts tables) on dev and prod
-2. Optionally runs second migration (orgs, members tables) if multi-tenancy is needed
+2. Optionally runs second migration (tenants, members tables) if multi-tenancy is needed
 3. Seeds database with test data via `seed.ts`
 
 **Usage:**
@@ -118,7 +118,7 @@ Runs initial database migrations and seeds test data.
 - `login_attempts` - Security tracking
 
 **Database tables created (second migration, if dev said yest to multi-tenancy):**
-- `orgs` - Organizations for multi-tenancy
+- `tenants` - Organizations for multi-tenancy
 - `members` - Organization membership with roles (org_admin, member, guest)
 
 ### `sysadmin.ts`
@@ -214,7 +214,7 @@ tsx ./scripts/init/seed.ts
 
 **Database Schema:**
 - Core tables (users, sessions, login_attempts)
-- Optional multi-tenancy tables (orgs, members)
+- Optional multi-tenancy tables (tenants, members)
 
 ## Environment Variables
 

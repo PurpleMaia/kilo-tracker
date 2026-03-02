@@ -15,7 +15,7 @@ import { RegisterForm } from "../../../components/auth/RegisterForm";
 async function getOrganizations() {
   try {
     const organizations = await db
-      .selectFrom('orgs')
+      .selectFrom('tenants')
       .select(['id', 'name', 'slug'])
       .orderBy('name', 'asc')
       .execute();

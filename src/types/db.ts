@@ -17,9 +17,9 @@ export type NewMember = Insertable<DB['members']>;
 export type MemberUpdate = Updateable<DB['members']>;
 
 // Organizations
-export type Org = Selectable<DB['orgs']>;
-export type NewOrg = Insertable<DB['orgs']>;
-export type OrgUpdate = Updateable<DB['orgs']>;
+export type Org = Selectable<DB['tenants']>;
+export type NewOrg = Insertable<DB['tenants']>;
+export type OrgUpdate = Updateable<DB['tenants']>;
 
 // Sessions
 export type Session = Selectable<DB['sessions']>;
