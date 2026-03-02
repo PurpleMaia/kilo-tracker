@@ -24,7 +24,7 @@ export default function GuestDashboardClient({ user }: GuestDashboardClientProps
         <Badge variant="outline" className="text-sm">Guest</Badge>
       </div>
 
-      <Button variant="outline" className="w-full md:w-auto">
+      <Button asChild variant="outline" className="w-full md:w-auto">
         <Link href="/kilo" className="block">
           Try the KILO Entry Form
         </Link>
