@@ -3,19 +3,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { MemberDashboardData } from "@/lib/data/member";
+import { AuthUser } from "@/types/auth";
 
 const formatCount = (value: number) => value.toLocaleString();
 
-type DashboardUser = {
-  id: string;
-  username: string;
-  email: string;
-  role: "admin" | "member" | null;
-  systemRole: "sysadmin" | "user";
-};
-
 type MemberDashboardClientProps = {
-  user: DashboardUser;
+  user: AuthUser;
   data: MemberDashboardData;
 };
 

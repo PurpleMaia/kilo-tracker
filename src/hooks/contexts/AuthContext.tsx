@@ -1,8 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { AuthUser } from '@/types/auth';
-import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -11,25 +10,21 @@ interface AuthContextType {
   login: (type: string, identifier: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  setUser: (user: AuthUser | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
+  initialUser?: AuthUser | null;
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
+export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
+  const [user, setUser] = useState<AuthUser | null>(initialUser);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Check for existing session on mount
-  useEffect(() => {
-    refreshSession();
-  }, []);
-
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/auth/session', {
@@ -49,7 +44,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const login = async (
     type: string,
@@ -109,6 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     refreshSession,
+    setUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

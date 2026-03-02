@@ -1,8 +1,9 @@
 import { POST } from '@/app/api/auth/register/route';
 import { db } from '@/db/kysely/client';
 import { hashPassword } from '@/lib/auth/password';
-import { createMockRequest, testOrg } from './helpers';
+import { createMockRequest, testOrg } from '../../helpers';
 import { randomUUID } from 'crypto';
+import { Errors } from '@/lib/errors';
 
 /*
 1. Test successful registration without organization:
@@ -50,6 +51,11 @@ const existingUser = {
 describe('Registration Tests', () => {
    // Setup: Create test organization and existing user before tests
    beforeAll(async () => {
+      // Clear any existing rate limit records to start fresh
+      await db.deleteFrom('login_attempts')
+         .where('identifier', '=', 'REGISTRATION')
+         .execute();
+
       // Create test organization
       await db.insertInto('orgs').values({
          id: testOrg.id,
@@ -60,7 +66,7 @@ describe('Registration Tests', () => {
 
       // Create existing user for duplicate tests
       const passwordHash = await hashPassword(existingUser.password);
-      
+
       await db.insertInto('users').values({
          id: existingUser.id,
          email: existingUser.email,
@@ -75,6 +81,7 @@ describe('Registration Tests', () => {
    afterAll(async () => {
       await db.deleteFrom('members').where('org_id', '=', testOrg.id).execute();
       await db.deleteFrom('sessions').execute();
+      await db.deleteFrom('login_attempts').where('identifier', '=', 'REGISTRATION').execute();
       await db.deleteFrom('users').where('email', '=', registerTestUser.email).execute();
       await db.deleteFrom('users').where('id', '=', existingUser.id).execute();
       await db.deleteFrom('orgs').where('id', '=', testOrg.id).execute();
@@ -90,12 +97,16 @@ describe('Registration Tests', () => {
    });
 
    describe('Successful Registration', () => {
+      // Use unique IPs for successful registration tests to avoid rate limiting
       test('should register user without organization', async () => {
-         const request = createMockRequest({
-            email: registerTestUser.email,
-            username: registerTestUser.username,
-            password: registerTestUser.password,
-         });
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               username: registerTestUser.username,
+               password: registerTestUser.password,
+            },
+            { 'x-forwarded-for': '10.0.2.1' }
+         );
 
          const response = await POST(request);
 
@@ -122,12 +133,15 @@ describe('Registration Tests', () => {
       });
 
       test('should register user with organization and create member record', async () => {
-         const request = createMockRequest({
-            email: registerTestUser.email,
-            username: registerTestUser.username,
-            password: registerTestUser.password,
-            organizationId: testOrg.id,
-         });
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               username: registerTestUser.username,
+               password: registerTestUser.password,
+               organizationId: testOrg.id,
+            },
+            { 'x-forwarded-for': '10.0.2.2' }
+         );
 
          const response = await POST(request);
 
@@ -161,11 +175,14 @@ describe('Registration Tests', () => {
       });
 
       test('should create session cookie on successful registration', async () => {
-         const request = createMockRequest({
-            email: registerTestUser.email,
-            username: registerTestUser.username,
-            password: registerTestUser.password,
-         });
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               username: registerTestUser.username,
+               password: registerTestUser.password,
+            },
+            { 'x-forwarded-for': '10.0.2.3' }
+         );
 
          const response = await POST(request);
 
@@ -192,11 +209,14 @@ describe('Registration Tests', () => {
 
    describe('Duplicate User Errors', () => {
       test('should return 409 if email already exists', async () => {
-         const request = createMockRequest({
-            email: existingUser.email, // Use existing user's email
-            username: 'newusername',
-            password: 'NewPassword123!',
-         });
+         const request = createMockRequest(
+            {
+               email: existingUser.email, // Use existing user's email
+               username: 'newusername',
+               password: 'NewPassword123!',
+            },
+            { 'x-forwarded-for': '10.0.3.1' }
+         );
 
          const response = await POST(request);
 
@@ -206,11 +226,14 @@ describe('Registration Tests', () => {
       });
 
       test('should return 409 if username already exists', async () => {
-         const request = createMockRequest({
-            email: 'newemail@example.com',
-            username: existingUser.username, // Use existing user's username
-            password: 'NewPassword123!',
-         });
+         const request = createMockRequest(
+            {
+               email: 'newemail@example.com',
+               username: existingUser.username, // Use existing user's username
+               password: 'NewPassword123!',
+            },
+            { 'x-forwarded-for': '10.0.3.2' }
+         );
 
          const response = await POST(request);
 
@@ -223,13 +246,16 @@ describe('Registration Tests', () => {
    describe('Organization Errors', () => {
       test('should return 404 if organization does not exist', async () => {
          const nonExistentOrgId = randomUUID();
-         
-         const request = createMockRequest({
-            email: registerTestUser.email,
-            username: registerTestUser.username,
-            password: registerTestUser.password,
-            organizationId: nonExistentOrgId,
-         });
+
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               username: registerTestUser.username,
+               password: registerTestUser.password,
+               organizationId: nonExistentOrgId,
+            },
+            { 'x-forwarded-for': '10.0.4.1' }
+         );
 
          const response = await POST(request);
 
@@ -240,12 +266,16 @@ describe('Registration Tests', () => {
    });
 
    describe('Validation Errors', () => {
+      // Use unique IPs for validation tests to avoid rate limiting from previous tests
       test('should return 400 for invalid email format', async () => {
-         const request = createMockRequest({
-            email: 'not-an-email',
-            username: registerTestUser.username,
-            password: registerTestUser.password,
-         });
+         const request = createMockRequest(
+            {
+               email: 'not-an-email',
+               username: registerTestUser.username,
+               password: registerTestUser.password,
+            },
+            { 'x-forwarded-for': '10.0.1.1' }
+         );
 
          const response = await POST(request);
 
@@ -256,11 +286,14 @@ describe('Registration Tests', () => {
       });
 
       test('should return 400 for username too short', async () => {
-         const request = createMockRequest({
-            email: registerTestUser.email,
-            username: 'ab', // Less than 3 characters
-            password: registerTestUser.password,
-         });
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               username: 'ab', // Less than 3 characters
+               password: registerTestUser.password,
+            },
+            { 'x-forwarded-for': '10.0.1.2' }
+         );
 
          const response = await POST(request);
 
@@ -270,11 +303,14 @@ describe('Registration Tests', () => {
       });
 
       test('should return 400 for invalid username characters', async () => {
-         const request = createMockRequest({
-            email: registerTestUser.email,
-            username: 'user@name!', // Invalid characters
-            password: registerTestUser.password,
-         });
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               username: 'user@name!', // Invalid characters
+               password: registerTestUser.password,
+            },
+            { 'x-forwarded-for': '10.0.1.3' }
+         );
 
          const response = await POST(request);
 
@@ -284,11 +320,14 @@ describe('Registration Tests', () => {
       });
 
       test('should return 400 for password too short', async () => {
-         const request = createMockRequest({
-            email: registerTestUser.email,
-            username: registerTestUser.username,
-            password: 'short', // Less than 8 characters
-         });
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               username: registerTestUser.username,
+               password: 'short', // Less than 8 characters
+            },
+            { 'x-forwarded-for': '10.0.1.4' }
+         );
 
          const response = await POST(request);
 
@@ -298,16 +337,104 @@ describe('Registration Tests', () => {
       });
 
       test('should return 400 for missing required fields', async () => {
-         const request = createMockRequest({
-            email: registerTestUser.email,
-            // Missing username and password
-         });
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               // Missing username and password
+            },
+            { 'x-forwarded-for': '10.0.1.5' }
+         );
 
          const response = await POST(request);
 
          expect(response.status).toBe(400);
          const data = await response.json();
          expect(data.error).toBe('Invalid input');
+      });
+   });
+
+   describe('Rate Limiting', () => {
+      const rateLimitTestIP = '192.168.1.100';
+
+      // Clean up rate limit records after each test
+      afterEach(async () => {
+         await db.deleteFrom('login_attempts')
+            .where('ip_address', '=', rateLimitTestIP)
+            .where('identifier', '=', 'REGISTRATION')
+            .execute();
+      });
+
+      test('should allow registration within rate limit', async () => {
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               username: registerTestUser.username,
+               password: registerTestUser.password,
+            },
+            { 'x-forwarded-for': rateLimitTestIP }
+         );
+
+         const response = await POST(request);
+
+         expect(response.status).toBe(201);
+      });
+
+      test('should block registration after exceeding rate limit', async () => {
+         // Insert 5 registration attempts to simulate hitting the limit
+         const now = new Date();
+         for (let i = 0; i < 5; i++) {
+            await db.insertInto('login_attempts').values({
+               ip_address: rateLimitTestIP,
+               user_agent: 'test-agent',
+               identifier: 'REGISTRATION',
+               successful: true,
+               attempt_at: now,
+            }).execute();
+         }
+
+         // Try to register - should be blocked
+         const request = createMockRequest(
+            {
+               email: 'ratelimit@example.com',
+               username: 'ratelimituser',
+               password: 'SecurePassword123!',
+            },
+            { 'x-forwarded-for': rateLimitTestIP }
+         );
+
+         const response = await POST(request);
+
+         expect(response.status).toBe(429);
+         const data = await response.json();
+         expect(data.error).toBe(Errors.TOO_MANY_REQUESTS.message);
+      });
+
+      test('should allow registration after rate limit window expires', async () => {
+         // Insert 5 old registration attempts (outside the 1 hour window)
+         const oldTime = new Date(Date.now() - 61 * 60 * 1000); // 61 minutes ago
+         for (let i = 0; i < 5; i++) {
+            await db.insertInto('login_attempts').values({
+               ip_address: rateLimitTestIP,
+               user_agent: 'test-agent',
+               identifier: 'REGISTRATION',
+               successful: true,
+               attempt_at: oldTime,
+            }).execute();
+         }
+
+         // Try to register - should succeed since old attempts are outside window
+         const request = createMockRequest(
+            {
+               email: registerTestUser.email,
+               username: registerTestUser.username,
+               password: registerTestUser.password,
+            },
+            { 'x-forwarded-for': rateLimitTestIP }
+         );
+
+         const response = await POST(request);
+
+         expect(response.status).toBe(201);
       });
    });
 });

@@ -2,7 +2,7 @@ import { POST } from '@/app/api/auth/logout/route';
 import { db } from '@/db/kysely/client';
 import { hashPassword } from '@/lib/auth/password';
 import { hashToken, storeTokenInDB } from '@/lib/auth/token';
-import { createMockRequest, testUser, testAdmin } from './helpers';
+import { createMockRequest, testUser, testAdmin } from '../../helpers';
 import { randomUUID } from 'crypto';
 
 /*
@@ -175,8 +175,9 @@ describe('Logout Tests', () => {
          );
 
          const response = await POST(request);
-         
-         expect(307).toContain(response.status);
+
+         // Empty session token is treated as NO_SESSION and returns 401
+         expect(response.status).toBe(401);
       });
    });
 

@@ -22,6 +22,13 @@ const newUser = {
 test.describe.configure({ mode: 'serial' }); // Run tests in order since they depend on shared state (test user in DB)
 
 test.describe('Registration Flow', () => {
+  // Clear rate limiting before each test to prevent "Too many requests" errors
+  test.beforeEach(async () => {
+    await db.deleteFrom('login_attempts')
+      .where('identifier', '=', 'REGISTRATION')
+      .execute();
+  });
+
   test.afterEach(async () => {
     // Cleanup any user created during tests
     await db.deleteFrom('sessions')
@@ -178,7 +185,7 @@ test.describe('Registration Flow', () => {
 
   });
 
-  test('should show error when email already exists', async ({ page }) => {
+  test('should show error when email already exists', async ({ page, context }) => {
     // First create a user
     await page.goto('/register');
     await page.waitForLoadState('networkidle');
@@ -188,12 +195,19 @@ test.describe('Registration Flow', () => {
     await page.fill('input#username', `duplicate${timestamp}`);
     await page.fill('input#password', 'Password123!');
     await page.fill('input#confirmPassword', 'Password123!');
-    
+
     await page.click('button[type="submit"]');
     await page.waitForURL(/^(?!.*register).*$/, { timeout: 10000 });
 
+    // Clear cookies/session so we're logged out before trying again
+    await context.clearCookies();
+
     // Try to register again with same email
-    await page.goto('/register');    
+    await page.goto('/register');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('[id="register-form"]', { state: 'visible' });
+    await page.waitForSelector('input#email', { state: 'visible' });
+
     await page.fill('input#email', `duplicate-${timestamp}@example.com`);
     await page.fill('input#username', `different${timestamp}`);
     await page.fill('input#password', 'Password123!');

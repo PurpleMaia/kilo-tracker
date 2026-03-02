@@ -4,10 +4,10 @@ import { DB } from '../types';
 import { RetryDriver } from './driver';
 import 'dotenv/config';
 
-const CONNECTION_STRING = process.env.DATABASE_URL; // Default and Local
+// const CONNECTION_STRING = process.env.DATABASE_URL; // Default and Local
 
 // In case you want to test Dev and Prod urls (need env vars set)
-// const CONNECTION_STRING = process.env.DEV_URL; // DEV
+const CONNECTION_STRING = process.env.DEV_URL; // DEV
 // const CONNECTION_STRING = process.env.PROD_URL; // PROD
 
 declare global {

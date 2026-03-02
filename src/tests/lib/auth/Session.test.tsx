@@ -2,7 +2,7 @@ import { GET } from '@/app/api/auth/session/route';
 import { db } from '@/db/kysely/client';
 import { Errors } from '@/lib/errors';
 import { hashPassword } from '@/lib/auth/password';
-import { testUser, createMockRequest, testOrg } from './helpers';
+import { testUser, createMockRequest, testOrg } from '../../helpers';
 import { randomUUID } from 'crypto';
 import { hashToken } from '@/lib/auth/token';
 
@@ -157,6 +157,86 @@ describe('Session Validation Tests', () => {
          expect(response.status).toBe(401);
          const data = await response.json();
          expect(data.error).toBe(Errors.NO_SESSION.message); // validateSession does not differentiate expired vs invalid, both return NO_SESSION
+      })
+   })
+
+   describe('Session Validation Caching', () => {
+      test('should return consistent user data on multiple validations', async () => {
+         // First request
+         const request1 = createMockRequest({}, {}, {
+            'session_token': testUser.session_token,
+         });
+         const response1 = await GET(request1);
+         expect(response1.status).toBe(200);
+         const data1 = await response1.json();
+
+         // Second request with same token
+         const request2 = createMockRequest({}, {}, {
+            'session_token': testUser.session_token,
+         });
+         const response2 = await GET(request2);
+         expect(response2.status).toBe(200);
+         const data2 = await response2.json();
+
+         // Both should return the same user data
+         expect(data1.user.id).toBe(data2.user.id);
+         expect(data1.user.email).toBe(data2.user.email);
+         expect(data1.user.username).toBe(data2.user.username);
+      })
+
+      test('should correctly validate different session tokens', async () => {
+         // Create a second user and session with unique identifiers
+         const uniqueSuffix = randomUUID().slice(0, 8);
+         const secondUser = {
+            id: randomUUID(),
+            email: `seconduser-${uniqueSuffix}@example.com`,
+            username: `seconduser${uniqueSuffix}`,
+            password: 'SecurePassword123!',
+            session_token: `second-valid-token-${uniqueSuffix}`,
+         };
+
+         const passwordHash = await hashPassword(secondUser.password);
+         const tokenHash = hashToken(secondUser.session_token);
+
+         await db.insertInto('users').values({
+            id: secondUser.id,
+            email: secondUser.email,
+            username: secondUser.username,
+            password_hash: passwordHash,
+            system_role: 'user',
+            created_at: new Date(),
+         }).execute();
+
+         await db.insertInto('sessions').values({
+            id: randomUUID(),
+            user_id: secondUser.id,
+            token_hash: tokenHash,
+            created_at: new Date(),
+            expires_at: new Date(Date.now() + 1000 * 60 * 60),
+         }).execute();
+
+         // Validate first user's session
+         const request1 = createMockRequest({}, {}, {
+            'session_token': testUser.session_token,
+         });
+         const response1 = await GET(request1);
+         const data1 = await response1.json();
+
+         // Validate second user's session
+         const request2 = createMockRequest({}, {}, {
+            'session_token': secondUser.session_token,
+         });
+         const response2 = await GET(request2);
+         const data2 = await response2.json();
+
+         // Should return different user data
+         expect(data1.user.id).toBe(testUser.id);
+         expect(data2.user.id).toBe(secondUser.id);
+         expect(data1.user.email).not.toBe(data2.user.email);
+
+         // Clean up second user
+         await db.deleteFrom('sessions').where('user_id', '=', secondUser.id).execute();
+         await db.deleteFrom('users').where('id', '=', secondUser.id).execute();
       })
    })
 });

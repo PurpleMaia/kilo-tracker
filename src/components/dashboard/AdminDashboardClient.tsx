@@ -3,20 +3,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AuthUser } from "@/types/auth";
 import type { AdminDashboardData } from "@/lib/data/admin";
 
 const formatCount = (value: number) => value.toLocaleString();
 
-type DashboardUser = {
-  id: string;
-  username: string;
-  email: string;
-  role: "admin" | "member" | null;
-  systemRole: "sysadmin" | "user";
-};
-
 type AdminDashboardClientProps = {
-  user: DashboardUser;
+  user: AuthUser;
   data: AdminDashboardData;
 };
 

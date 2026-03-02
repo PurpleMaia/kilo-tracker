@@ -1,34 +1,32 @@
-import { cookies } from "next/headers";
-import { validateSessionFromCookies } from "@/lib/auth/session";
-import DashboardRedirectClient from "./DashboardRedirectClient";
+import { getAuthUser } from "@/lib/auth/session";
+import { fetchAdminDashboardData } from "@/lib/data/admin";
+import { fetchMemberDashboardData } from "@/lib/data/member";
+import { fetchSysAdminDashboardData } from "@/lib/data/sysadmin";
+import AdminDashboardClient from "@/components/dashboard/AdminDashboardClient";
+import MemberDashboardClient from "@/components/dashboard/MemberDashboardClient";
+import SysAdminDashboardClient from "@/components/dashboard/SysAdminDashboardClient";
+import GuestDashboardClient from "@/components/dashboard/GuestDashboardClient";
 
-/**
- * Dashboard Index Page
- *
- * Redirects users to their appropriate role-based dashboard:
- * - /dashboard/sysadmin - System administrators
- * - /dashboard/admin - Organization administrators
- * - /dashboard/member - Organization members
- * - /dashboard/guest - Guest users (no organization)
- */
 export default async function DashboardPage() {
-  let destination = "/login?type=user";
+  // fetch cached user data
+  const user = await getAuthUser();  
 
-  try {
-    const cookieStore = await cookies();
-    const user = await validateSessionFromCookies(cookieStore);
-    if (user.system_role === "sysadmin") {
-      destination = "/dashboard/sysadmin";
-    } else if (user.role === "admin") {
-      destination = "/dashboard/admin";
-    } else if (user.role === "member") {
-      destination = "/dashboard/member";
-    } else {
-      destination = "/dashboard/guest";
-    }
-  } catch {
-    destination = "/login?type=user";
+  // feed user data into client component dashboard renders
+  if (user.system_role === "sysadmin") {
+    const data = await fetchSysAdminDashboardData();
+    return <SysAdminDashboardClient user={user} data={data} />;
   }
 
-  return <DashboardRedirectClient destination={destination} />;
-}
+  if (user.role === "admin") {
+    const data = await fetchAdminDashboardData(user.id);
+    return <AdminDashboardClient user={user} data={data} />;
+  }
+
+  if (user.role === "member") {
+    const data = await fetchMemberDashboardData(user.id);
+    return <MemberDashboardClient user={user} data={data} />;
+  }
+
+  // Guest (no org role)
+  return <GuestDashboardClient user={user} />;
+}  

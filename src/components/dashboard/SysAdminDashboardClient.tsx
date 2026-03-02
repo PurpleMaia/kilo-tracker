@@ -5,19 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { SysAdminDashboardData } from "@/lib/data/sysadmin";
+import { AuthUser } from "@/types/auth";
 
 const formatCount = (value: number) => value.toLocaleString();
 
-type DashboardUser = {
-  id: string;
-  username: string;
-  email: string;
-  role: "admin" | "member" | null;
-  systemRole: "sysadmin" | "user";
-};
-
 type SysAdminDashboardClientProps = {
-  user: DashboardUser;
+  user: AuthUser;
   data: SysAdminDashboardData;
 };
 
@@ -202,7 +195,7 @@ export default function SysAdminDashboardClient({ user, data }: SysAdminDashboar
             </div>
             <div>
               <span className="text-muted-foreground">System Role:</span>
-              <p className="font-medium">{user.systemRole}</p>
+              <p className="font-medium">{user.system_role}</p>
             </div>
             <div>
               <span className="text-muted-foreground">User ID:</span>

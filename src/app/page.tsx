@@ -1,41 +1,14 @@
 'use client';
 
-import { useAuth } from "@/hooks/contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Separator } from "@/components/ui/separator";
 
+// Middleware handles auth redirects - authenticated users are redirected to /dashboard
 export default function Home() {
-  const { user, isLoading, isAuthenticated } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
-      router.replace("/dashboard");
-    }
-  }, [isLoading, isAuthenticated, user, router]);
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <div className="text-lg text-zinc-600">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || !user) {
-    return <LandingPage />;
-  }
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-      <div className="text-lg text-zinc-600">Loading...</div>
-    </div>
-  );
+  return <LandingPage />;
 }
 
 function LandingPage() {

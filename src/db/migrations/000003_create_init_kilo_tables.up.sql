@@ -22,7 +22,7 @@ CREATE TABLE kilo (
     q3 TEXT,
     audio BYTEA, -- storing bytes for prototype, but should use a file system approach
     image BYTEA, -- storing bytes for prototype, but should use a file system approach
-    created_at TIMESTAMP,
+    created_at TIMESTAMP
     -- more TEXT   -- more distinct sections of kilo, following the framework
 );
 

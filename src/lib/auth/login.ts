@@ -29,8 +29,10 @@ export async function login(identifier: string, password: string): Promise<AuthU
 
     const { password_hash, ...account } = accountResult
 
-    console.log('[login] Account found:', account.id.slice(0, 6), '... |', account.username);
-    console.log('[login] Verifying password...');
+    if (process.env.NODE_ENV !== "production") {
+        console.log('[login] Account found:', account.id.slice(0, 6), '... |', account.username);
+        console.log('[login] Verifying password...');
+    }
 
     // Verify password
     if (!(await verifyPassword(accountResult.password_hash, password))) {
@@ -39,11 +41,11 @@ export async function login(identifier: string, password: string): Promise<AuthU
 
     // Early return for a system admin
     if (account.system_role === 'sysadmin') {
-        console.log('[login] User is a system administrator...')
+        if (process.env.NODE_ENV !== "production") {
+            console.log('[login] User is a system administrator...');
+        }
         return { ...account } as AuthUser;
     }
-
-    console.log(`[login] Fetching user's organization role...`)
 
     const role = await fetchUserRole(account.id)
 
@@ -56,6 +58,10 @@ export async function login(identifier: string, password: string): Promise<AuthU
  * @returns A promise that resolves to the UserRole if found, otherwise null.
  */
 export async function fetchUserRole(userId: string): Promise<UserRole | null> {
+
+    if (process.env.NODE_ENV !== "production") {
+        console.log(`[fetchUserRole] Fetching organization role for user ${userId.slice(0, 6)}...`);
+    }
 
     // Fetch user's role in an org (if any)
     const roleResult = await db.selectFrom('members')

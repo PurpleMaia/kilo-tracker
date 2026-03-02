@@ -1,7 +1,7 @@
 import { POST } from '@/app/api/auth/login/route';
 import { db } from '@/db/kysely/client';
 import { hashPassword } from '@/lib/auth/password';
-import { testUser, testAdmin, createMockRequest } from './helpers';
+import { testUser, testAdmin, createMockRequest } from '../../helpers';
 import { Errors } from '@/lib/errors';
 
 /*
@@ -71,6 +71,7 @@ describe('Login Tests', () => {
 
   // Cleanup: Clear login attempts before each test
   beforeEach(async () => {
+    // Clear identifier-based login attempts
     await db
       .deleteFrom('login_attempts')
       .where('identifier', 'in', [
@@ -81,6 +82,18 @@ describe('Login Tests', () => {
         'nonexistent@example.com',
         'wronguser',
         'ratelimit@example.com',
+      ])
+      .execute();
+
+    // Also clear IP-based rate limit records (default test IP and test-specific IPs)
+    await db
+      .deleteFrom('login_attempts')
+      .where('ip_address', 'in', [
+        '127.0.0.1',
+        '192.168.1.100',
+        '192.168.1.200',
+        '203.0.113.42',
+        '198.51.100.1',
       ])
       .execute();
   });
@@ -292,13 +305,17 @@ describe('Login Tests', () => {
   });
 
   describe('Input Validation', () => {
+    // Use unique IPs for validation tests to avoid rate limiting from previous tests
     test('should fail with empty identifier', async () => {
-      const request = createMockRequest({
-        credentials: {
-          identifier: '',
-          password: 'SomePassword123!',
+      const request = createMockRequest(
+        {
+          credentials: {
+            identifier: '',
+            password: 'SomePassword123!',
+          },
         },
-      });
+        { 'x-forwarded-for': '10.0.0.1' }
+      );
 
       const response = await POST(request);
       const data = await response.json();
@@ -309,12 +326,15 @@ describe('Login Tests', () => {
     });
 
     test('should fail with empty password', async () => {
-      const request = createMockRequest({
-        credentials: {
-          identifier: testUser.email,
-          password: '',
+      const request = createMockRequest(
+        {
+          credentials: {
+            identifier: testUser.email,
+            password: '',
+          },
         },
-      });
+        { 'x-forwarded-for': '10.0.0.2' }
+      );
 
       const response = await POST(request);
       const data = await response.json();
@@ -324,11 +344,14 @@ describe('Login Tests', () => {
     });
 
     test('should fail with missing credentials', async () => {
-      const request = createMockRequest({
-        credentials: {
-          identifier: testUser.email,
+      const request = createMockRequest(
+        {
+          credentials: {
+            identifier: testUser.email,
+          },
         },
-      });
+        { 'x-forwarded-for': '10.0.0.3' }
+      );
 
       const response = await POST(request);
       const data = await response.json();

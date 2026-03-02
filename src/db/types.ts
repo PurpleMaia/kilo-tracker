@@ -17,6 +17,18 @@ export type Sysrole = "sysadmin" | "user";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export interface Kilo {
+  audio: Buffer | null;
+  created_at: Timestamp | null;
+  id: Generated<number>;
+  image: Buffer | null;
+  location: string | null;
+  q1: string | null;
+  q2: string | null;
+  q3: string | null;
+  user_id: string | null;
+}
+
 export interface LoginAttempts {
   attempt_at: Generated<Timestamp | null>;
   error_message: string | null;
@@ -44,11 +56,29 @@ export interface OauthAccounts {
   user_id: string;
 }
 
+export interface OleloNoeau {
+  id: Generated<number>;
+  text: string | null;
+}
+
 export interface Orgs {
   created_at: Generated<Timestamp | null>;
   id: Generated<string>;
   name: string;
   slug: string;
+}
+
+export interface Profiles {
+  aina: string | null;
+  dob: Timestamp | null;
+  first_name: string | null;
+  id: string;
+  kula: string | null;
+  last_name: string | null;
+  mauna: string | null;
+  mokupuni: string | null;
+  user_id: string | null;
+  wai: string | null;
 }
 
 export interface SchemaMigrations {
@@ -74,10 +104,13 @@ export interface Users {
 }
 
 export interface DB {
+  kilo: Kilo;
   login_attempts: LoginAttempts;
   members: Members;
   oauth_accounts: OauthAccounts;
+  olelo_noeau: OleloNoeau;
   orgs: Orgs;
+  profiles: Profiles;
   schema_migrations: SchemaMigrations;
   sessions: Sessions;
   users: Users;
