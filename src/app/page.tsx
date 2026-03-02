@@ -31,7 +31,11 @@ export default function Home() {
     return <LandingPage />;
   }
 
-  return null;
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+      <div className="text-lg text-zinc-600">Loading...</div>
+    </div>
+  );
 }
 
 function LandingPage() {
