@@ -67,7 +67,7 @@ async function seed() {
         
     // Insert test organization
     console.log("Seeding test organization...");
-    await db.insertInto("orgs").values(TEST_ORG).execute();
+    await db.insertInto("tenants").values(TEST_ORG).execute();
 
     // Insert members
     console.log("Seeding organization members...");

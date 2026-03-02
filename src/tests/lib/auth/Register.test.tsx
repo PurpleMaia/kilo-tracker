@@ -57,7 +57,7 @@ describe('Registration Tests', () => {
          .execute();
 
       // Create test organization
-      await db.insertInto('orgs').values({
+      await db.insertInto('tenants').values({
          id: testOrg.id,
          name: testOrg.name,
          slug: testOrg.slug,
@@ -84,7 +84,7 @@ describe('Registration Tests', () => {
       await db.deleteFrom('login_attempts').where('identifier', '=', 'REGISTRATION').execute();
       await db.deleteFrom('users').where('email', '=', registerTestUser.email).execute();
       await db.deleteFrom('users').where('id', '=', existingUser.id).execute();
-      await db.deleteFrom('orgs').where('id', '=', testOrg.id).execute();
+      await db.deleteFrom('tenants').where('id', '=', testOrg.id).execute();
 
       await db.destroy();
    });

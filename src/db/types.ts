@@ -61,7 +61,7 @@ export interface OleloNoeau {
   text: string | null;
 }
 
-export interface Orgs {
+export interface tenants {
   created_at: Generated<Timestamp | null>;
   id: Generated<string>;
   name: string;
@@ -109,7 +109,7 @@ export interface DB {
   members: Members;
   oauth_accounts: OauthAccounts;
   olelo_noeau: OleloNoeau;
-  orgs: Orgs;
+  tenants: tenants;
   profiles: Profiles;
   schema_migrations: SchemaMigrations;
   sessions: Sessions;

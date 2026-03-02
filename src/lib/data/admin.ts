@@ -20,11 +20,11 @@ export type AdminDashboardData = {
 export async function fetchAdminDashboardData(userId: string): Promise<AdminDashboardData> {
   const orgMembership = await db
     .selectFrom("members as m")
-    .innerJoin("orgs as o", "m.org_id", "o.id")
+    .innerJoin("tenants as o", "m.org_id", "o.id")
     .select(({ ref }) => [
       ref("o.id").as("orgId"),
       ref("o.name").as("orgName"),
-      ref("o.slug").as("orgSlug"),
+      ref("o.slug").as("tenantslug"),
     ])
     .where("m.user_id", "=", userId)
     .where("m.user_role", "=", "admin")
@@ -48,7 +48,7 @@ export async function fetchAdminDashboardData(userId: string): Promise<AdminDash
     org: {
       id: orgMembership.orgId,
       name: orgMembership.orgName,
-      slug: orgMembership.orgSlug,
+      slug: orgMembership.tenantslug,
     },
     teamMemberCount: Number(teamCountResult?.count ?? 0),
     pendingInvites: 0,

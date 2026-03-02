@@ -12,7 +12,7 @@ async function unseed() {
     // Delete members (cascade will handle this, but being explicit)
     console.log("Removing test organization members...");
     const org = await db
-        .selectFrom("orgs")
+        .selectFrom("tenants")
         .select("id")
         .where("slug", "=", TEST_ORG_SLUG)
         .executeTakeFirst();
@@ -23,7 +23,7 @@ async function unseed() {
 
     // Delete test organization
     console.log("Removing test organization...");
-    await db.deleteFrom("orgs").where("slug", "=", TEST_ORG_SLUG).execute();
+    await db.deleteFrom("tenants").where("slug", "=", TEST_ORG_SLUG).execute();
 
     // Delete test accounts
     console.log("Removing test accounts...");

@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     // If organization is provided, verify it exists
     if (organizationId) {
       const org = await db
-        .selectFrom('orgs')
+        .selectFrom('tenants')
         .select('id')
         .where('id', '=', organizationId)
         .executeTakeFirst();
