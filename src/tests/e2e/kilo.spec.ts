@@ -3,6 +3,35 @@ import { hashPassword } from '@/lib/auth/password';
 import { test, expect, Page } from '@playwright/test';
 import { testUser } from '../helpers';
 
+let speachesAvailable = false;
+
+/**
+ * Check if the Speaches API is running and accessible
+ */
+async function checkSpeachesAPI(): Promise<boolean> {
+  const baseUrl = process.env.SPEACHES_BASE_URL?.trim();
+  if (!baseUrl) {
+    console.warn('[Kilo E2E] SPEACHES_BASE_URL not configured - audio tests will be skipped');
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    });
+    if (response.ok) {
+      console.log('[Kilo E2E] Speaches API is available');
+      return true;
+    }
+    console.warn(`[Kilo E2E] Speaches API health check failed with status: ${response.status} - audio tests will be skipped`);
+    return false;
+  } catch (error) {
+    console.warn(`[Kilo E2E] Speaches API is not reachable: ${error instanceof Error ? error.message : error} - audio tests will be skipped`);
+    return false;
+  }
+}
+
 const loginAsUser = async (page: Page) => {
   await page.goto('/login');
   await page.fill('input#identifier', testUser.email);
@@ -11,7 +40,11 @@ const loginAsUser = async (page: Page) => {
 }
 
 test.describe('Kilo Entry Form', () => {
+
   test.beforeAll(async () => {
+    // Check Speaches API availability
+    speachesAvailable = await checkSpeachesAPI();
+
     const passwordHash = await hashPassword(testUser.password);
     await db.insertInto('users').values({
         id: testUser.id,
@@ -31,6 +64,8 @@ test.describe('Kilo Entry Form', () => {
   });
 
   test('allows a user to submit a kilo entry with audio & skip questions', async ({ page }) => {
+    test.skip(!speachesAvailable, 'Speaches API is not available - skipping audio transcription test');
+
     // Log in as test user
     await loginAsUser(page);
 
