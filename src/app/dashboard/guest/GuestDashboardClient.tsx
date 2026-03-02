@@ -66,6 +66,7 @@ export default function GuestDashboardClient({ user }: GuestDashboardClientProps
               Organizations provide access to collaborative tools, shared resources,
               and team features. Contact an organization administrator to request access.
             </p>
+            {/* TODO: replace with org listing page once built */}
             <Button asChild className="w-full">
               <Link href="/dashboard/survey">Browse Organizations</Link>
             </Button>
@@ -185,6 +186,7 @@ export default function GuestDashboardClient({ user }: GuestDashboardClientProps
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
+            {/* TODO: replace with org listing page once built */}
             <Button asChild>
               <Link href="/dashboard/survey">Find Organizations</Link>
             </Button>
