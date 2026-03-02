@@ -154,7 +154,7 @@ export default function SurveyForm() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Weather</span>
-              <span className="font-medium capitalize">{survey.weather.replace("_", " ")}</span>
+              <span className="font-medium capitalize">{survey.weather.replaceAll("_", " ")}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Kilo</span>
