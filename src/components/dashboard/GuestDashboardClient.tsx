@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,10 @@ export default function GuestDashboardClient({ user }: GuestDashboardClientProps
               Organizations provide access to collaborative tools, shared resources,
               and team features. Contact an organization administrator to request access.
             </p>
-            <Button className="w-full">Browse Organizations</Button>
+            {/* TODO: replace with org listing page once built */}
+            <Button asChild className="w-full">
+              <Link href="/dashboard/survey">Browse Organizations</Link>
+            </Button>
           </CardContent>
         </Card>
 
@@ -182,7 +186,10 @@ export default function GuestDashboardClient({ user }: GuestDashboardClientProps
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
-            <Button>Find Organizations</Button>
+            {/* TODO: replace with org listing page once built */}
+            <Button asChild>
+              <Link href="/dashboard/survey">Find Organizations</Link>
+            </Button>
             <Button variant="outline">Contact Support</Button>
           </div>
         </CardContent>
