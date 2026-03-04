@@ -77,6 +77,7 @@ export interface Profiles {
   last_name: string | null;
   mauna: string | null;
   mokupuni: string | null;
+  role: string | null;
   user_id: string | null;
   wai: string | null;
 }
