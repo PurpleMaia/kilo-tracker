@@ -83,3 +83,54 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+const deleteKiloSchema = z.object({
+  id: z.number().int().positive("Invalid entry ID"),
+});
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = await validateSession(request);
+
+    const body = await request.json();
+    const parsed = deleteKiloSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", issues: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { id } = parsed.data;
+
+    // Delete the entry only if it belongs to the user
+    const result = await db
+      .deleteFrom("kilo")
+      .where("id", "=", id)
+      .where("user_id", "=", user.id)
+      .execute();
+
+    if (Number(result[0].numDeletedRows) === 0) {
+      return NextResponse.json(
+        { error: "Entry not found or not authorized" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode }
+      );
+    }
+
+    console.error("[DELETE /api/kilo]", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
