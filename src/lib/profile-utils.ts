@@ -25,6 +25,9 @@ export function isProfileComplete(profile: UserProfile | null): boolean {
     profile.first_name?.trim() &&
     profile.last_name?.trim() &&
     profile.dob &&
+      (typeof profile.dob === 'string'
+        ? profile.dob.trim().length > 0
+        : !Number.isNaN((profile.dob as Date).getTime())) &&
     profile.mauna?.trim() &&
     profile.aina?.trim() &&
     profile.wai?.trim() &&
