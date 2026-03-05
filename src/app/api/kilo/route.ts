@@ -57,7 +57,57 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+
+  // If ID provided, return single entry
+  if (id) {
+    console.log(`Fetching kilo entry with ID: ${id}`);
+    const entryId = Number(id);
+    if (isNaN(entryId)) {
+      return NextResponse.json(
+        { error: "Invalid entry ID" },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const user = await validateSession(request);
+
+      const entry = await db
+        .selectFrom("kilo")
+        .select(["id", "q1", "q2", "q3", "location", "created_at"])
+        .where("id", "=", entryId)
+        .where("user_id", "=", user.id)
+        .executeTakeFirst();
+
+      if (!entry) {
+        return NextResponse.json(
+          { error: "Entry not found or not authorized" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ entry }, { status: 200 });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: error.statusCode }
+        );
+      }
+
+      console.error("[GET /api/kilo?id=]", error);
+      return NextResponse.json(
+        { error: "Internal Server Error" },
+        { status: 500 }
+      );
+    }
+  }
+
+  // Otherwise return all entries
   try {
+    console.log("Fetching all kilo entries for user");
     const user = await validateSession(request);
 
     const entries = await db
@@ -128,6 +178,64 @@ export async function DELETE(request: NextRequest) {
     }
 
     console.error("[DELETE /api/kilo]", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+const updateKiloSchema = kiloEntrySchema.extend({
+  id: z.number().int().positive("Invalid entry ID"),
+});
+
+export async function PUT(request: NextRequest) {
+  try {
+    const user = await validateSession(request);
+
+    const body = await request.json();
+    const parsed = updateKiloSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", issues: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const { id, q1, q2, q3, location } = parsed.data;
+
+    // Update the entry only if it belongs to the user
+    const updatedEntry = await db
+      .updateTable("kilo")
+      .set({
+        q1,
+        q2: q2 ?? null,
+        q3: q3 ?? null,
+        location: location ?? null,
+      })
+      .where("id", "=", id)
+      .where("user_id", "=", user.id)
+      .returning(["id", "q1", "q2", "q3", "location", "created_at"])
+      .executeTakeFirst();
+
+    if (!updatedEntry) {
+      return NextResponse.json(
+        { error: "Entry not found or not authorized" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ entry: updatedEntry }, { status: 200 });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode }
+      );
+    }
+
+    console.error("[PUT /api/kilo]", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
