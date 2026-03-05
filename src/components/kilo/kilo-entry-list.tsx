@@ -84,7 +84,7 @@ export function KiloEntryList() {
                 <Button asChild
                   variant="ghost"
                   size="sm"
-                  className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-900/20"                  
+                  className="text-gray-500 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-900/20"                  
                 >
                   <Link href={`/kilo?edit=${entry.id}`}>
                     <Pencil />
@@ -95,7 +95,7 @@ export function KiloEntryList() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
+                  className="text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
                   onClick={() => deleteEntry(entry.id)}
                   disabled={deletingId === entry.id}
                 >
