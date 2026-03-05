@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AuthUser } from "@/types/auth";
+import { KiloEntryList } from "../kilo/kilo-entry-list";
 
 type GuestDashboardClientProps = {
   user: AuthUser;
@@ -23,6 +24,8 @@ export default function GuestDashboardClient({ user }: GuestDashboardClientProps
         </div>
         <Badge variant="outline" className="text-sm">Guest</Badge>
       </div>
+
+      <KiloEntryList />
 
       <Button asChild variant="outline" className="w-full md:w-auto">
         <Link href="/kilo" className="block">
