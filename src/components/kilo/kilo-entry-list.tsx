@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, MapPin, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, MapPin, Clock, Trash2 } from "lucide-react";
 
 type KiloEntry = {
   id: number;
@@ -17,6 +18,7 @@ export function KiloEntryList() {
   const [entries, setEntries] = useState<KiloEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchEntries() {
@@ -37,6 +39,28 @@ export function KiloEntryList() {
 
     fetchEntries();
   }, []);
+
+  const handleDelete = async (id: number) => {
+    setDeletingId(id);
+    try {
+      const response = await fetch("/api/kilo", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete entry");
+      }
+
+      setEntries((prev) => prev.filter((entry) => entry.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete entry");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -82,7 +106,7 @@ export function KiloEntryList() {
         {entries.map((entry) => (
           <div
             key={entry.id}
-            className="border rounded-lg p-4 space-y-3"
+            className="group border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
@@ -99,12 +123,27 @@ export function KiloEntryList() {
                     : "Unknown date"}
                 </span>
               </div>
-              {entry.location && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>{entry.location}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {entry.location && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    <span>{entry.location}</span>
+                  </div>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
+                  onClick={() => handleDelete(entry.id)}
+                  disabled={deletingId === entry.id}
+                >
+                  {deletingId === entry.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
