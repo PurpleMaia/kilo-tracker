@@ -40,7 +40,17 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           </div>
         </header>
 
-        <main className="container mx-auto py-6 px-4">
+        <main className="container mx-auto py-6 px-4 space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <Link
+              href="/kilo"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Go to KILO Tracker →
+            </Link>
+          </div>
+
           {children}
 
           <p className="text-sm text-muted-foreground font-bold mt-8"> Areas marked with * are not yet implemented</p>
