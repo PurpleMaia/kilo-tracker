@@ -55,3 +55,31 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await validateSession(request);
+
+    const entries = await db
+      .selectFrom("kilo")
+      .select(["id", "q1", "q2", "q3", "location", "created_at"])
+      .where("user_id", "=", user.id)
+      .orderBy("created_at", "desc")
+      .execute();
+
+    return NextResponse.json({ entries }, { status: 200 });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode }
+      );
+    }
+
+    console.error("[GET /api/kilo]", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
