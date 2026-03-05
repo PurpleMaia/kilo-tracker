@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChevronLeft, ChevronRight, Loader2, Keyboard, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { KiloEntry } from "@/types/kilo";
 
 type Question = {
@@ -44,10 +45,9 @@ type FormData = Record<string, string>;
 
 interface KiloEntryFormProps {
   initialData?: KiloEntry | null;
-  onCancelEdit?: () => void;
 }
 
-export function KiloEntryForm({ initialData, onCancelEdit }: KiloEntryFormProps) {
+export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   const isEditMode = !!initialData;
 
   // Initialize form data from initialData
@@ -56,8 +56,8 @@ export function KiloEntryForm({ initialData, onCancelEdit }: KiloEntryFormProps)
   const [showTextInput, setShowTextInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const router = useRouter();
 
   // Populate form with initial data when provided
   useEffect(() => {
@@ -134,12 +134,9 @@ export function KiloEntryForm({ initialData, onCancelEdit }: KiloEntryFormProps)
         q3: formData.q3 || null,
       };
 
-      const method = isEditMode ? "PUT" : "POST";
-      const url = isEditMode
-        ? "/api/kilo"
-        : "/api/kilo";
+      const method = isEditMode ? "PUT" : "POST";      
 
-      const response = await fetch(url, {
+      const response = await fetch("/api/kilo", {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -152,69 +149,38 @@ export function KiloEntryForm({ initialData, onCancelEdit }: KiloEntryFormProps)
         throw new Error(data.error || "Failed to save entry");
       }
 
-      setSuccess(true);
       setFormData({});
       setCurrentStep(0);
 
-      // If in edit mode, call onCancelEdit to exit edit mode
-      if (isEditMode && onCancelEdit) {
-        onCancelEdit();
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
     } finally {
       setIsSubmitting(false);
+      router.push("/dashboard");
     }
   };
-
-  if (success) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <Alert>
-            <AlertDescription>
-              {isEditMode
-                ? "Your entry has been updated successfully!"
-                : "Your entry has been saved successfully!"}
-            </AlertDescription>
-          </Alert>
-          {!isEditMode && (
-            <Button
-              className="mt-4 w-full"
-              onClick={() => setSuccess(false)}
-            >
-              Add Another Entry
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">
-            {isEditMode ? "Edit Entry" : currentQuestion.question}
+            {currentQuestion.question}
           </CardTitle>
           <div className="flex items-center gap-2">
-            {isEditMode && onCancelEdit && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onCancelEdit}
+                onClick={() => router.push("/dashboard")}
                 disabled={isSubmitting}
               >
                 <X className="h-4 w-4 mr-1" />
                 Cancel
               </Button>
-            )}
-            {!isEditMode && (
+            
               <span className="text-sm text-muted-foreground">
                 {currentStep + 1} / {QUESTIONS.length}
-              </span>
-            )}
+              </span>            
           </div>
         </div>
         {!isEditMode && currentQuestion.required && (
@@ -223,72 +189,42 @@ export function KiloEntryForm({ initialData, onCancelEdit }: KiloEntryFormProps)
           </CardDescription>
         )}
       </CardHeader>
-      {/* Edit mode: show all fields at once */}
-        {isEditMode ? (
-          <CardContent className="space-y-4">
-            {QUESTIONS.map((question) => (
-              <div key={question.id}>
-                <label className="text-sm font-medium mb-2 block">
-                  {question.question}
-                  {question.required && <span className="text-red-500"> *</span>}
-                </label>
-                <Textarea
-                  placeholder="Your response..."
-                  value={formData[question.id] || ""}
-                  onChange={(e) => handleTextChange(e.target.value)}
-                  disabled={isSubmitting}
-                  rows={3}
-                />
-              </div>
-            ))}
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        ) : (
-          /* Create mode: wizard steps */
-          <CardContent className="space-y-4">
-            <AudioRecorder onTranscription={handleTranscription} onRecordingStateChange={setIsTranscribing} />
+      {/* Create mode: wizard steps */}
+      <CardContent className="space-y-4">
+        <AudioRecorder onTranscription={handleTranscription} onRecordingStateChange={setIsTranscribing} />
+          {/* Show editable textarea if there's an answer OR user clicked "prefer to type" */}
+          {(hasAnswer || showTextInput) && (
+            <Textarea
+              placeholder="Your response..."
+              value={currentAnswer}
+              onChange={(e) => handleTextChange(e.target.value)}
+              disabled={isSubmitting || isTranscribing}
+              rows={4}
+              autoFocus={showTextInput && !hasAnswer}
+            />
+          )}
 
-            {/* Show editable textarea if there's an answer OR user clicked "prefer to type" */}
-            {(hasAnswer || showTextInput) && (
-              <Textarea
-                placeholder="Your response..."
-                value={currentAnswer}
-                onChange={(e) => handleTextChange(e.target.value)}
-                disabled={isSubmitting || isTranscribing}
-                rows={4}
-                autoFocus={showTextInput && !hasAnswer}
-              />
-            )}
+          {/* Show "prefer to type" only when no answer exists yet */}
+          {!hasAnswer && !showTextInput && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-muted-foreground hover:text-foreground"
+              onClick={() => setShowTextInput(true)}
+            >
+              <Keyboard className="h-4 w-4 mr-2" />
+              Prefer to type instead?
+            </Button>
+          )}
 
-            {/* Show "prefer to type" only when no answer exists yet */}
-            {!hasAnswer && !showTextInput && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-muted-foreground hover:text-foreground"
-                onClick={() => setShowTextInput(true)}
-              >
-                <Keyboard className="h-4 w-4 mr-2" />
-                Prefer to type instead?
-              </Button>
-            )}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+      </CardContent>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        )}
-
-      <CardFooter className="flex justify-between">
-        {isEditMode ? (
-          <div />
-        ) : (
+      <CardFooter className="flex justify-between">        
           <Button
             variant="outline"
             onClick={handleBack}
@@ -297,8 +233,7 @@ export function KiloEntryForm({ initialData, onCancelEdit }: KiloEntryFormProps)
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
-        )}
-        {isEditMode || isLastStep ? (
+        {isLastStep ? (
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
