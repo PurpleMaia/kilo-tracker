@@ -1,66 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import useKiloEntries from "@/hooks/use-kilo";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Clock, Trash2 } from "lucide-react";
-
-type KiloEntry = {
-  id: number;
-  q1: string | null;
-  q2: string | null;
-  q3: string | null;
-  location: string | null;
-  created_at: string | null;
-};
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, MapPin, Clock, Trash2, Pencil } from "lucide-react";
+import Link from "next/link";
 
 export function KiloEntryList() {
-  const [entries, setEntries] = useState<KiloEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-
-  useEffect(() => {
-    async function fetchEntries() {
-      try {
-        const response = await fetch("/api/kilo");
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Failed to fetch entries");
-        }
-        const data = await response.json();
-        setEntries(data.entries);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load entries");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchEntries();
-  }, []);
-
-  const handleDelete = async (id: number) => {
-    setDeletingId(id);
-    try {
-      const response = await fetch("/api/kilo", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to delete entry");
-      }
-
-      setEntries((prev) => prev.filter((entry) => entry.id !== id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete entry");
-    } finally {
-      setDeletingId(null);
-    }
-  };
+  const { 
+    entries, isLoading, error,
+    deletingId, deleteEntry,
+  } = useKiloEntries();
 
   if (isLoading) {
     return (
@@ -130,11 +80,23 @@ export function KiloEntryList() {
                     <span>{entry.location}</span>
                   </div>
                 )}
+                {/* Edit Kilo Button */}
+                <Button asChild
+                  variant="ghost"
+                  size="sm"
+                  className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-900/20"                  
+                >
+                  <Link href={`/kilo?edit=${entry.id}`}>
+                    <Pencil />
+                  </Link>
+                </Button>
+
+                {/* Delete Kilo Button  */}
                 <Button
                   variant="ghost"
                   size="sm"
                   className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
-                  onClick={() => handleDelete(entry.id)}
+                  onClick={() => deleteEntry(entry.id)}
                   disabled={deletingId === entry.id}
                 >
                   {deletingId === entry.id ? (
