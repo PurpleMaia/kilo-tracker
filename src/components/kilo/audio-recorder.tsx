@@ -123,13 +123,15 @@ export function AudioRecorder({ onTranscription, onRecordingStateChange, compact
         disabled={transcribing}
         className={cn(
           "cursor-pointer relative flex items-center justify-center w-20 h-20 rounded-full transition-all duration-200",
-          "focus:outline-none focus:ring-4 focus:ring-offset-2",
+          "touch-action-manipulation",
+          "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-offset-2",
           recording
-            ? "bg-red-500 hover:bg-red-600 focus:ring-red-300"
+            ? "bg-red-500 hover:bg-red-600 focus-visible:ring-red-300"
             : transcribing
             ? "bg-yellow-500 cursor-not-allowed"
-            : "bg-linear-to-br from-green-500 to-lime-800 hover:from-green-600 hover:to-lime-900 focus:ring-lime-300 transition-colors",          
+            : "bg-linear-to-br from-green-500 to-lime-800 hover:from-green-600 hover:to-lime-900 focus-visible:ring-lime-300 transition-colors",
         )}
+        aria-label={recording ? "Stop recording" : "Start recording"}
       >
         {recording ? (
           <Square className="h-8 w-8 text-white fill-white" />

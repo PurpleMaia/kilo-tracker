@@ -1,23 +1,20 @@
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { KiloEntryForm } from '@/components/kilo/kilo-entry-form'
+import { Suspense } from "react";
+import { KiloEntryFormClient } from "./KiloPage";
+
+function KiloPageLoading() {
+  return (
+    <div className="flex items-center justify-center py-10">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted border-t-foreground" />
+    </div>
+  );
+}
 
 export default function KiloPage() {
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-start py-10 gap-8 px-4">
-      <div className="w-full max-w-lg">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </Link>
-      </div>
-
-      <h1 className="text-4xl font-bold">KILO Tracker</h1>
-
-      <KiloEntryForm />
+    <div className="mt-4 space-y-6 px-4 sm:px-0 pb-safe">
+      <Suspense fallback={<KiloPageLoading />}>
+        <KiloEntryFormClient />
+      </Suspense>
     </div>
-  )
+  );
 }

@@ -3,7 +3,9 @@
 import { useEffect, useState, useTransition } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Loader2, Pencil, Trash2 } from "lucide-react";
+import Link from "next/link";
+import useKiloEntries from "@/hooks/use-kilo";
 
 type KiloEntry = {
   id: number;
@@ -17,12 +19,16 @@ type KiloEntry = {
 const PAGE_SIZE = 5;
 
 export function KiloHistoryCard() {
-  const [entries, setEntries] = useState<KiloEntry[]>([]);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const {
+    entries, setEntries,
+    initialLoading, setInitialLoading,
+    // error, TODO handle error state
+    deletingId, deleteEntry
+  } = useKiloEntries();
 
   function fetchPage(p: number, onDone?: () => void) {
     fetch(`/api/kilo?page=${p}&limit=${PAGE_SIZE}`)
@@ -61,17 +67,75 @@ export function KiloHistoryCard() {
         ) : (
           <ul className={`space-y-4 transition-opacity duration-150 ${isPending ? "opacity-50" : "opacity-100"}`}>
             {entries.map((entry) => (
-              <li key={entry.id} className="border rounded-md p-3 space-y-1 text-sm">
-                <p className="text-xs text-muted-foreground">
-                  {entry.created_at
-                    ? new Date(entry.created_at).toLocaleString()
-                    : "No date recorded"}
-                </p>
-                <p><span className="font-medium">Weather: </span>{entry.q1 ?? "—"}</p>
-                {entry.q2 && <p><span className="font-medium">Outside: </span>{entry.q2}</p>}
-                {entry.q3 && <p><span className="font-medium">Excited about: </span>{entry.q3}</p>}
-                {entry.location && <p><span className="font-medium">Location: </span>{entry.location}</p>}
-              </li>
+              <Card 
+                key={entry.id}
+                className="group border rounded-lg space-y-4 hover:bg-muted/50 transition-colors"
+              >
+                {/* Entry Header */}
+                <CardHeader className="gap-2 text-sm text-muted-foreground mb-0">
+                  <div className="flex items-center justify-between gap-2">
+                    {/* Date Made */}
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4 shrink-0" />
+                      <span>
+                        {entry.created_at
+                          ? new Date(entry.created_at).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "Unknown date"}
+                      </span>
+                    </div>
+                    {/* Location Done */}
+                    {/* {entry.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-4 w-4 shrink-0" />
+                        <span>{entry.location}</span>
+                      </div>
+                    )} */}
+
+                    {/* Buttons */}
+                    <div className="flex items-center gap-2">
+                      <Button id='edit-kilo-button' asChild
+                        variant="ghost" size="sm" className="touch-action-manipulation" aria-label="Edit KILO Entry">
+                        <Link href={`/kilo?edit=${entry.id}`}>
+                          <Pencil className="w-5 h-5" />
+                        </Link>
+                      </Button>
+                      <Button id='delete-kilo-button'                
+                      variant="ghost" size="sm" className="touch-action-manipulation text-red-500 hover:text-red-700" aria-label="Delete KILO Entry"
+                      onClick={() => deleteEntry(entry.id)} 
+                      disabled={deletingId === entry.id}>
+                        <Trash2 className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                </CardHeader>  
+                <CardContent className="pt-0 space-y-2">                
+                  {entry.q1 && (
+                    <div>
+                      <p className="font-medium text-sm">Question 1:</p>
+                      <p className="text-sm">{entry.q1}</p>
+                    </div>
+                  )}              
+                  {entry.q2 && (
+                    <div>
+                      <p className="font-medium text-sm">Question 2:</p>
+                      <p className="text-sm">{entry.q2}</p>
+                    </div>
+                  )}              
+                  {entry.q3 && (
+                    <div>
+                      <p className="font-medium text-sm">Question 3:</p>
+                      <p className="text-sm">{entry.q3}</p>
+                    </div>
+                  )}
+                </CardContent>                  
+              </Card>
             ))}
           </ul>
         )}
