@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { AudioRecorder } from "./audio-recorder";
+import { PhotoTaker } from "./photo-taker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -12,9 +13,8 @@ import {
   CardDescription,
   CardFooter,
 } from "@/components/ui/card";
-import Image from "next/image";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ChevronLeft, ChevronRight, Loader2, Keyboard, X, ImagePlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Keyboard, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { KiloEntry } from "@/types/kilo";
 
@@ -62,7 +62,6 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const router = useRouter();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Populate form with initial data when provided
   useEffect(() => {
@@ -100,17 +99,9 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
     setShowTextInput(true);
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (photoPreview) URL.revokeObjectURL(photoPreview);
-    setPhotoPreview(URL.createObjectURL(file));
-  };
-
   const handleRemovePhoto = () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoPreview(null);
-    if (photoInputRef.current) photoInputRef.current.value = "";
   };
 
   const handleTextChange = (value: string) => {
@@ -146,15 +137,40 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
     setIsSubmitting(true);
 
     try {
+      let photoPath = null;
+
+      // Upload photo if available (data URL from camera capture)
+      if (photoPreview && photoPreview.startsWith("data:")) {
+        const formData = new FormData();
+        // Convert data URL to blob
+        const response = await fetch(photoPreview);
+        const blob = await response.blob();
+        const file = new File([blob], "photo.jpg", { type: "image/jpeg" });
+        formData.append("photo", file);
+
+        const uploadRes = await fetch("/api/photo", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error("Failed to upload photo");
+        }
+
+        const { path } = await uploadRes.json();
+        photoPath = path;
+      }
+
       const payload = {
         q1: formData.q1 || "",
         q2: formData.q2 || null,
         q3: formData.q3 || null,
+        photo_path: photoPath,
       };
 
-      const method = isEditMode ? "PUT" : "POST";      
+      const method = isEditMode ? "PUT" : "POST";
 
-      const response = await fetch("/api/kilo", {
+      const apiResponse = await fetch("/api/kilo", {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -162,13 +178,14 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
         body: JSON.stringify(isEditMode ? { id: initialData!.id, ...payload } : payload),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
+      if (!apiResponse.ok) {
+        const data = await apiResponse.json();
         throw new Error(data.error || "Failed to save entry");
       }
 
       setFormData({});
       setCurrentStep(0);
+      setPhotoPreview(null);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
@@ -236,29 +253,13 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
             </Button>
           )}
 
-          {/* Show photo upload section if applicable */}
+          {/* Show photo/camera section if applicable */}
           {currentQuestion.picture && (
-            <div className="space-y-2 pt-1">
-              <p className="text-xs text-muted-foreground">Upload a photo of your Kilo (optional)</p>
-              {photoPreview ? (
-                <div className="relative w-fit">
-                  <Image src={photoPreview} alt="Kilo photo" width={300} height={200} className="rounded-md max-h-48 object-cover" />
-                  <button
-                    type="button"
-                    onClick={handleRemovePhoto}
-                    className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white hover:bg-black/80"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ) : (
-                <Button type="button" variant="outline" size="sm" onClick={() => photoInputRef.current?.click()}>
-                  <ImagePlus className="h-4 w-4 mr-2" />
-                  Add Photo
-                </Button>
-              )}
-              <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
-            </div>
+            <PhotoTaker
+              photoPreview={photoPreview}
+              onPhotoCapture={setPhotoPreview}
+              onPhotoRemove={handleRemovePhoto}
+            />
           )}            
 
           {error && (
