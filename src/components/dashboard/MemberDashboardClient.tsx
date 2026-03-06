@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import type { MemberDashboardData } from "@/lib/data/member";
 import { AuthUser } from "@/types/auth";
 import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
+import { DailyOleloCard } from "@/components/dashboard/daily-olelo-card";
 
 const formatCount = (value: number) => value.toLocaleString();
 
@@ -40,6 +41,8 @@ export default function MemberDashboardClient({ user, data }: MemberDashboardCli
           <Badge variant="secondary" className="text-sm">Member</Badge>
         </div>
       </div>
+
+      <DailyOleloCard />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { SysAdminDashboardData } from "@/lib/data/sysadmin";
 import { AuthUser } from "@/types/auth";
+import { DailyOleloCard } from "@/components/dashboard/daily-olelo-card";
 
 const formatCount = (value: number) => value.toLocaleString();
 
@@ -26,6 +27,8 @@ export default function SysAdminDashboardClient({ user, data }: SysAdminDashboar
         </div>
         <Badge variant="destructive" className="text-sm">System Admin</Badge>
       </div>
+
+      <DailyOleloCard />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
