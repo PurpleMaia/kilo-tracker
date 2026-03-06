@@ -19,11 +19,13 @@ export default function KiloPage() {
     if (!editId) {
       setEditEntry(null);
       setIsLoadingEntry(false);
+      setError(null);
       return;
     }
 
     async function fetchEntry() {
       try {
+        setError(null);
         setIsLoadingEntry(true);
         const response = await fetch(`/api/kilo?id=${editId}`);
         if (!response.ok) {
