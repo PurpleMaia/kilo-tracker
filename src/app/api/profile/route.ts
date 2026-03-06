@@ -7,7 +7,7 @@ import { AppError } from "@/lib/errors";
 const profileUpdateSchema = z.object({
   first_name: z.string().trim().min(1),
   last_name: z.string().trim().min(1),
-  dob: z.string().min(1),
+  dob: z.string().date(),
   mauna: z.string().trim().min(1),
   aina: z.string().trim().min(1),
   wai: z.string().trim().min(1),
