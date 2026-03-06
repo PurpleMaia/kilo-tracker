@@ -1,17 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { AudioRecorder } from "./audio-recorder";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChevronLeft, ChevronRight, Loader2, Keyboard, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -79,54 +74,33 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   const currentAnswer = formData[currentQuestion.id] || "";
   const hasAnswer = currentAnswer.trim().length > 0;
 
-  const handleTranscription = (transcribedText: string) => {
-    // Append to existing text if there's already content
-    setFormData((prev) => {
-      const existing = prev[currentQuestion.id]?.trim() || "";
-      const newText = existing
-        ? `${existing} ${transcribedText}`
-        : transcribedText;
-      return {
-        ...prev,
-        [currentQuestion.id]: newText,
-      };
-    });
-    // Show text input after transcription so user can edit
-    setShowTextInput(true);
+  const handleTranscription = (field: "q1" | "q2" | "q3", text: string) => {
+    const setter = { q1: setQ1, q2: setQ2, q3: setQ3 }[field];
+    setter((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text));
   };
 
-  const handleTextChange = (value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [currentQuestion.id]: value,
-    }));
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(URL.createObjectURL(file));
   };
 
-  const handleBack = () => {
-    setError(null);
-    setShowTextInput(false);
-    setCurrentStep((prev) => prev - 1);
+  const handleRemovePhoto = () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
   };
 
-  const handleNext = () => {
-    if (currentQuestion.required && !currentAnswer.trim()) {
-      setError("This question is required");
-      return;
-    }
-    setError(null);
-    setShowTextInput(false);
-    setCurrentStep((prev) => prev + 1);
-  };
+  const canSubmit = q1.trim() !== "" && q2.trim() !== "" && q3.trim() !== "";
 
   const handleSubmit = async () => {
-    if (currentQuestion.required && !currentAnswer.trim()) {
-      setError("This question is required");
+    if (!q1.trim() || !q2.trim() || !q3.trim()) {
+      setError("All questions are required");
       return;
     }
-
     setError(null);
     setIsSubmitting(true);
-
     try {
       const payload = {
         q1: formData.q1 || "",
@@ -143,7 +117,6 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
         },
         body: JSON.stringify(isEditMode ? { id: initialData!.id, ...payload } : payload),
       });
-
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || "Failed to save entry");
@@ -152,6 +125,9 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
       setFormData({});
       setCurrentStep(0);
 
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+      sessionStorage.setItem("kilo_submitted", "true");
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
     } finally {
@@ -161,100 +137,114 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   };
 
   return (
-    <Card className="">
-      <CardHeader className="pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <CardTitle className="text-lg">
-            {currentQuestion.question}
-          </CardTitle>
-          <div className="flex items-center justify-between sm:justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/dashboard")}
-                disabled={isSubmitting}
-                className="touch-action-manipulation h-10 px-3"
-              >
-                <X className="h-4 w-4 mr-1" />
-                Cancel
-              </Button>
+    <Card className="w-full max-w-lg">
+      <CardHeader>
+        <CardTitle>KILO Entry</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
 
-              <span className="text-sm text-muted-foreground">
-                {currentStep + 1} / {QUESTIONS.length}
-              </span>
+        {/* Q1 */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            What is your weather today? <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-2 items-start">
+            <Textarea
+              placeholder="Type your response or use the mic..."
+              value={q1}
+              onChange={(e) => setQ1(e.target.value)}
+              disabled={isSubmitting}
+              rows={3}
+              className="flex-1"
+            />
+            <AudioRecorder
+              compact
+              onTranscription={(text) => handleTranscription("q1", text)}
+              onRecordingStateChange={() => {}}
+            />
           </div>
         </div>
-        {!isEditMode && currentQuestion.required && (
-          <CardDescription className="text-red-500">
-            * Required
-          </CardDescription>
-        )}
-      </CardHeader>
-      {/* Create mode: wizard steps */}
-      <CardContent className="space-y-4">
-        <AudioRecorder onTranscription={handleTranscription} onRecordingStateChange={setIsTranscribing} />
-          {/* Show editable textarea if there's an answer OR user clicked "prefer to type" */}
-          {(hasAnswer || showTextInput) && (
+
+        {/* Q2 */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            What do you see outside today? <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-2 items-start">
             <Textarea
-              placeholder="Your response..."
-              value={currentAnswer}
-              onChange={(e) => handleTextChange(e.target.value)}
-              disabled={isSubmitting || isTranscribing}
-              rows={4}
-              autoFocus={showTextInput && !hasAnswer}
+              placeholder="Type your response or use the mic..."
+              value={q2}
+              onChange={(e) => setQ2(e.target.value)}
+              disabled={isSubmitting}
+              rows={3}
+              className="flex-1"
             />
-          )}
-
-          {/* Show "prefer to type" only when no answer exists yet */}
-          {!hasAnswer && !showTextInput && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-muted-foreground hover:text-foreground touch-action-manipulation h-10"
-              onClick={() => setShowTextInput(true)}
-            >
-              <Keyboard className="h-4 w-4 mr-2" />
-              Prefer to type instead?
-            </Button>
-          )}
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-      </CardContent>
-
-      <CardFooter className="flex justify-between gap-3 pb-safe">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={isFirstStep || isSubmitting}
-            className="touch-action-manipulation flex-1 sm:flex-none h-11"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-        {isLastStep ? (
-          <Button onClick={handleSubmit} disabled={isSubmitting} className="touch-action-manipulation flex-1 sm:flex-none h-11">
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : isEditMode ? (
-              "Update Entry"
+            <AudioRecorder
+              compact
+              onTranscription={(text) => handleTranscription("q2", text)}
+              onRecordingStateChange={() => {}}
+            />
+          </div>
+          {/* Photo upload */}
+          <div className="space-y-2 pt-1">
+            <p className="text-xs text-muted-foreground">Upload a photo of your Kilo (optional)</p>
+            {photoPreview ? (
+              <div className="relative w-fit">
+                <Image src={photoPreview} alt="Kilo photo" width={300} height={200} className="rounded-md max-h-48 object-cover" />
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white hover:bg-black/80"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
             ) : (
-              "Save Entry"
+              <Button type="button" variant="outline" size="sm" onClick={() => photoInputRef.current?.click()}>
+                <ImagePlus className="h-4 w-4 mr-2" />
+                Add Photo
+              </Button>
             )}
-          </Button>
-        ) : (
-          <Button onClick={handleNext} disabled={isSubmitting} className="touch-action-manipulation flex-1 sm:flex-none h-11">
-            Next
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
+            <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
+          </div>
+        </div>
+
+        {/* Q3 */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            What are you excited to do today? <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-2 items-start">
+            <Textarea
+              placeholder="Type your response or use the mic..."
+              value={q3}
+              onChange={(e) => setQ3(e.target.value)}
+              disabled={isSubmitting}
+              rows={3}
+              className="flex-1"
+            />
+            <AudioRecorder
+              compact
+              onTranscription={(text) => handleTranscription("q3", text)}
+              onRecordingStateChange={() => {}}
+            />
+          </div>
+        </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
-      </CardFooter>
+
+        <Button onClick={handleSubmit} disabled={isSubmitting || !canSubmit} className="w-full">
+          {isSubmitting ? (
+            <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+          ) : (
+            "Save Entry"
+          )}
+        </Button>
+      </CardContent>
     </Card>
   );
 }
