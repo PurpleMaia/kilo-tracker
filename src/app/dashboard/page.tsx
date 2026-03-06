@@ -2,7 +2,6 @@ import { getAuthUser } from "@/lib/auth/session";
 import { fetchAdminDashboardData } from "@/lib/data/admin";
 import { fetchMemberDashboardData } from "@/lib/data/member";
 import { fetchSysAdminDashboardData } from "@/lib/data/sysadmin";
-import { fetchUserProfile } from "@/lib/data/profile";
 import AdminDashboardClient from "@/components/dashboard/AdminDashboardClient";
 import MemberDashboardClient from "@/components/dashboard/MemberDashboardClient";
 import SysAdminDashboardClient from "@/components/dashboard/SysAdminDashboardClient";
@@ -10,7 +9,7 @@ import GuestDashboardClient from "@/components/dashboard/GuestDashboardClient";
 
 export default async function DashboardPage() {
   // fetch cached user data
-  const user = await getAuthUser();
+  const user = await getAuthUser();  
 
   // feed user data into client component dashboard renders
   if (user.system_role === "sysadmin") {
@@ -29,6 +28,5 @@ export default async function DashboardPage() {
   }
 
   // Guest (no org role)
-  const profile = await fetchUserProfile(user.id);
-  return <GuestDashboardClient user={user} profile={profile} />;
-}
+  return <GuestDashboardClient user={user} />;
+}  

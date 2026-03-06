@@ -94,7 +94,7 @@ export default function SurveyForm() {
     return (
       <div className="max-w-lg mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Today&apos;s Kilo</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Today's Kilo</h1>
           <p className="text-muted-foreground mt-1">
             Select your organization to begin
           </p>
@@ -181,7 +181,7 @@ export default function SurveyForm() {
     <div className="max-w-lg mx-auto space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Today&apos;s Kilo</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Today's Kilo</h1>
           <p className="text-muted-foreground mt-1">
             Fill out today&apos;s observations
           </p>
@@ -216,7 +216,7 @@ export default function SurveyForm() {
         {/* Question 2: Kilo + photo */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">2. What do you see outside today? <span className="text-red-500">*</span></CardTitle>
+            <CardTitle className="text-base">2. What is the kilo of what you see outside today? <span className="text-red-500">*</span></CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

@@ -11,31 +11,11 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
 
 export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
 
-export type Json = JsonValue;
-
-export type JsonArray = JsonValue[];
-
-export type JsonObject = {
-  [x: string]: JsonValue | undefined;
-};
-
-export type JsonPrimitive = boolean | number | string | null;
-
-export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
-
 export type Role = "admin" | "member";
 
 export type Sysrole = "sysadmin" | "user";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
-
-export interface ActivityCategories {
-  created_at: Generated<Timestamp | null>;
-  emoji: string | null;
-  id: Generated<string>;
-  label: string;
-  tenant_id: string;
-}
 
 export interface Kilo {
   audio: Buffer | null;
@@ -81,6 +61,13 @@ export interface OleloNoeau {
   text: string | null;
 }
 
+export interface tenants {
+  created_at: Generated<Timestamp | null>;
+  id: Generated<string>;
+  name: string;
+  slug: string;
+}
+
 export interface Profiles {
   aina: string | null;
   dob: Timestamp | null;
@@ -90,7 +77,6 @@ export interface Profiles {
   last_name: string | null;
   mauna: string | null;
   mokupuni: string | null;
-  role: string | null;
   user_id: string | null;
   wai: string | null;
 }
@@ -108,18 +94,8 @@ export interface Sessions {
   user_id: string | null;
 }
 
-export interface Tenants {
-  branding_config: Generated<Json | null>;
-  created_at: Generated<Timestamp | null>;
-  id: Generated<string>;
-  name: string;
-  slug: string;
-}
-
 export interface Users {
-  avatar_url: string | null;
   created_at: Generated<Timestamp | null>;
-  display_name: string | null;
   email: string;
   id: Generated<string>;
   password_hash: string;
@@ -128,15 +104,14 @@ export interface Users {
 }
 
 export interface DB {
-  activity_categories: ActivityCategories;
   kilo: Kilo;
   login_attempts: LoginAttempts;
   members: Members;
   oauth_accounts: OauthAccounts;
   olelo_noeau: OleloNoeau;
+  tenants: tenants;
   profiles: Profiles;
   schema_migrations: SchemaMigrations;
   sessions: Sessions;
-  tenants: Tenants;
   users: Users;
 }
