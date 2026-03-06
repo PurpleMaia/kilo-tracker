@@ -8,3 +8,29 @@ export type KiloEntry = {
   photo_path: string | null;
   created_at: string | null;
 };
+
+export type Question = {
+  id: string;
+  question: string;
+  required: boolean;
+  picture?: boolean;
+};
+
+export const QUESTIONS: Question[] = [
+  {
+    id: "q1",
+    question: "What is your weather today?",
+    required: true,    
+  },
+  {
+    id: "q2",
+    question: "What do you see outside today?",
+    required: true,    
+    picture: true,
+  },
+  {
+    id: "q3",
+    question: "What are you excited to do today?",
+    required: true,
+  },
+];

@@ -16,33 +16,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChevronLeft, ChevronRight, Loader2, Keyboard, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { KiloEntry } from "@/types/kilo";
-
-type Question = {
-  id: string;
-  question: string;
-  required: boolean;
-  picture?: boolean;
-};
-
-const QUESTIONS: Question[] = [
-  {
-    id: "q1",
-    question: "What is your weather today?",
-    required: true,    
-  },
-  {
-    id: "q2",
-    question: "What do you see outside today?",
-    required: true,    
-    picture: true,
-  },
-  {
-    id: "q3",
-    question: "What are you excited to do today?",
-    required: true,
-  },
-];
+import { KiloEntry, QUESTIONS } from "@/types/kilo";
 
 type FormData = Record<string, string>;
 
