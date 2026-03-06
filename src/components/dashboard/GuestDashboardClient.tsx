@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { AuthUser } from "@/types/auth";
 import { UserProfile, isProfileComplete } from "@/lib/profile-utils";
 import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
+import { DailyOleloCard } from "@/components/dashboard/daily-olelo-card";
 
 type GuestDashboardClientProps = {
   user: AuthUser;
@@ -131,6 +132,8 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
           </div>
         )}
       </div>
+
+      <DailyOleloCard />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

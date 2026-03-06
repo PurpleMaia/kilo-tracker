@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { AuthUser } from "@/types/auth";
 import type { AdminDashboardData } from "@/lib/data/admin";
 import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
+import { DailyOleloCard } from "@/components/dashboard/daily-olelo-card";
 
 const formatCount = (value: number) => value.toLocaleString();
 
@@ -42,6 +43,8 @@ export default function AdminDashboardClient({ user, data }: AdminDashboardClien
           <Badge className="bg-purple-600 text-sm">Org Admin</Badge>
         </div>
       </div>
+
+      <DailyOleloCard />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
