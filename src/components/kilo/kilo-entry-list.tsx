@@ -87,13 +87,13 @@ export function KiloEntryList() {
                 {/* Buttons */}
                 <div className="flex items-center gap-2">
                   <Button id='edit-kilo-button'
-                    variant="ghost" size="sm" className="touch-action-manipulation">
+                    variant="ghost" size="sm" className="touch-action-manipulation" aria-label="Edit KILO Entry">
                     <Link href={`/kilo?edit=${entry.id}`}>
                       <Pencil className="w-5 h-5" />
                     </Link>
                   </Button>
                   <Button id='delete-kilo-button'                
-                   variant="ghost" size="sm" className="touch-action-manipulation text-red-500 hover:text-red-700" 
+                   variant="ghost" size="sm" className="touch-action-manipulation text-red-500 hover:text-red-700" aria-label="Delete KILO Entry"
                    onClick={() => deleteEntry(entry.id)} 
                    disabled={deletingId === entry.id}>
                     <Trash2 className="w-5 h-5" />
