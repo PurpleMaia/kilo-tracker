@@ -62,7 +62,6 @@ export async function GET(request: NextRequest) {
 
   // If ID provided, return single entry
   if (id) {
-    console.log(`Fetching kilo entry with ID: ${id}`);
     const entryId = Number(id);
     if (isNaN(entryId)) {
       return NextResponse.json(
