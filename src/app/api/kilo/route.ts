@@ -55,13 +55,21 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+ 
+const PAGE_SIZE = 5;
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
-  // If ID provided, return single entry
-  if (id) {
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? String(PAGE_SIZE))));
+  const offset = (page - 1) * limit;
+
+  const isEditing = !!id;
+
+  // If ID provided, return single entry (editing)
+  if (isEditing) {
     const entryId = Number(id);
     if (isNaN(entryId)) {
       return NextResponse.json(
@@ -104,19 +112,29 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Otherwise return all entries
+  // Otherwise return paginated list of entries
   try {
-    console.log("Fetching all kilo entries for user");
     const user = await validateSession(request);
+    const [entries, countResult] = await Promise.all([
+      db
+        .selectFrom("kilo")
+        .select(["id", "q1", "q2", "q3", "location", "created_at"])
+        .where("user_id", "=", user.id)
+        .orderBy("created_at", "desc")
+        .limit(limit)
+        .offset(offset)
+        .execute(),
+      db
+        .selectFrom("kilo")
+        .select(({ fn }) => fn.count<number>("id").as("total"))
+        .where("user_id", "=", user.id)
+        .executeTakeFirst(),
+    ]);
 
-    const entries = await db
-      .selectFrom("kilo")
-      .select(["id", "q1", "q2", "q3", "location", "created_at"])
-      .where("user_id", "=", user.id)
-      .orderBy("created_at", "desc")
-      .execute();
+    const total = Number(countResult?.total ?? 0);
+    const totalPages = Math.ceil(total / limit);
 
-    return NextResponse.json({ entries }, { status: 200 });
+    return NextResponse.json({ entries, total, page, totalPages });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(
