@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ path: `/uploads/kilo/${filename}` });
   } catch (error) {
-    console.error("[POST /api/kilo/photo]", error);
+    console.error("[POST /api/photo]", error);
     return NextResponse.json(
       { error: "Failed to upload photo" },
       { status: 500 }
