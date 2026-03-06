@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AudioRecorder } from "./audio-recorder";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,8 +12,9 @@ import {
   CardDescription,
   CardFooter,
 } from "@/components/ui/card";
+import Image from "next/image";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ChevronLeft, ChevronRight, Loader2, Keyboard, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Keyboard, X, ImagePlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { KiloEntry } from "@/types/kilo";
 
@@ -21,23 +22,25 @@ type Question = {
   id: string;
   question: string;
   required: boolean;
+  picture?: boolean;
 };
 
 const QUESTIONS: Question[] = [
   {
     id: "q1",
-    question: "question 1",
-    required: true,
+    question: "What is your weather today?",
+    required: true,    
   },
   {
     id: "q2",
-    question: "question 2",
-    required: false,
+    question: "What do you see outside today?",
+    required: true,    
+    picture: true,
   },
   {
     id: "q3",
-    question: "question 3",
-    required: false,
+    question: "What are you excited to do today?",
+    required: true,
   },
 ];
 
@@ -58,6 +61,8 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const router = useRouter();
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   // Populate form with initial data when provided
   useEffect(() => {
@@ -93,6 +98,19 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
     });
     // Show text input after transcription so user can edit
     setShowTextInput(true);
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const handleRemovePhoto = () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
   };
 
   const handleTextChange = (value: string) => {
@@ -217,6 +235,31 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
               Prefer to type instead?
             </Button>
           )}
+
+          {/* Show photo upload section if applicable */}
+          {currentQuestion.picture && (
+            <div className="space-y-2 pt-1">
+              <p className="text-xs text-muted-foreground">Upload a photo of your Kilo (optional)</p>
+              {photoPreview ? (
+                <div className="relative w-fit">
+                  <Image src={photoPreview} alt="Kilo photo" width={300} height={200} className="rounded-md max-h-48 object-cover" />
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 text-white hover:bg-black/80"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <Button type="button" variant="outline" size="sm" onClick={() => photoInputRef.current?.click()}>
+                  <ImagePlus className="h-4 w-4 mr-2" />
+                  Add Photo
+                </Button>
+              )}
+              <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
+            </div>
+          )}            
 
           {error && (
             <Alert variant="destructive">
