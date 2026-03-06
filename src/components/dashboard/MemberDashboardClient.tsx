@@ -1,18 +1,27 @@
 "use client";
 
+import { useEffect } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { MemberDashboardData } from "@/lib/data/member";
 import { AuthUser } from "@/types/auth";
+import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
 
 const formatCount = (value: number) => value.toLocaleString();
 
 type MemberDashboardClientProps = {
   user: AuthUser;
   data: MemberDashboardData;
+  kiloSubmitted?: boolean;
 };
 
-export default function MemberDashboardClient({ user, data }: MemberDashboardClientProps) {
+export default function MemberDashboardClient({ user, data, kiloSubmitted }: MemberDashboardClientProps) {
+  useEffect(() => {
+    if (kiloSubmitted) {
+      toast.success("KILO entry saved successfully!");
+    }
+  }, [kiloSubmitted]);
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -145,6 +154,8 @@ export default function MemberDashboardClient({ user, data }: MemberDashboardCli
           </div>
         </CardContent>
       </Card>
+
+      <KiloHistoryCard />
     </div>
   );
 }

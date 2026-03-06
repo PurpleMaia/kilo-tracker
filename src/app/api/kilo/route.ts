@@ -11,6 +11,35 @@ const kiloEntrySchema = z.object({
   location: z.string().nullable().optional(),
 });
 
+export async function GET(request: NextRequest) {
+  try {
+    const user = await validateSession(request);
+
+    const entries = await db
+      .selectFrom("kilo")
+      .select(["id", "q1", "q2", "q3", "location", "created_at"])
+      .where("user_id", "=", user.id)
+      .orderBy("created_at", "desc")
+      .limit(20)
+      .execute();
+
+    return NextResponse.json({ entries });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode }
+      );
+    }
+
+    console.error("[GET /api/kilo]", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await validateSession(request);

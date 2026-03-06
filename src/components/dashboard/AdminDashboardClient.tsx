@@ -1,19 +1,29 @@
 "use client";
 
+import { useEffect } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AuthUser } from "@/types/auth";
 import type { AdminDashboardData } from "@/lib/data/admin";
+import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
 
 const formatCount = (value: number) => value.toLocaleString();
 
 type AdminDashboardClientProps = {
   user: AuthUser;
   data: AdminDashboardData;
+  kiloSubmitted?: boolean;
 };
 
-export default function AdminDashboardClient({ user, data }: AdminDashboardClientProps) {
+export default function AdminDashboardClient({ user, data, kiloSubmitted }: AdminDashboardClientProps) {
+  useEffect(() => {
+    if (kiloSubmitted) {
+      toast.success("KILO entry saved successfully!");
+    }
+  }, [kiloSubmitted]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -217,6 +227,8 @@ export default function AdminDashboardClient({ user, data }: AdminDashboardClien
           </div>
         </CardContent>
       </Card>
+
+      <KiloHistoryCard />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { AudioRecorder } from "./audio-recorder";
 import { Button } from "@/components/ui/button";
@@ -10,13 +11,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, ImagePlus, X } from "lucide-react";
 
 export function KiloEntryForm() {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [q1, setQ1] = useState("");
   const [q2, setQ2] = useState("");
   const [q3, setQ3] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const handleTranscription = (field: "q1" | "q2" | "q3", text: string) => {
@@ -57,30 +58,13 @@ export function KiloEntryForm() {
         throw new Error(data.error || "Failed to save entry");
       }
       if (photoPreview) URL.revokeObjectURL(photoPreview);
-      setQ1(""); setQ2(""); setQ3("");
-      setPhotoPreview(null);
-      setSuccess(true);
+      router.push("/dashboard?kilo_submitted=true");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  if (success) {
-    return (
-      <Card className="w-full max-w-lg">
-        <CardContent className="pt-6 space-y-4">
-          <Alert>
-            <AlertDescription>Your entry has been saved successfully!</AlertDescription>
-          </Alert>
-          <Button className="w-full" onClick={() => setSuccess(false)}>
-            Add Another Entry
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="w-full max-w-lg">
