@@ -142,8 +142,8 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
               ))}
             </div>
             <div className="mt-auto flex flex-col gap-2 pt-2">
-              <Button className="w-full">Browse Organizations</Button>
-              <Button variant="outline" className="w-full">Contact Support</Button>
+              <Button className="w-full" disabled>Browse Organizations</Button>
+              <Button variant="outline" className="w-full" disabled>Contact Support</Button>
             </div>
           </CardContent>
         </Card>
