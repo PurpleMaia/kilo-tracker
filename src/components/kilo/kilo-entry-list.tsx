@@ -3,7 +3,7 @@
 import useKiloEntries from "@/hooks/use-kilo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, MapPin, Clock, Trash2, Pencil } from "lucide-react";
+import { Loader2, Clock, Trash2, Pencil } from "lucide-react";
 import Link from "next/link";
 
 export function KiloEntryList() {
@@ -48,87 +48,79 @@ export function KiloEntryList() {
   }
 
   return (
-    <Card>
+    <Card className="pb-4">
       <CardHeader>
         <CardTitle>Recent KILO Entries</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {entries.map((entry) => (
-          <div
+          <Card 
             key={entry.id}
-            className="group border rounded-lg p-4 space-y-3 hover:bg-muted/50 transition-colors"
+            className="group border rounded-lg space-y-4 hover:bg-muted/50 transition-colors"
           >
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                <span>
-                  {entry.created_at
-                    ? new Date(entry.created_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "Unknown date"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {entry.location && (
+            {/* Entry Header */}
+            <CardHeader className="gap-2 text-sm text-muted-foreground mb-0">
+              <div className="flex items-center justify-between gap-2">
+                {/* Date Made */}
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4 shrink-0" />
+                  <span>
+                    {entry.created_at
+                      ? new Date(entry.created_at).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "Unknown date"}
+                  </span>
+                </div>
+                {/* Location Done */}
+                {/* {entry.location && (
                   <div className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
+                    <MapPin className="h-4 w-4 shrink-0" />
                     <span>{entry.location}</span>
                   </div>
-                )}
-                {/* Edit Kilo Button */}
-                <Button asChild
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-500 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-900/20"                  
-                >
-                  <Link href={`/kilo?edit=${entry.id}`}>
-                    <Pencil />
-                  </Link>
-                </Button>
+                )} */}
 
-                {/* Delete Kilo Button  */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20"
-                  onClick={() => deleteEntry(entry.id)}
-                  disabled={deletingId === entry.id}
-                >
-                  {deletingId === entry.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
+                {/* Buttons */}
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" className="touch-action-manipulation">
+                    <Link href={`/kilo?edit=${entry.id}`}>
+                      <Pencil className="w-5 h-5" />
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="touch-action-manipulation text-red-500 hover:text-red-700" 
+                   onClick={() => deleteEntry(entry.id)} 
+                   disabled={deletingId === entry.id}>
+                    <Trash2 className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
+            </CardHeader>  
+            <CardContent className="pt-0 space-y-2">                
               {entry.q1 && (
                 <div>
                   <p className="font-medium text-sm">Question 1:</p>
                   <p className="text-sm">{entry.q1}</p>
                 </div>
-              )}
+              )}              
               {entry.q2 && (
                 <div>
                   <p className="font-medium text-sm">Question 2:</p>
                   <p className="text-sm">{entry.q2}</p>
                 </div>
-              )}
+              )}              
               {entry.q3 && (
                 <div>
                   <p className="font-medium text-sm">Question 3:</p>
                   <p className="text-sm">{entry.q3}</p>
                 </div>
               )}
-            </div>
-          </div>
+            </CardContent>                  
+          </Card>
         ))}
       </CardContent>
     </Card>

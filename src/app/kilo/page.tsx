@@ -59,7 +59,7 @@ export default function KiloPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mt-4 space-y-6 px-4 sm:px-0 pb-safe">
       <KiloEntryForm
         initialData={editEntry}
       />

@@ -161,26 +161,27 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <Card className="">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle className="text-lg">
             {currentQuestion.question}
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push("/dashboard")}
                 disabled={isSubmitting}
+                className="touch-action-manipulation h-10 px-3"
               >
                 <X className="h-4 w-4 mr-1" />
                 Cancel
               </Button>
-            
+
               <span className="text-sm text-muted-foreground">
                 {currentStep + 1} / {QUESTIONS.length}
-              </span>            
+              </span>
           </div>
         </div>
         {!isEditMode && currentQuestion.required && (
@@ -209,7 +210,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full text-muted-foreground hover:text-foreground"
+              className="w-full text-muted-foreground hover:text-foreground touch-action-manipulation h-10"
               onClick={() => setShowTextInput(true)}
             >
               <Keyboard className="h-4 w-4 mr-2" />
@@ -224,17 +225,18 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
           )}
       </CardContent>
 
-      <CardFooter className="flex justify-between">        
+      <CardFooter className="flex justify-between gap-3 pb-safe">
           <Button
             variant="outline"
             onClick={handleBack}
             disabled={isFirstStep || isSubmitting}
+            className="touch-action-manipulation flex-1 sm:flex-none h-11"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
         {isLastStep ? (
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
+          <Button onClick={handleSubmit} disabled={isSubmitting} className="touch-action-manipulation flex-1 sm:flex-none h-11">
             {isSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -247,7 +249,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
             )}
           </Button>
         ) : (
-          <Button onClick={handleNext} disabled={isSubmitting}>
+          <Button onClick={handleNext} disabled={isSubmitting} className="touch-action-manipulation flex-1 sm:flex-none h-11">
             Next
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
