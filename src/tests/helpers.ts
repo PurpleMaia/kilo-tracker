@@ -236,12 +236,12 @@ export async function logout(page: Page) {
 /**
  * Helper function to login as regular user
  */
-export async function loginAsUser(page: Page, user: TestUser) {
+export async function loginAsUser(page: Page) {
   await page.goto('/login');
   await page.waitForLoadState('networkidle');
   await page.waitForSelector('input#authString', { state: 'visible' });
-  await page.fill('input#authString', user.email);
-  await page.fill('input#password', user.password);
+  await page.fill('input#authString', testUser.email);
+  await page.fill('input#password', testUser.password);
 
   await Promise.all([
     page.waitForURL(/.*dashboard(?!\/login)/, { timeout: 10000 }),

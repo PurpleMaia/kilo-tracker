@@ -1,14 +1,7 @@
 import { db } from '@/db/kysely/client';
 import { hashPassword } from '@/lib/auth/password';
-import { test, expect, Page } from '@playwright/test';
-import { testUser } from '../helpers';
-
-const loginAsUser = async (page: Page) => {
-  await page.goto('/login');
-  await page.fill('input#identifier', testUser.email);
-  await page.fill('input#password', testUser.password);
-  await page.click('button[type="submit"]');
-}
+import { test, expect } from '@playwright/test';
+import { testUser, loginAsUser } from '../helpers';
 
 test.describe.configure({ mode: 'serial' });
 
