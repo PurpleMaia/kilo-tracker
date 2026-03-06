@@ -69,19 +69,19 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
             <div className="space-y-2 flex-3">        
             {entry.q1 && (
             <div>
-                <p className="font-medium text-sm">Question 1:</p>
+                <p className="font-medium text-sm text-wrap">Question 1:</p>
                 <p className="text-sm">{entry.q1}</p>
             </div>
             )}              
             {entry.q2 && (
             <div>
-                <p className="font-medium text-sm">Question 2:</p>
+                <p className="font-medium text-sm text-wrap">Question 2:</p>
                 <p className="text-sm">{entry.q2}</p>
             </div>
             )}              
             {entry.q3 && (
             <div>
-                <p className="font-medium text-sm">Question 3:</p>
+                <p className="font-medium text-sm text-wrap">Question 3:</p>
                 <p className="text-sm">{entry.q3}</p>
             </div>
             )}
