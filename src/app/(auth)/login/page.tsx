@@ -10,15 +10,32 @@ function LoginPageContent() {
   const type = searchParams.get('type') as SystemRole | null;
   const loginType = type === 'sysadmin' ? 'sysadmin' : 'user';
 
-  const isSysAdminLogin = loginType === 'sysadmin';
-  const isUserLogin = loginType === 'user';
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-4">
       <div className="w-full max-w-md">
         <LoginForm loginType={loginType} />
+      </div>
+    </div>
+  );
+}
 
-        <div className="mt-8 p-6 bg-zinc-100 rounded-lg">
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
+        <div className="text-zinc-600">Loading...</div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function TestAccounts(loginType: SystemRole) {
+    const isSysAdminLogin = loginType === 'sysadmin';
+    const isUserLogin = loginType === 'user';
+    return (
+      <div className="mt-8 p-6 bg-zinc-100 rounded-lg">
           <h3 className="text-lg font-semibold mb-3 text-zinc-900">
             Test Accounts
           </h3>
@@ -95,23 +112,7 @@ function LoginPageContent() {
                   </div>
                 </>
               )}
-
-            
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <div className="text-zinc-600">Loading...</div>
-      </div>
-    }>
-      <LoginPageContent />
-    </Suspense>
-  );
+    )
 }
