@@ -54,40 +54,36 @@ export async function PUT(request: NextRequest) {
     }
 
     const { first_name, last_name, dob, mauna, aina, wai, kula, role } = parsed.data;
-    const dobDate = dob ? new Date(dob) : undefined;
+    const dobDate = dob ? new Date(dob) : null;
 
-    const existing = await db
-      .selectFrom("profiles")
-      .select("id")
-      .where("user_id", "=", user.id)
+    const profile = await db
+      .insertInto("profiles")
+      .values({
+        id: crypto.randomUUID(),
+        user_id: user.id,
+        first_name: first_name ?? null,
+        last_name: last_name ?? null,
+        dob: dobDate,
+        mauna: mauna ?? null,
+        aina: aina ?? null,
+        wai: wai ?? null,
+        kula: kula ?? null,
+        role: role ?? null,
+      })
+      .onConflict((oc) =>
+        oc.column("user_id").doUpdateSet((eb) => ({
+          first_name: eb.fn.coalesce(eb.ref("excluded.first_name"), eb.ref("profiles.first_name")),
+          last_name: eb.fn.coalesce(eb.ref("excluded.last_name"), eb.ref("profiles.last_name")),
+          dob: eb.fn.coalesce(eb.ref("excluded.dob"), eb.ref("profiles.dob")),
+          mauna: eb.fn.coalesce(eb.ref("excluded.mauna"), eb.ref("profiles.mauna")),
+          aina: eb.fn.coalesce(eb.ref("excluded.aina"), eb.ref("profiles.aina")),
+          wai: eb.fn.coalesce(eb.ref("excluded.wai"), eb.ref("profiles.wai")),
+          kula: eb.fn.coalesce(eb.ref("excluded.kula"), eb.ref("profiles.kula")),
+          role: eb.fn.coalesce(eb.ref("excluded.role"), eb.ref("profiles.role")),
+        }))
+      )
+      .returningAll()
       .executeTakeFirst();
-
-    let profile;
-    if (existing) {
-      profile = await db
-        .updateTable("profiles")
-        .set({ first_name, last_name, dob: dobDate, mauna, aina, wai, kula, role })
-        .where("user_id", "=", user.id)
-        .returningAll()
-        .executeTakeFirst();
-    } else {
-      profile = await db
-        .insertInto("profiles")
-        .values({
-          id: crypto.randomUUID(),
-          user_id: user.id,
-          first_name: first_name ?? null,
-          last_name: last_name ?? null,
-          dob: dobDate ?? null,
-          mauna: mauna ?? null,
-          aina: aina ?? null,
-          wai: wai ?? null,
-          kula: kula ?? null,
-          role: role ?? null,
-        })
-        .returningAll()
-        .executeTakeFirst();
-    }
 
     return NextResponse.json({ profile });
   } catch (error) {
