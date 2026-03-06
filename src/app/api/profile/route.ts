@@ -71,16 +71,16 @@ export async function PUT(request: NextRequest) {
         role: role ?? null,
       })
       .onConflict((oc) =>
-        oc.column("user_id").doUpdateSet((eb) => ({
-          first_name: eb.fn.coalesce(eb.ref("excluded.first_name"), eb.ref("profiles.first_name")),
-          last_name: eb.fn.coalesce(eb.ref("excluded.last_name"), eb.ref("profiles.last_name")),
-          dob: eb.fn.coalesce(eb.ref("excluded.dob"), eb.ref("profiles.dob")),
-          mauna: eb.fn.coalesce(eb.ref("excluded.mauna"), eb.ref("profiles.mauna")),
-          aina: eb.fn.coalesce(eb.ref("excluded.aina"), eb.ref("profiles.aina")),
-          wai: eb.fn.coalesce(eb.ref("excluded.wai"), eb.ref("profiles.wai")),
-          kula: eb.fn.coalesce(eb.ref("excluded.kula"), eb.ref("profiles.kula")),
-          role: eb.fn.coalesce(eb.ref("excluded.role"), eb.ref("profiles.role")),
-        }))
+        oc.column("user_id").doUpdateSet({
+          first_name: first_name ?? null,
+          last_name: last_name ?? null,
+          dob: dobDate,
+          mauna: mauna ?? null,
+          aina: aina ?? null,
+          wai: wai ?? null,
+          kula: kula ?? null,
+          role: role ?? null,
+        })
       )
       .returningAll()
       .executeTakeFirst();
