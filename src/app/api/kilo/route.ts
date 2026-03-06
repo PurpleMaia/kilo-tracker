@@ -11,19 +11,37 @@ const kiloEntrySchema = z.object({
   location: z.string().nullable().optional(),
 });
 
+const PAGE_SIZE = 5;
+
 export async function GET(request: NextRequest) {
   try {
     const user = await validateSession(request);
 
-    const entries = await db
-      .selectFrom("kilo")
-      .select(["id", "q1", "q2", "q3", "location", "created_at"])
-      .where("user_id", "=", user.id)
-      .orderBy("created_at", "desc")
-      .limit(20)
-      .execute();
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+    const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? String(PAGE_SIZE))));
+    const offset = (page - 1) * limit;
 
-    return NextResponse.json({ entries });
+    const [entries, countResult] = await Promise.all([
+      db
+        .selectFrom("kilo")
+        .select(["id", "q1", "q2", "q3", "location", "created_at"])
+        .where("user_id", "=", user.id)
+        .orderBy("created_at", "desc")
+        .limit(limit)
+        .offset(offset)
+        .execute(),
+      db
+        .selectFrom("kilo")
+        .select(({ fn }) => fn.count<number>("id").as("total"))
+        .where("user_id", "=", user.id)
+        .executeTakeFirst(),
+    ]);
+
+    const total = Number(countResult?.total ?? 0);
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({ entries, total, page, totalPages });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(
