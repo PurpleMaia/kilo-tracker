@@ -33,7 +33,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
           <div className="container flex h-14 items-center px-4 justify-between">
             <Link href="/dashboard" className="ml-6 flex items-center space-x-2">
-              <span className="font-bold text-xl">PMF Template</span>
+              <span className="font-bold text-xl">KILO</span>
             </Link>
 
             <DashboardHeader user={headerUser} />
@@ -41,16 +41,6 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
         </header>
 
         <main className="container mx-auto py-6 px-4 space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <Link
-              href="/kilo"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Go to KILO Tracker →
-            </Link>
-          </div>
-
           {children}
 
           <p className="text-sm text-muted-foreground font-bold mt-8"> Areas marked with * are not yet implemented</p>

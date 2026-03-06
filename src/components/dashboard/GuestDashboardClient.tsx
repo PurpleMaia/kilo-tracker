@@ -113,20 +113,16 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold tracking-tight">Welcome, {user.username}!</h1>
-            <Badge variant="outline" className="text-sm">Guest</Badge>
           </div>
-          <p className="text-muted-foreground mt-1">
-            You&apos;re currently browsing as a guest
-          </p>
         </div>
         {profileComplete ? (
           <Button asChild className="w-full sm:w-auto">
-            <Link href="/kilo">Try the KILO Entry Form</Link>
+            <Link href="/kilo">Start a new KILO</Link>
           </Button>
         ) : (
           <div className="flex flex-col gap-1 w-full sm:w-auto">
             <Button disabled className="w-full sm:w-auto" variant="outline">
-              Try the KILO Entry Form
+              Start a new KILO
             </Button>
             <p className="text-xs text-muted-foreground text-center">Complete your profile to unlock.</p>
           </div>
@@ -140,7 +136,7 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
           <CardHeader className="flex flex-row items-start justify-between space-y-0">
             <div>
               <CardTitle>Your Account</CardTitle>
-              <CardDescription>Your account information and profile</CardDescription>
+              <CardDescription>View or edit account</CardDescription>
             </div>
             {!editing ? (
               <Button variant="outline" size="sm" onClick={handleEdit}>
@@ -169,14 +165,14 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
                 <span className="text-muted-foreground">Email:</span>
                 <span className="font-medium">{user.email}</span>
               </div>
-              <div className="flex justify-between">
+              {/* <div className="flex justify-between">
                 <span className="text-muted-foreground">Account Type:</span>
                 <Badge variant="outline">Guest</Badge>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Organization:</span>
                 <span className="text-muted-foreground italic">None</span>
-              </div>
+              </div> */}
             </div>
 
             {/* Editable profile fields */}
@@ -296,32 +292,7 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
               )}
             </div>
           </CardContent>
-        </Card>
-
-        {/* Get More Access card */}
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Get More Access</CardTitle>
-            <CardDescription>
-              Join an organization to unlock the full platform experience
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-5 flex-1">
-            <div className="space-y-2">
-              {[
-                { enabled: true, label: "View Public Content", description: "Browse publicly available resources" },
-                { enabled: true, label: "Update Profile", description: "Manage your account settings" },
-                { enabled: false, label: "Team Collaboration", description: "Requires organization membership" },
-              ].map(({ enabled, label, description }) => (
-                <FeatureItem key={label} enabled={enabled} label={label} description={description} />
-              ))}
-            </div>
-            <div className="mt-auto flex flex-col gap-2 pt-2">
-              <Button className="w-full" disabled>Browse Organizations</Button>
-              <Button variant="outline" className="w-full" disabled>Contact Support</Button>
-            </div>
-          </CardContent>
-        </Card>
+        </Card>        
       </div>
 
       <KiloHistoryCard />
