@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Mic, Square } from "lucide-react";
+import { useState, useRef } from "react";
+import { Mic, Square, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Ask browser what audio format it supports */
@@ -13,9 +13,10 @@ function getSupportedMimeType(): string {
 interface AudioRecorderProps {
   onTranscription?: (text: string) => void;
   onRecordingStateChange?: (isRecording: boolean) => void;
+  compact?: boolean;
 }
 
-export function AudioRecorder({ onTranscription, onRecordingStateChange }: AudioRecorderProps) {
+export function AudioRecorder({ onTranscription, onRecordingStateChange, compact }: AudioRecorderProps) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -85,6 +86,33 @@ export function AudioRecorder({ onTranscription, onRecordingStateChange }: Audio
     setRecording(false);
     onRecordingStateChange?.(false);
   };
+
+  if (compact) {
+    return (
+      <button
+        type="button"
+        onClick={recording ? stopRecording : startRecording}
+        disabled={transcribing}
+        title={recording ? "Stop recording" : transcribing ? "Transcribing..." : "Record audio"}
+        className={cn(
+          "flex items-center justify-center w-9 h-9 rounded-full transition-colors shrink-0",
+          recording
+            ? "bg-red-500 hover:bg-red-600 text-white"
+            : transcribing
+            ? "bg-yellow-500 text-white cursor-not-allowed"
+            : "bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground",
+        )}
+      >
+        {transcribing ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : recording ? (
+          <Square className="h-4 w-4 fill-current" />
+        ) : (
+          <Mic className="h-4 w-4" />
+        )}
+      </button>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-4">

@@ -31,4 +31,4 @@ export default async function DashboardPage() {
   // Guest (no org role)
   const profile = await fetchUserProfile(user.id);
   return <GuestDashboardClient user={user} profile={profile} />;
-}  
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthUser } from "@/types/auth";
 import { UserProfile, isProfileComplete } from "@/lib/profile-utils";
+import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
 
 type GuestDashboardClientProps = {
   user: AuthUser;
@@ -43,7 +44,16 @@ function toFormValues(profile: UserProfile | null): ProfileForm {
 
 export default function GuestDashboardClient({ user, profile: initialProfile }: GuestDashboardClientProps) {
   const router = useRouter();
+  const toastShown = useRef(false);
   const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("kilo_submitted") === "true" && !toastShown.current) {
+      toastShown.current = true;
+      sessionStorage.removeItem("kilo_submitted");
+      toast.success("KILO entry saved successfully!");
+    }
+  }, []);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
   const [form, setForm] = useState<ProfileForm>(toFormValues(initialProfile));
@@ -123,31 +133,6 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Get More Access card — merges alert + join + features + CTA */}
-        <Card className="flex flex-col">
-          <CardHeader>
-            <CardTitle>Get More Access</CardTitle>
-            <CardDescription>
-              Join an organization to unlock the full platform experience
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-5 flex-1">
-            <div className="space-y-2">
-              {[
-                { enabled: true, label: "View Public Content", description: "Browse publicly available resources" },
-                { enabled: true, label: "Update Profile", description: "Manage your account settings" },
-                { enabled: false, label: "Team Collaboration", description: "Requires organization membership" },
-              ].map(({ enabled, label, description }) => (
-                <FeatureItem key={label} enabled={enabled} label={label} description={description} />
-              ))}
-            </div>
-            <div className="mt-auto flex flex-col gap-2 pt-2">
-              <Button className="w-full" disabled>Browse Organizations</Button>
-              <Button variant="outline" className="w-full" disabled>Contact Support</Button>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-start justify-between space-y-0">
             <div>
@@ -309,7 +294,34 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
             </div>
           </CardContent>
         </Card>
+
+        {/* Get More Access card */}
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle>Get More Access</CardTitle>
+            <CardDescription>
+              Join an organization to unlock the full platform experience
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-5 flex-1">
+            <div className="space-y-2">
+              {[
+                { enabled: true, label: "View Public Content", description: "Browse publicly available resources" },
+                { enabled: true, label: "Update Profile", description: "Manage your account settings" },
+                { enabled: false, label: "Team Collaboration", description: "Requires organization membership" },
+              ].map(({ enabled, label, description }) => (
+                <FeatureItem key={label} enabled={enabled} label={label} description={description} />
+              ))}
+            </div>
+            <div className="mt-auto flex flex-col gap-2 pt-2">
+              <Button className="w-full" disabled>Browse Organizations</Button>
+              <Button variant="outline" className="w-full" disabled>Contact Support</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      <KiloHistoryCard />
     </div>
   );
 }
