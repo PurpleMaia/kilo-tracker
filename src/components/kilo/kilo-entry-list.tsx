@@ -86,7 +86,7 @@ export function KiloEntryList() {
 
                 {/* Buttons */}
                 <div className="flex items-center gap-2">
-                  <Button id='edit-kilo-button'
+                  <Button id='edit-kilo-button' asChild
                     variant="ghost" size="sm" className="touch-action-manipulation" aria-label="Edit KILO Entry">
                     <Link href={`/kilo?edit=${entry.id}`}>
                       <Pencil className="w-5 h-5" />
