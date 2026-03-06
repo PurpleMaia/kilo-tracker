@@ -68,36 +68,9 @@ const useKiloEntries = () => {
         }
     }
 
-    const updateEntry = async (id: number, updatedData: Partial<KiloEntry>) => {
-        setUpdatingId(id);
-        try {
-            await validateSession(); // Ensure user is authenticated before attempting update
-            const response = await fetch("/api/kilo", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, ...updatedData }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || "Failed to update entry");
-            }
-
-            const data = await response.json();
-            setEntries((prev) =>
-                prev.map((entry) => (entry.id === id ? data.entry : entry))
-            );
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to update entry");
-        } finally {
-            setUpdatingId(null);
-        }
-    }
-
     return { 
         entries, isLoading, error, 
-        deletingId, deleteEntry,
-        updatingId, updateEntry,
+        deletingId, deleteEntry
     };
 };
 
