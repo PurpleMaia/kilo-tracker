@@ -34,15 +34,15 @@ export interface ActivityCategories {
   emoji: string | null;
   id: Generated<string>;
   label: string;
-  tenant_id: string;
+  tenant_id: string | null;
 }
 
 export interface Kilo {
   audio: Buffer | null;
-  created_at: Timestamp | null;
+  created_at: Generated<Timestamp | null>;
   id: Generated<number>;
-  image: Buffer | null;
   location: string | null;
+  photo_path: string | null;
   q1: string | null;
   q2: string | null;
   q3: string | null;
@@ -109,7 +109,7 @@ export interface Sessions {
 }
 
 export interface Tenants {
-  branding_config: Generated<Json | null>;
+  branding_config: Json | null;
   created_at: Generated<Timestamp | null>;
   id: Generated<string>;
   name: string;
@@ -117,9 +117,7 @@ export interface Tenants {
 }
 
 export interface Users {
-  avatar_url: string | null;
   created_at: Generated<Timestamp | null>;
-  display_name: string | null;
   email: string;
   id: Generated<string>;
   password_hash: string;
