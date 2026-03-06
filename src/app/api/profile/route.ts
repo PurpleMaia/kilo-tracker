@@ -5,14 +5,14 @@ import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 
 const profileUpdateSchema = z.object({
-  first_name: z.string().min(1).trim(),
-  last_name: z.string().min(1).trim(),
+  first_name: z.string().trim().min(1),
+  last_name: z.string().trim().min(1),
   dob: z.string().min(1),
-  mauna: z.string().min(1).trim(),
-  aina: z.string().min(1).trim(),
-  wai: z.string().min(1).trim(),
-  kula: z.string().min(1).trim(),
-  role: z.string().min(1).trim(),
+  mauna: z.string().trim().min(1),
+  aina: z.string().trim().min(1),
+  wai: z.string().trim().min(1),
+  kula: z.string().trim().min(1),
+  role: z.string().trim().min(1),
 });
 
 export async function GET(request: NextRequest) {
