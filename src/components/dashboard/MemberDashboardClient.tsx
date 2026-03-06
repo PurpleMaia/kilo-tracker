@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,19 +13,17 @@ const formatCount = (value: number) => value.toLocaleString();
 type MemberDashboardClientProps = {
   user: AuthUser;
   data: MemberDashboardData;
-  kiloSubmitted?: boolean;
 };
 
-export default function MemberDashboardClient({ user, data, kiloSubmitted }: MemberDashboardClientProps) {
-  const router = useRouter();
+export default function MemberDashboardClient({ user, data }: MemberDashboardClientProps) {
   const toastShown = useRef(false);
   useEffect(() => {
-    if (kiloSubmitted && !toastShown.current) {
+    if (sessionStorage.getItem("kilo_submitted") === "true" && !toastShown.current) {
       toastShown.current = true;
+      sessionStorage.removeItem("kilo_submitted");
       toast.success("KILO entry saved successfully!");
-      router.replace("/dashboard");
     }
-  }, [kiloSubmitted, router]);
+  }, []);
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

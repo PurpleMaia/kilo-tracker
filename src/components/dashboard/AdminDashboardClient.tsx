@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,19 +14,17 @@ const formatCount = (value: number) => value.toLocaleString();
 type AdminDashboardClientProps = {
   user: AuthUser;
   data: AdminDashboardData;
-  kiloSubmitted?: boolean;
 };
 
-export default function AdminDashboardClient({ user, data, kiloSubmitted }: AdminDashboardClientProps) {
-  const router = useRouter();
+export default function AdminDashboardClient({ user, data }: AdminDashboardClientProps) {
   const toastShown = useRef(false);
   useEffect(() => {
-    if (kiloSubmitted && !toastShown.current) {
+    if (sessionStorage.getItem("kilo_submitted") === "true" && !toastShown.current) {
       toastShown.current = true;
+      sessionStorage.removeItem("kilo_submitted");
       toast.success("KILO entry saved successfully!");
-      router.replace("/dashboard");
     }
-  }, [kiloSubmitted, router]);
+  }, []);
 
   return (
     <div className="space-y-6">

@@ -16,7 +16,6 @@ import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
 type GuestDashboardClientProps = {
   user: AuthUser;
   profile: UserProfile | null;
-  kiloSubmitted?: boolean;
 };
 
 type ProfileForm = {
@@ -43,18 +42,18 @@ function toFormValues(profile: UserProfile | null): ProfileForm {
   };
 }
 
-export default function GuestDashboardClient({ user, profile: initialProfile, kiloSubmitted }: GuestDashboardClientProps) {
+export default function GuestDashboardClient({ user, profile: initialProfile }: GuestDashboardClientProps) {
   const router = useRouter();
   const toastShown = useRef(false);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    if (kiloSubmitted && !toastShown.current) {
+    if (sessionStorage.getItem("kilo_submitted") === "true" && !toastShown.current) {
       toastShown.current = true;
+      sessionStorage.removeItem("kilo_submitted");
       toast.success("KILO entry saved successfully!");
-      router.replace("/dashboard");
     }
-  }, [kiloSubmitted, router]);
+  }, []);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
   const [form, setForm] = useState<ProfileForm>(toFormValues(initialProfile));

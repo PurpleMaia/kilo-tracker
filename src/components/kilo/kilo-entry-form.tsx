@@ -58,7 +58,8 @@ export function KiloEntryForm() {
         throw new Error(data.error || "Failed to save entry");
       }
       if (photoPreview) URL.revokeObjectURL(photoPreview);
-      router.push("/dashboard?kilo_submitted=true");
+      sessionStorage.setItem("kilo_submitted", "true");
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
     } finally {
