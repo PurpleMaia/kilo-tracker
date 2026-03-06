@@ -23,7 +23,7 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
-export type Role = "admin" | "worker";
+export type Role = "admin" | "member";
 
 export type Sysrole = "sysadmin" | "user";
 
