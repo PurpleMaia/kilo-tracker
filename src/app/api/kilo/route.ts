@@ -9,6 +9,7 @@ const kiloEntrySchema = z.object({
   q2: z.string().nullable().optional(),
   q3: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
+  photo_path: z.string().nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { q1, q2, q3, location } = parsed.data;
+    const { q1, q2, q3, location, photo_path } = parsed.data;
 
     const newEntry = await db
       .insertInto("kilo")
@@ -35,8 +36,9 @@ export async function POST(request: NextRequest) {
         q2: q2 ?? null,
         q3: q3 ?? null,
         location: location ?? null,
+        photo_path: photo_path ?? null,
       })
-      .returning(["id", "q1", "q2", "q3", "location", "created_at"])
+      .returning(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
       .executeTakeFirst();
 
     return NextResponse.json({ entry: newEntry }, { status: 201 });
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
 
       const entry = await db
         .selectFrom("kilo")
-        .select(["id", "q1", "q2", "q3", "location", "created_at"])
+        .select(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
         .where("id", "=", entryId)
         .where("user_id", "=", user.id)
         .executeTakeFirst();
@@ -118,7 +120,7 @@ export async function GET(request: NextRequest) {
     const [entries, countResult] = await Promise.all([
       db
         .selectFrom("kilo")
-        .select(["id", "q1", "q2", "q3", "location", "created_at"])
+        .select(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
         .where("user_id", "=", user.id)
         .orderBy("created_at", "desc")
         .limit(limit)
@@ -220,7 +222,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { id, q1, q2, q3, location } = parsed.data;
+    const { id, q1, q2, q3, location, photo_path } = parsed.data;
 
     // Update the entry only if it belongs to the user
     const updatedEntry = await db
@@ -230,10 +232,11 @@ export async function PUT(request: NextRequest) {
         q2: q2 ?? null,
         q3: q3 ?? null,
         location: location ?? null,
+        photo_path: photo_path ?? null,
       })
       .where("id", "=", id)
       .where("user_id", "=", user.id)
-      .returning(["id", "q1", "q2", "q3", "location", "created_at"])
+      .returning(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
       .executeTakeFirst();
 
     if (!updatedEntry) {
