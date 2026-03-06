@@ -37,7 +37,6 @@ export function DailyOleloCard() {
     <Card>
       <CardHeader>
         <CardTitle>ʻOlelo Noʻeau of the Day</CardTitle>
-        <CardDescription>Hawaiian wisdom</CardDescription>
       </CardHeader>
       <CardContent>
         <blockquote className="text-lg italic text-muted-foreground">

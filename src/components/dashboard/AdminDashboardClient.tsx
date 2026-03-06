@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { AuthUser } from "@/types/auth";
 import type { AdminDashboardData } from "@/lib/data/admin";
 import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
-import { DailyOleloCard } from "@/components/dashboard/daily-olelo-card";
+import { DailyOleloCard } from "@/components/shared/DailyON";
 
 const formatCount = (value: number) => value.toLocaleString();
 

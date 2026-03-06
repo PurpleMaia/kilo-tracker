@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { AuthUser } from "@/types/auth";
 import { UserProfile, isProfileComplete } from "@/lib/profile-utils";
 import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
-import { DailyOleloCard } from "@/components/dashboard/daily-olelo-card";
+import { DailyOleloCard } from "@/components/shared/DailyON";
 
 type GuestDashboardClientProps = {
   user: AuthUser;

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import type { SysAdminDashboardData } from "@/lib/data/sysadmin";
 import { AuthUser } from "@/types/auth";
-import { DailyOleloCard } from "@/components/dashboard/daily-olelo-card";
+import { DailyOleloCard } from "@/components/shared/DailyON";
 
 const formatCount = (value: number) => value.toLocaleString();
 
