@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,8 +19,10 @@ type MemberDashboardClientProps = {
 
 export default function MemberDashboardClient({ user, data, kiloSubmitted }: MemberDashboardClientProps) {
   const router = useRouter();
+  const toastShown = useRef(false);
   useEffect(() => {
-    if (kiloSubmitted) {
+    if (kiloSubmitted && !toastShown.current) {
+      toastShown.current = true;
       toast.success("KILO entry saved successfully!");
       router.replace("/dashboard");
     }

@@ -216,7 +216,7 @@ export default function SurveyForm() {
         {/* Question 2: Kilo + photo */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">2. What you see outside today? <span className="text-red-500">*</span></CardTitle>
+            <CardTitle className="text-base">2. What do you see outside today? <span className="text-red-500">*</span></CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

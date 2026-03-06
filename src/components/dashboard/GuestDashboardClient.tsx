@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -45,14 +45,16 @@ function toFormValues(profile: UserProfile | null): ProfileForm {
 
 export default function GuestDashboardClient({ user, profile: initialProfile, kiloSubmitted }: GuestDashboardClientProps) {
   const router = useRouter();
+  const toastShown = useRef(false);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    if (kiloSubmitted) {
+    if (kiloSubmitted && !toastShown.current) {
+      toastShown.current = true;
       toast.success("KILO entry saved successfully!");
       router.replace("/dashboard");
     }
-  }, [kiloSubmitted]);
+  }, [kiloSubmitted, router]);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
   const [form, setForm] = useState<ProfileForm>(toFormValues(initialProfile));
