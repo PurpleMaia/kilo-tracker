@@ -5,7 +5,6 @@
 // - view picture
 
 import Link from 'next/link'
-import useKiloEntries from '@/hooks/use-kilo'
 import { KiloEntry } from '@/types/kilo'
 import { Clock, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -13,9 +12,10 @@ import { Card, CardHeader, CardContent } from '../ui/card'
 
 interface KiloCardProps {
     entry: KiloEntry
+    deletingId: number | null
+    deleteEntry: (id: number) => void
 }
-export default function KiloCard({ entry }: KiloCardProps) {
-  const { deletingId, deleteEntry } = useKiloEntries();
+export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardProps) {
   return (
     <Card 
         key={entry.id}

@@ -58,7 +58,10 @@ export function KiloHistoryCard() {
         ) : (
           <ul className={`space-y-4 transition-opacity duration-150 ${isPending ? "opacity-50" : "opacity-100"}`}>
             {entries.map((entry) => (
-              <KiloCard entry={entry} key={entry.id} />
+              <KiloCard entry={entry} key={entry.id} 
+                deletingId={deletingId}
+                deleteEntry={deleteEntry}              
+              />
             ))}
           </ul>
         )}
