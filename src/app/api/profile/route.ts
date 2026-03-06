@@ -4,15 +4,19 @@ import { db } from "@/db/kysely/client";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 
+function emptyToUndefined(val: unknown) {
+  return typeof val === "string" && val.trim() === "" ? undefined : val;
+}
+
 const profileUpdateSchema = z.object({
-  first_name: z.string().trim().min(1),
-  last_name: z.string().trim().min(1),
-  dob: z.string().date(),
-  mauna: z.string().trim().min(1),
-  aina: z.string().trim().min(1),
-  wai: z.string().trim().min(1),
-  kula: z.string().trim().min(1),
-  role: z.string().trim().min(1),
+  first_name: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  last_name: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  dob: z.preprocess(emptyToUndefined, z.string().date().optional()),
+  mauna: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  aina: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  wai: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  kula: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  role: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
 });
 
 export async function GET(request: NextRequest) {
@@ -50,6 +54,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const { first_name, last_name, dob, mauna, aina, wai, kula, role } = parsed.data;
+    const dobDate = dob ? new Date(dob) : undefined;
 
     const existing = await db
       .selectFrom("profiles")
@@ -61,7 +66,7 @@ export async function PUT(request: NextRequest) {
     if (existing) {
       profile = await db
         .updateTable("profiles")
-        .set({ first_name, last_name, dob: new Date(dob), mauna, aina, wai, kula, role })
+        .set({ first_name, last_name, dob: dobDate, mauna, aina, wai, kula, role })
         .where("user_id", "=", user.id)
         .returningAll()
         .executeTakeFirst();
@@ -71,14 +76,14 @@ export async function PUT(request: NextRequest) {
         .values({
           id: crypto.randomUUID(),
           user_id: user.id,
-          first_name,
-          last_name,
-          dob: new Date(dob),
-          mauna,
-          aina,
-          wai,
-          kula,
-          role,
+          first_name: first_name ?? null,
+          last_name: last_name ?? null,
+          dob: dobDate ?? null,
+          mauna: mauna ?? null,
+          aina: aina ?? null,
+          wai: wai ?? null,
+          kula: kula ?? null,
+          role: role ?? null,
         })
         .returningAll()
         .executeTakeFirst();
