@@ -1,3 +1,5 @@
+"use client"
+
 // Main Kilo Card
 // - edit, delete, view kilo
 // - view picture
