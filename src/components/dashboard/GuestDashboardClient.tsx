@@ -50,6 +50,7 @@ export default function GuestDashboardClient({ user, profile: initialProfile, ki
   useEffect(() => {
     if (kiloSubmitted) {
       toast.success("KILO entry saved successfully!");
+      router.replace("/dashboard");
     }
   }, [kiloSubmitted]);
   const [saving, setSaving] = useState(false);

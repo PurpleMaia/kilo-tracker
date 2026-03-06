@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +19,13 @@ type AdminDashboardClientProps = {
 };
 
 export default function AdminDashboardClient({ user, data, kiloSubmitted }: AdminDashboardClientProps) {
+  const router = useRouter();
   useEffect(() => {
     if (kiloSubmitted) {
       toast.success("KILO entry saved successfully!");
+      router.replace("/dashboard");
     }
-  }, [kiloSubmitted]);
+  }, [kiloSubmitted, router]);
 
   return (
     <div className="space-y-6">
