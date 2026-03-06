@@ -2,8 +2,10 @@
 
 import { KiloEntry } from "@/types/kilo";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 const useKiloEntries = () => {
+    const router = useRouter();
     const [entries, setEntries] = useState<KiloEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);    
@@ -31,9 +33,22 @@ const useKiloEntries = () => {
         fetchEntries();
     }, []);
 
+    async function validateSession() {
+        try {
+            const response = await fetch("/api/auth/session");
+            if (!response.ok) {
+                throw new Error("Unauthorized");
+            }
+        } catch (err) {
+            router.push("/login");
+            setError("You must be logged in to view your KILO entries.");
+        }
+    }
+
     const deleteEntry = async (id: number) => {
         setDeletingId(id);
-        try {
+        try {            
+            await validateSession(); // Ensure user is authenticated before attempting delete
             const response = await fetch("/api/kilo", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
@@ -56,6 +71,7 @@ const useKiloEntries = () => {
     const updateEntry = async (id: number, updatedData: Partial<KiloEntry>) => {
         setUpdatingId(id);
         try {
+            await validateSession(); // Ensure user is authenticated before attempting update
             const response = await fetch("/api/kilo", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
