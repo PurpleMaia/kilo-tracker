@@ -1,37 +1,15 @@
 "use client";
 
 import { KiloEntry } from "@/types/kilo";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 const useKiloEntries = () => {
     const router = useRouter();
     const [entries, setEntries] = useState<KiloEntry[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);    
     const [deletingId, setDeletingId] = useState<number | null>(null);
-    const [updatingId, setUpdatingId] = useState<number | null>(null);
-
-    async function fetchEntries() {
-        try {
-            setIsLoading(true);
-            const response = await fetch("/api/kilo");
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || "Failed to fetch entries");
-        }
-            const data = await response.json();
-            setEntries(data.entries);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to load entries");
-        } finally {
-            setIsLoading(false);
-        }
-    }
-
-    useEffect(() => {
-        fetchEntries();
-    }, []);
 
     async function validateSession() {
         try {
@@ -69,7 +47,9 @@ const useKiloEntries = () => {
     }
 
     return { 
-        entries, isLoading, error, 
+        entries, setEntries,
+        initialLoading, setInitialLoading,
+        error, 
         deletingId, deleteEntry
     };
 };
