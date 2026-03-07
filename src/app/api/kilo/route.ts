@@ -4,12 +4,22 @@ import { db } from "@/db/kysely/client";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 
+// Regex pattern for valid photo paths: /kilo/{userId}/{uuid}.{ext}
+const PHOTO_PATH_PATTERN = /^\/kilo\/[a-zA-Z0-9_-]+\/[a-f0-9-]{36}\.(jpg|jpeg|png|gif|webp)$/i;
+
 const kiloEntrySchema = z.object({
   q1: z.string().min(1, "Question 1 is required"),
   q2: z.string().nullable().optional(),
   q3: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
-  photo_path: z.string().nullable().optional(),
+  photo_path: z
+    .string()
+    .nullable()
+    .optional()
+    .refine(
+      (val) => !val || PHOTO_PATH_PATTERN.test(val),
+      "Invalid photo path format"
+    ),
 });
 
 export async function POST(request: NextRequest) {

@@ -1,19 +1,24 @@
+"use client"
+
 // Main Kilo Card
 // - edit, delete, view kilo
 // - view picture
 
 import Link from 'next/link'
-import useKiloEntries from '@/hooks/use-kilo'
-import { KiloEntry } from '@/types/kilo'
+import Image from 'next/image'
+import { KiloEntry, QUESTIONS } from '@/types/kilo'
 import { Clock, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Card, CardHeader, CardContent } from '../ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from '../ui/dialog'
+import { DialogTitle } from '@radix-ui/react-dialog'
 
 interface KiloCardProps {
     entry: KiloEntry
+    deletingId: number | null
+    deleteEntry: (id: number) => void
 }
-export default function KiloCard({ entry }: KiloCardProps) {
-  const { deletingId, deleteEntry } = useKiloEntries();
+export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardProps) {
   return (
     <Card 
         key={entry.id}
@@ -21,9 +26,9 @@ export default function KiloCard({ entry }: KiloCardProps) {
         >
         {/* Entry Header */}
         <CardHeader className="gap-2 text-sm text-muted-foreground mb-0">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between">
             {/* Date Made */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 shrink-0" />
                 <span>
                 {entry.created_at
@@ -46,7 +51,7 @@ export default function KiloCard({ entry }: KiloCardProps) {
             )} */}
 
             {/* Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
                 <Button id='edit-kilo-button' asChild
                 variant="ghost" size="sm" className="touch-action-manipulation" aria-label="Edit KILO Entry">
                 <Link href={`/kilo?edit=${entry.id}`}>
@@ -64,34 +69,28 @@ export default function KiloCard({ entry }: KiloCardProps) {
 
         </CardHeader>  
         <CardContent className="pt-0 space-y-2 flex w-full">
-            <div className="space-y-2 flex-3">        
+            <div className="space-y-2 grow">        
             {entry.q1 && (
             <div>
-                <p className="font-medium text-sm">Question 1:</p>
+                <p className="font-medium text-sm text-wrap">{QUESTIONS[0].question}:</p>
                 <p className="text-sm">{entry.q1}</p>
             </div>
-            )}              
+            )}
+            <div className='border-t my-2' />
             {entry.q2 && (
-            <div>
-                <p className="font-medium text-sm">Question 2:</p>
+                <div>
+                <p className="font-medium text-sm text-wrap">{QUESTIONS[1].question}:</p>
                 <p className="text-sm">{entry.q2}</p>
             </div>
             )}              
+            <div className='border-t my-2' />
             {entry.q3 && (
             <div>
-                <p className="font-medium text-sm">Question 3:</p>
-                <p className="text-sm">{entry.q3}</p>
+                <p className="font-medium text-sm ">{QUESTIONS[2].question}:</p>
+                <p className="text-sm text-wrap">{entry.q3}</p>
             </div>
             )}
             </div>  
-
-            <div className='border-l mx-4'></div>   
-
-            <div className="flex-4 flex items-center align-middle">
-                {entry.photo_path && (
-                    <img src={entry.photo_path} alt="KILO Entry Photo" className="w-full h-auto rounded-lg" />
-                )}
-            </div>
         </CardContent>
     </Card>
   )
