@@ -148,15 +148,21 @@ export function LoginForm({ loginType }: LoginFormProps) {
             </Button>
           </p>
         )}
-        <p className="text-sm text-muted-foreground">
-          {loginType === 'sysadmin' ? 'Switch to ' : 'Switch to '}
-          <Button asChild variant="link" className="p-0 h-auto">
-            <Link href={loginType === 'sysadmin' ? '/login?type=user' : '/login?type=sysadmin'}>
-              {loginType === 'sysadmin' ? 'User Login' : 'Internal Login'}
-            </Link>
-          </Button>
-        </p>
+        {/* {LoginSwitch(loginType)} */}      
       </CardFooter>
     </Card>
   );
+}
+
+function LoginSwitch(loginType: SystemRole) {
+  return (
+    <p className="text-sm text-muted-foreground">
+      {loginType === 'sysadmin' ? 'Switch to ' : 'Switch to '}
+      <Button asChild variant="link" className="p-0 h-auto">
+        <Link href={loginType === 'sysadmin' ? '/login?type=user' : '/login?type=sysadmin'}>
+          {loginType === 'sysadmin' ? 'User Login' : 'Internal Login'}
+        </Link>
+      </Button>
+    </p>
+  )
 }

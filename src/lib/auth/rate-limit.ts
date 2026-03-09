@@ -88,7 +88,9 @@ export async function checkLoginRateLimit(ip: string | null, identifier: string)
     const attemptCount = result ? Number(result.attemptCount) : 0;
     const remainingAttempts = Math.max(0, MAX_ATTEMPTS - attemptCount);
 
-    console.log(`[RateLimit] Login attempts in last ${WINDOW_MINUTES} minutes for Identifier (${identifier}): ${attemptCount}. Remaining: ${remainingAttempts}`);
+    if (process.env.NODE_ENV !== "production") {
+        console.log(`[RateLimit] Login attempts in last ${WINDOW_MINUTES} minutes for Identifier (${identifier}): ${attemptCount}. Remaining: ${remainingAttempts}`);
+    }
 
     if (attemptCount >= MAX_ATTEMPTS) {
         throw Errors.TOO_MANY_REQUESTS;
@@ -113,4 +115,59 @@ export async function clearFailedAttempts(ip: string | null, identifier: string)
         .execute();
 
     console.log(`[RateLimit] Cleared failed login attempts for Identifier (${identifier}). Deleted rows: ${result.length}`);
+}
+
+/**
+ * Records a registration attempt in the database.
+ * @param ip The IP address of the client (may be null).
+ * @param userAgent The User-Agent string of the client (may be null).
+ */
+export async function recordRegistrationAttempt(ip: string | null, userAgent: string | null, success: boolean = true, error?: string): Promise<void> {
+    const result = await db.insertInto('login_attempts')
+        .values({
+            ip_address: ip,
+            user_agent: userAgent,
+            identifier: 'REGISTRATION',
+            error_message: error ?? null,
+            successful: success
+        })
+        .execute();
+
+    if (!result[0].numInsertedOrUpdatedRows || result[0].numInsertedOrUpdatedRows === BigInt(0)) {
+        console.error('[RateLimit] Failed to record registration attempt for IP:', ip);
+    }
+}
+
+/**
+ * Checks if the number of registration attempts from an IP exceeds the allowed limit.
+ * @param ip The client IP address (may be null).
+ * @throws Error with code 'TOO_MANY_REQUESTS' if the limit is exceeded.
+ */
+export async function checkRegistrationRateLimit(ip: string | null): Promise<void> {
+    const MAX_ATTEMPTS = 5;
+    const WINDOW_MINUTES = 60; // 1 hour window for registrations
+
+    if (!ip) {
+        // If we can't identify the client, allow the request but log a warning
+        console.warn('[RateLimit] No IP address available for registration rate limit check');
+        return;
+    }
+
+    const since = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000);
+
+    const result = await db.selectFrom('login_attempts')
+        .select(db.fn.count<number>('id').as('attemptCount'))
+        .where('attempt_at', '>=', since)
+        .where('identifier', '=', 'REGISTRATION')
+        .where('ip_address', '=', ip)
+        .executeTakeFirst();
+
+    const attemptCount = result ? Number(result.attemptCount) : 0;
+    const remainingAttempts = Math.max(0, MAX_ATTEMPTS - attemptCount);
+
+    console.log(`[RateLimit] Registration attempts in last ${WINDOW_MINUTES} minutes for IP (${ip}): ${attemptCount}. Remaining: ${remainingAttempts}`);
+
+    if (attemptCount >= MAX_ATTEMPTS) {
+        throw Errors.TOO_MANY_REQUESTS;
+    }
 }

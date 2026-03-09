@@ -125,3 +125,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  .touch-action-manipulation {
+    touch-action: manipulation;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}

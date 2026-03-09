@@ -1,0 +1,5 @@
+
+
+ALTER TABLE kilo ADD COLUMN photo_path TEXT;
+ALTER TABLE kilo DROP COLUMN image;
+

@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/contexts/AuthContext";
 
 type HeaderUser = {
   username: string;
@@ -28,6 +29,7 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({ user }: DashboardHeaderProps) {
   const router = useRouter();
+  const { logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const userInitials = user.username.slice(0, 2).toUpperCase();
@@ -43,10 +45,7 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
+      await logout()
     } finally {
       const loginType = isSysAdmin ? "sysadmin" : "user";
       router.replace(`/login?type=${loginType}`);

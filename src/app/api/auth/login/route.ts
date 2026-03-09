@@ -63,9 +63,10 @@ export async function POST(request: NextRequest) {
       const sessionType = user.system_role
 
       const sessionSetResponse = await createSession(user.id, sessionType, res);
-      
-      console.log('[LOGIN] Logged in successfully');
-      console.log(sessionSetResponse)
+
+      if (process.env.NODE_ENV !== "production") {
+          console.log('[LOGIN] Logged in successfully');
+      }
       return sessionSetResponse;
   } catch (error) {
       if (error instanceof AppError) {

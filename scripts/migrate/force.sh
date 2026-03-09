@@ -15,4 +15,4 @@ export $(cat $ENV_FILE | grep -v '^#' | xargs)
 
 echo ""
 echo "Forcing migration to version ${VERSION}..."
-migrate -database "${DATABASE_URL}" -path src/lib/db/migrations force ${VERSION}
+migrate -database "${DATABASE_URL}" -path src/db/migrations force ${VERSION}

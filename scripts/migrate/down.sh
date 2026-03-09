@@ -11,8 +11,8 @@ export $(cat $ENV_FILE | grep -v '^#' | xargs)
 echo ""
 if [ -z "$DOWNS" ]; then
     echo "Rolling back all migrations..."
-    migrate -database "${DATABASE_URL}" -path src/lib/db/migrations down
+    migrate -database "${DATABASE_URL}" -path src/db/migrations down
 else
     echo "Rolling back $DOWNS migration(s)..."
-    migrate -database "${DATABASE_URL}" -path src/lib/db/migrations down ${DOWNS}
+    migrate -database "${DATABASE_URL}" -path src/db/migrations down ${DOWNS}
 fi

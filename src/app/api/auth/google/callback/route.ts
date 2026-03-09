@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get("state");
 
     // URLs for redirects
-    const loginUrl = new URL("/login", process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000");
-    const dashboardUrl = new URL("/", process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000");
+    const loginUrl = new URL("/login", process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:3000");
+    const dashboardUrl = new URL("/dashboard", process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:3000");
 
     try {
         // Step 1: Verify required parameters are present

@@ -11,11 +11,43 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
 
 export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
 
+export type Json = JsonValue;
+
+export type JsonArray = JsonValue[];
+
+export type JsonObject = {
+  [x: string]: JsonValue | undefined;
+};
+
+export type JsonPrimitive = boolean | number | string | null;
+
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
 export type Role = "admin" | "member";
 
 export type Sysrole = "sysadmin" | "user";
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
+
+export interface ActivityCategories {
+  created_at: Generated<Timestamp | null>;
+  emoji: string | null;
+  id: Generated<string>;
+  label: string;
+  tenant_id: string | null;
+}
+
+export interface Kilo {
+  audio: Buffer | null;
+  created_at: Generated<Timestamp | null>;
+  id: Generated<number>;
+  location: string | null;
+  photo_path: string | null;
+  q1: string | null;
+  q2: string | null;
+  q3: string | null;
+  user_id: string | null;
+}
 
 export interface LoginAttempts {
   attempt_at: Generated<Timestamp | null>;
@@ -30,7 +62,7 @@ export interface LoginAttempts {
 export interface Members {
   created_at: Generated<Timestamp | null>;
   id: Generated<string>;
-  org_id: string | null;
+  tenant_id: string | null;
   user_id: string | null;
   user_role: Role;
 }
@@ -44,11 +76,23 @@ export interface OauthAccounts {
   user_id: string;
 }
 
-export interface Orgs {
-  created_at: Generated<Timestamp | null>;
-  id: Generated<string>;
-  name: string;
-  slug: string;
+export interface OleloNoeau {
+  id: Generated<number>;
+  text: string | null;
+}
+
+export interface Profiles {
+  aina: string | null;
+  dob: Timestamp | null;
+  first_name: string | null;
+  id: string;
+  kula: string | null;
+  last_name: string | null;
+  mauna: string | null;
+  mokupuni: string | null;
+  role: string | null;
+  user_id: string | null;
+  wai: string | null;
 }
 
 export interface SchemaMigrations {
@@ -64,6 +108,14 @@ export interface Sessions {
   user_id: string | null;
 }
 
+export interface Tenants {
+  branding_config: Json | null;
+  created_at: Generated<Timestamp | null>;
+  id: Generated<string>;
+  name: string;
+  slug: string;
+}
+
 export interface Users {
   created_at: Generated<Timestamp | null>;
   email: string;
@@ -74,11 +126,15 @@ export interface Users {
 }
 
 export interface DB {
+  activity_categories: ActivityCategories;
+  kilo: Kilo;
   login_attempts: LoginAttempts;
   members: Members;
   oauth_accounts: OauthAccounts;
-  orgs: Orgs;
+  olelo_noeau: OleloNoeau;
+  profiles: Profiles;
   schema_migrations: SchemaMigrations;
   sessions: Sessions;
+  tenants: Tenants;
   users: Users;
 }

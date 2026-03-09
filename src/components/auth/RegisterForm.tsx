@@ -163,7 +163,7 @@ export function RegisterForm({ organizations }: RegisterFormProps) {
           </div>
 
           <div className="space-y-4 pt-2">
-            <div className="flex items-center space-x-2">
+            {/* <div className="flex items-center space-x-2">
               <Checkbox
                 id="isPartOfOrg"
                 checked={isPartOfOrg}
@@ -181,7 +181,7 @@ export function RegisterForm({ organizations }: RegisterFormProps) {
               >
                 Are you part of an organization?
               </Label>
-            </div>
+            </div> */}
 
             {isPartOfOrg && (
               <div className="space-y-2" id="org-selector">

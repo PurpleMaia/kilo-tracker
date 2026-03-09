@@ -12,7 +12,7 @@ import { GET } from '@/app/api/auth/google/callback/route';
 import { db } from '@/db/kysely/client';
 import { hashPassword } from '@/lib/auth/password';
 import { randomUUID } from 'crypto';
-import { createMockGetRequest } from './helpers';
+import { createMockGetRequest } from '../../helpers';
 
 /*
 1. Test successful OAuth registration:
