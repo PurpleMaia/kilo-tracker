@@ -19,6 +19,15 @@ interface KiloCardProps {
     deleteEntry: (id: number) => void
 }
 export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardProps) {
+  const hasPhoto = !!entry.photo_path;
+  const date = entry.created_at ? new Date(entry.created_at).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }) : "Unknown date";
+
   return (
     <Card 
         key={entry.id}
@@ -30,17 +39,7 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
             {/* Date Made */}
             <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 shrink-0" />
-                <span>
-                {entry.created_at
-                    ? new Date(entry.created_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                    })
-                    : "Unknown date"}
-                </span>
+                <span>{date}</span>
             </div>
             {/* Location Done */}
             {/* {entry.location && (
@@ -68,7 +67,7 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
             </div>
 
         </CardHeader>  
-        <CardContent className="pt-0 space-y-2 flex w-full">
+        <CardContent className="pt-0 space-y-2 w-full">
             <div className="space-y-2 grow">        
             {entry.q1 && (
             <div>
@@ -91,7 +90,45 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
             </div>
             )}
             </div>  
+
+            {hasPhoto && entry.photo_path && (
+                <>
+                  <div className='border-b'></div>
+                  <PicturePreviewDialog photoPath={entry.photo_path} date={date} />
+                </>
+            )}
         </CardContent>
     </Card>
   )
 }
+
+function PicturePreviewDialog({ photoPath, date }: { photoPath: string, date: string }) {
+    return (
+      <Dialog>
+        <DialogTrigger asChild>
+          <div className="relative w-full h-24 sm:h-28 md:h-32 lg:h-36 cursor-pointer">
+            <Image
+                src={photoPath}
+                alt="KILO Entry Photo"
+                fill
+                className="object-cover rounded-lg"
+            />
+            </div>
+        </DialogTrigger>
+        <DialogContent className="h-[40vh] sm:h-auto sm:max-w-xl">
+          <DialogHeader className=''>
+            <DialogTitle>{date}</DialogTitle>
+          </DialogHeader>
+          <div className="w-full aspect-square relative">
+            <Image
+              src={photoPath}
+              alt="KILO Entry Photo"
+              fill
+              className="object-contain rounded-lg"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
