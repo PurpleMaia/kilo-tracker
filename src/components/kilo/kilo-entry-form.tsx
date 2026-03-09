@@ -164,12 +164,12 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
       setFormData({});
       setCurrentStep(0);
       setPhotoPreview(null);
+      router.push("/dashboard");
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
     } finally {
       setIsSubmitting(false);
-      router.push("/dashboard");
     }
   };
 
