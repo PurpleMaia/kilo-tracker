@@ -111,21 +111,22 @@ function PicturePreviewDialog({ photoPath, date }: { photoPath: string, date: st
                 src={photoPath}
                 alt="KILO Entry Photo"
                 fill
-                className="object-cover rounded-lg"
-            />
+                className="object-cover rounded-lg"/>
             </div>
         </DialogTrigger>
-        <DialogContent className="h-[40vh] sm:h-auto sm:max-w-xl">
+        <DialogContent className={
+            "h-[70vh]"            
+        }>
           <DialogHeader className=''>
             <DialogTitle>{date}</DialogTitle>
           </DialogHeader>
-          <div className="w-full aspect-square relative">
+          <div className='w-full h-108 relative'>
             <Image
               src={photoPath}
               alt="KILO Entry Photo"
               fill
               className="object-contain rounded-lg"
-            />
+              />
           </div>
         </DialogContent>
       </Dialog>
