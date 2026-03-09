@@ -4,8 +4,8 @@ import { db } from "@/db/kysely/client";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 
-// Regex pattern for valid photo paths: /kilo/{userId}/{uuid}.{ext}
-const PHOTO_PATH_PATTERN = /^\/kilo\/[a-zA-Z0-9_-]+\/[a-f0-9-]{36}\.(jpg|jpeg|png|gif|webp)$/i;
+// Regex pattern for valid photo paths: /uploads/kilo/{userId}/{timestamp}-{userId.slice(0,8)}.{ext}
+const PHOTO_PATH_PATTERN = /^\/uploads\/kilo\/[a-zA-Z0-9-]+\/\d+-[a-f0-9]{8}\.(jpg|jpeg|png|gif|webp)$/i;
 
 const kiloEntrySchema = z.object({
   q1: z.string().min(1, "Question 1 is required"),
@@ -30,8 +30,9 @@ export async function POST(request: NextRequest) {
     const parsed = kiloEntrySchema.safeParse(body);
 
     if (!parsed.success) {
+      console.log("[POST /api/kilo] Validation failed", parsed.error.issues);
       return NextResponse.json(
-        { error: "Invalid input", issues: parsed.error.issues },
+        { error: "Invalid input \n Issues: " + parsed.error.issues.map(issue => issue.message).join(", ")},
         { status: 400 }
       );
     }
