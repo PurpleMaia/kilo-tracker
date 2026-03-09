@@ -19,7 +19,7 @@ export type Question = {
 export const QUESTIONS: Question[] = [
   {
     id: "q1",
-    question: "What is your weather today?",
+    question: "What is your internal weather today?",
     required: true,    
   },
   {
