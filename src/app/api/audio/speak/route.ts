@@ -1,8 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { validateSession } from "@/lib/auth/session";
+import { AppError } from "@/lib/errors";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Validate user session
+    await validateSession(request);
+
     const baseUrl = process.env.SPEACHES_BASE_URL?.trim();
     const apiKey = process.env.SPEACHES_API_KEY?.trim();
     if (!baseUrl || !apiKey) {
@@ -39,7 +44,14 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error("[speaches] Error processing request:", error);
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode }
+      );
+    }
+
+    console.error("[POST /api/audio/speak]", error);
     return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }

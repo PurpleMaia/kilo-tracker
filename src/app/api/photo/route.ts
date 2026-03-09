@@ -3,6 +3,17 @@ import { validateSession } from "@/lib/auth/session";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+// Whitelist of allowed image extensions
+const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp"];
+
+// Map MIME types to safe extensions
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
 export async function POST(request: NextRequest) {
   try {
     const user = await validateSession(request);
@@ -25,10 +36,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
+    // Validate file type - must be a known image MIME type
+    const safeExt = MIME_TO_EXT[file.type];
+    if (!safeExt) {
       return NextResponse.json(
-        { error: "Only image files are allowed" },
+        { error: "Only JPG, PNG, GIF, and WebP images are allowed" },
+        { status: 400 }
+      );
+    }
+
+    // Double-check: validate file extension from filename against whitelist
+    const clientExt = file.name.split(".").pop()?.toLowerCase();
+    if (clientExt && !ALLOWED_EXTENSIONS.includes(clientExt)) {
+      return NextResponse.json(
+        { error: "Invalid file extension" },
         { status: 400 }
       );
     }
@@ -36,9 +57,8 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Generate unique filename
-    const ext = file.name.split(".").pop() || "jpg";
-    const filename = `${Date.now()}-${user.id.slice(0, 8)}.${ext}`;
+    // Generate unique filename using safe extension derived from MIME type
+    const filename = `${Date.now()}-${user.id.slice(0, 8)}.${safeExt}`;
 
     // Save to public/uploads/kilo/{userId}/
     const uploadDir = path.join(process.cwd(), "public", "uploads", "kilo", user.id);

@@ -56,10 +56,13 @@ export async function PUT(request: NextRequest) {
     const { first_name, last_name, dob, mauna, aina, wai, kula, role } = parsed.data;
     const dobDate = dob ? new Date(dob) : null;
 
+    // Generate a stable UUID for this user's profile (only used on insert)
+    const profileId = crypto.randomUUID();
+
     const profile = await db
       .insertInto("profiles")
       .values({
-        id: crypto.randomUUID(),
+        id: profileId,
         user_id: user.id,
         first_name: first_name ?? null,
         last_name: last_name ?? null,
@@ -72,6 +75,7 @@ export async function PUT(request: NextRequest) {
       })
       .onConflict((oc) =>
         oc.column("user_id").doUpdateSet({
+          // Note: id is NOT updated on conflict - it stays the same
           first_name: first_name ?? null,
           last_name: last_name ?? null,
           dob: dobDate,

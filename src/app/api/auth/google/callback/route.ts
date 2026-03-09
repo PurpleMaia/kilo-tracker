@@ -135,30 +135,34 @@ export async function GET(request: NextRequest) {
 
                 userId = randomUUID();
 
-                // Create user account
-                // OAuth users don't have passwords, so we use empty string
-                // In production, you might want to use a random hash or NULL
-                await db
-                    .insertInto("users")
-                    .values({
-                        id: userId,
-                        username: username,
-                        email: googleUser.email,
-                        password_hash: "", // OAuth users don't have password
-                        system_role: "user",
-                    })
-                    .execute();
+                // Create user account and link OAuth in a transaction
+                // OAuth users get a secure random hash (not empty) to prevent any password-based login
+                const secureOAuthHash = `oauth:${randomUUID()}:${Date.now()}`;
 
-                // Link OAuth account to new user
-                await db
-                    .insertInto("oauth_accounts")
-                    .values({
-                        user_id: userId,
-                        provider: "google",
-                        provider_user_id: googleUser.sub,
-                        email: googleUser.email,
-                    })
-                    .execute();
+                await db.transaction().execute(async (trx) => {
+                    // Create user account
+                    await trx
+                        .insertInto("users")
+                        .values({
+                            id: userId,
+                            username: username,
+                            email: googleUser.email,
+                            password_hash: secureOAuthHash, // Secure placeholder, not empty
+                            system_role: "user",
+                        })
+                        .execute();
+
+                    // Link OAuth account to new user
+                    await trx
+                        .insertInto("oauth_accounts")
+                        .values({
+                            user_id: userId,
+                            provider: "google",
+                            provider_user_id: googleUser.sub,
+                            email: googleUser.email,
+                        })
+                        .execute();
+                });
 
                 console.log("[oauth/callback] New user created with linked OAuth account");
             }

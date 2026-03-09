@@ -30,9 +30,9 @@ export async function POST(request: NextRequest) {
     const parsed = kiloEntrySchema.safeParse(body);
 
     if (!parsed.success) {
-      console.log("[POST /api/kilo] Validation failed", parsed.error.issues);
+      console.error("[POST /api/kilo] Validation failed for user:", user.id, "Issues:", JSON.stringify(parsed.error.issues));
       return NextResponse.json(
-        { error: "Invalid input", issues: parsed.error.issues},
+        { error: "Invalid input", issues: parsed.error.issues },
         { status: 400 }
       );
     }

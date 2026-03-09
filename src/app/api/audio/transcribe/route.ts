@@ -1,13 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { validateSession } from "@/lib/auth/session";
+import { AppError } from "@/lib/errors";
 
-export async function POST(request: Request) {
+const MAX_AUDIO_SIZE = 25 * 1024 * 1024; // 25MB limit for audio files
+
+export async function POST(request: NextRequest) {
   try {
+    // Validate user session
+    await validateSession(request);
+
     const formData = await request.formData();
     const audio = formData.get("file") as File;
 
     if (!audio) {
       return NextResponse.json({ error: "No audio sent" }, { status: 400 });
+    }
+
+    // Validate audio file size
+    if (audio.size > MAX_AUDIO_SIZE) {
+      return NextResponse.json(
+        { error: "Audio file too large (max 25MB)" },
+        { status: 400 }
+      );
     }
 
     const baseUrl = process.env.SPEACHES_BASE_URL?.trim();
@@ -41,7 +56,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("[speaches] Error processing request:", error);
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode }
+      );
+    }
+
+    console.error("[POST /api/audio/transcribe]", error);
     return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }
