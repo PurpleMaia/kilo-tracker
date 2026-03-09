@@ -3,6 +3,7 @@
 import { KiloEntry } from "@/types/kilo";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const useKiloEntries = () => {
     const router = useRouter();
@@ -25,7 +26,7 @@ const useKiloEntries = () => {
 
     const deleteEntry = async (id: number) => {
         setDeletingId(id);
-        try {            
+        try {
             await validateSession(); // Ensure user is authenticated before attempting delete
             const response = await fetch("/api/kilo", {
                 method: "DELETE",
@@ -34,22 +35,27 @@ const useKiloEntries = () => {
             });
 
             if (!response.ok) {
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 throw new Error(data.error || "Failed to delete entry");
             }
 
             setEntries((prev) => prev.filter((entry) => entry.id !== id));
+            toast.success("Entry deleted");
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to delete entry");
+            const message = err instanceof Error ? err.message : "Failed to delete entry";
+            setError(message);
+            toast.error("Failed to delete entry", {
+                description: message,
+            });
         } finally {
             setDeletingId(null);
         }
     }
 
-    return { 
+    return {
         entries, setEntries,
         initialLoading, setInitialLoading,
-        error, 
+        error, setError,
         deletingId, deleteEntry
     };
 };

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Mic, Square, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 /** Ask browser what audio format it supports */
@@ -42,7 +43,10 @@ export function AudioRecorder({ onTranscription, onRecordingStateChange, compact
       onTranscription?.(transcriptText);
       setTranscribing(false);
     } catch (e) {
-      console.error(e);
+      console.error("[AudioRecorder] Transcription error:", e);
+      toast.error("Failed to transcribe audio", {
+        description: e instanceof Error ? e.message : "Please try recording again.",
+      });
       setTranscribing(false);
     }
   };

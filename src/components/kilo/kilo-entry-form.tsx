@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ChevronLeft, ChevronRight, Loader2, Keyboard, X } from "lucide-react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { KiloEntry, QUESTIONS } from "@/types/kilo";
 
@@ -119,24 +120,30 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
 
       // Upload photo if available (data URL from camera capture)
       if (photoPreview && photoPreview.startsWith("data:")) {
-        const formData = new FormData();
+        const photoFormData = new FormData();
         // Convert data URL to blob
-        const response = await fetch(photoPreview);
-        const blob = await response.blob();
+        const blobResponse = await fetch(photoPreview);
+        const blob = await blobResponse.blob();
         const file = new File([blob], "photo.jpg", { type: "image/jpeg" });
-        formData.append("photo", file);
+        photoFormData.append("photo", file);
 
         const uploadRes = await fetch("/api/photo", {
           method: "POST",
-          body: formData,
+          body: photoFormData,
         });
 
         if (!uploadRes.ok) {
-          throw new Error("Failed to upload photo");
+          const uploadError = await uploadRes.json().catch(() => ({}));
+          const errorMessage = uploadError.error || "Failed to upload photo";
+          toast.error("Photo upload failed", {
+            description: errorMessage + ". Your entry will be saved without the photo.",
+          });
+          // Don't throw - allow entry to be saved without photo, but warn user
+          console.error("[KiloEntryForm] Photo upload failed:", errorMessage);
+        } else {
+          const { path } = await uploadRes.json();
+          photoPath = path;
         }
-
-        const { path } = await uploadRes.json();
-        photoPath = path;
       }
 
       const payload = {
@@ -157,9 +164,20 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
       });
 
       if (!apiResponse.ok) {
-        const data = await apiResponse.json();
-        throw new Error(data.error || "Failed to save entry");
+        const data = await apiResponse.json().catch(() => ({}));
+        const errorMessage = data.error || "Failed to save entry";
+
+        // Log validation issues for debugging
+        if (data.issues) {
+          console.error("[KiloEntryForm] Validation issues:", data.issues);
+        }
+
+        throw new Error(errorMessage);
       }
+
+      toast.success(isEditMode ? "Entry updated" : "Entry saved", {
+        description: "Your KILO entry has been saved successfully.",
+      });
 
       setFormData({});
       setCurrentStep(0);
@@ -167,7 +185,11 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
       router.push("/dashboard");
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save entry");
+      const message = err instanceof Error ? err.message : "Failed to save entry";
+      setError(message);
+      toast.error("Failed to save entry", {
+        description: message,
+      });
     } finally {
       setIsSubmitting(false);
     }

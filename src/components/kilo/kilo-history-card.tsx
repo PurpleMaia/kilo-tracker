@@ -3,7 +3,9 @@
 import { useEffect, useState, useTransition } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import useKiloEntries from "@/hooks/use-kilo";
 import KiloCard from "./kilo";
 
@@ -17,19 +19,31 @@ export function KiloHistoryCard() {
   const {
     entries, setEntries,
     initialLoading, setInitialLoading,
-    // error, TODO handle error state
+    error, setError,
     deletingId, deleteEntry
   } = useKiloEntries();
 
   function fetchPage(p: number, onDone?: () => void) {
     fetch(`/api/kilo?page=${p}&limit=${PAGE_SIZE}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error(`Failed to load entries (${r.status})`);
+        }
+        return r.json();
+      })
       .then((data) => {
         setEntries(data.entries ?? []);
         setTotalPages(data.totalPages ?? 1);
         setTotal(data.total ?? 0);
+        setError(null);
       })
-      .catch(() => {})
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Failed to load entries";
+        setError(message);
+        toast.error("Failed to load entries", {
+          description: "Please check your connection and try again.",
+        });
+      })
       .finally(() => onDone?.());
   }
 
@@ -53,14 +67,29 @@ export function KiloHistoryCard() {
       <CardContent>
         {initialLoading ? (
           <p className="text-sm text-muted-foreground text-center py-6">Loading entries...</p>
+        ) : error ? (
+          <div className="space-y-4 py-4">
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchPage(page)}
+              className="w-full"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </div>
         ) : entries.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">No entries yet.</p>
         ) : (
           <ul className={`space-y-4 transition-opacity duration-150 ${isPending ? "opacity-50" : "opacity-100"}`}>
             {entries.map((entry) => (
-              <KiloCard entry={entry} key={entry.id} 
+              <KiloCard entry={entry} key={entry.id}
                 deletingId={deletingId}
-                deleteEntry={deleteEntry}              
+                deleteEntry={deleteEntry}
               />
             ))}
           </ul>
