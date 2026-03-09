@@ -38,14 +38,16 @@ export async function POST(request: NextRequest) {
 
     // Generate unique filename
     const ext = file.name.split(".").pop() || "jpg";
-    const filename = `${user.id}-${Date.now()}.${ext}`;
+    const filename = `${Date.now()}-${user.id.slice(0, 8)}.${ext}`;
 
-    // Save to public/uploads/kilo/
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "kilo");
+    // Save to public/uploads/kilo/{userId}/
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "kilo", user.id);
     await mkdir(uploadDir, { recursive: true });
     await writeFile(path.join(uploadDir, filename), buffer);
 
-    return NextResponse.json({ path: `/uploads/kilo/${filename}` });
+    console.log("[POST /api/photo] Uploaded photo to", `/uploads/kilo/${user.id}/${filename}`);
+
+    return NextResponse.json({ path: `/uploads/kilo/${user.id}/${filename}` });
   } catch (error) {
     console.error("[POST /api/photo]", error);
     return NextResponse.json(
