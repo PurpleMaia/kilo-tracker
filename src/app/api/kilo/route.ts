@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       console.log("[POST /api/kilo] Validation failed", parsed.error.issues);
       return NextResponse.json(
-        { error: "Invalid input \n Issues: " + parsed.error.issues.map(issue => issue.message).join(", ")},
+        { error: "Invalid input", issues: parsed.error.issues},
         { status: 400 }
       );
     }

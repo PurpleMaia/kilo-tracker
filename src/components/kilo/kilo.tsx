@@ -10,8 +10,7 @@ import { KiloEntry, QUESTIONS } from '@/types/kilo'
 import { Clock, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Card, CardHeader, CardContent } from '../ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from '../ui/dialog'
-import { DialogTitle } from '@radix-ui/react-dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTrigger, DialogTitle } from '../ui/dialog'
 
 interface KiloCardProps {
     entry: KiloEntry
@@ -106,13 +105,13 @@ function PicturePreviewDialog({ photoPath, date }: { photoPath: string, date: st
     return (
       <Dialog>
         <DialogTrigger asChild>
-          <div className="relative w-full h-24 sm:h-28 md:h-32 lg:h-36 cursor-pointer">
+          <Button className="relative w-full h-24 sm:h-28 md:h-32 lg:h-36 cursor-pointer">
             <Image
                 src={photoPath}
                 alt="KILO Entry Photo"
                 fill
                 className="object-cover rounded-lg"/>
-            </div>
+            </Button>
         </DialogTrigger>
         <DialogContent className={
             "h-[70vh]"            

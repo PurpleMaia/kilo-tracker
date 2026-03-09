@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     await mkdir(uploadDir, { recursive: true });
     await writeFile(path.join(uploadDir, filename), buffer);
 
-    console.log("[POST /api/photo] Uploaded photo to", `/uploads/kilo/${user.id}/${filename}`);
+    if (process.env.NODE_ENV !== "production") console.log("[POST /api/photo] Uploaded photo to", `/uploads/kilo/${user.id}/${filename}`);
 
     return NextResponse.json({ path: `/uploads/kilo/${user.id}/${filename}` });
   } catch (error) {
