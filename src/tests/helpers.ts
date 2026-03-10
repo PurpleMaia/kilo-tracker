@@ -234,13 +234,28 @@ export async function logout(page: Page) {
 }
 
 /**
+ * Helper function to dismiss the "Install KILO App" dialog if it appears
+ */
+export async function dismissInstallDialog(page: Page) {
+  try {
+    const maybeLaterBtn = page.getByRole('button', { name: 'Maybe later' });
+    if (await maybeLaterBtn.isVisible({ timeout: 2000 })) {
+      await maybeLaterBtn.click();
+      await page.waitForTimeout(300); // Wait for dialog to close
+    }
+  } catch {
+    // Dialog not present, continue
+  }
+}
+
+/**
  * Helper function to login as regular user
  */
 export async function loginAsUser(page: Page) {
   await page.goto('/login');
   await page.waitForLoadState('networkidle');
-  await page.waitForSelector('input#authString', { state: 'visible' });
-  await page.fill('input#authString', testUser.email);
+  await page.waitForSelector('input#identifier', { state: 'visible' });
+  await page.fill('input#identifier', testUser.email);
   await page.fill('input#password', testUser.password);
 
   await Promise.all([
@@ -249,6 +264,9 @@ export async function loginAsUser(page: Page) {
   ]);
 
   await page.waitForLoadState('networkidle');
+
+  // Dismiss the install dialog if it appears
+  await dismissInstallDialog(page);
 }
 
 /**

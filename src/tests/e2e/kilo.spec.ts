@@ -1,7 +1,8 @@
 import { db } from '@/db/kysely/client';
 import { hashPassword } from '@/lib/auth/password';
 import { test, expect } from '@playwright/test';
-import { testUser, loginAsUser } from '../helpers';
+import { testUser, loginAsUser, dismissInstallDialog } from '../helpers';
+import { randomUUID } from 'crypto';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -16,6 +17,20 @@ test.describe('Kilo Entry Form', () => {
         password_hash: passwordHash,
         system_role: 'user',
     }).execute();
+
+    // Create a complete profile so the user can access the KILO form
+    await db.insertInto('profiles').values({
+      id: randomUUID(),
+      user_id: testUser.id,
+      first_name: 'Test',
+      last_name: 'User',
+      dob: new Date('1990-01-01'),
+      mauna: 'Mauna Kea',
+      aina: 'Hawaiʻi Island',
+      wai: 'Wailuku River',
+      kula: 'Test School',
+      role: 'Haumāna',
+    }).execute();
   });
 
   // Clean up kilo entries before each test to ensure data isolation
@@ -27,32 +42,44 @@ test.describe('Kilo Entry Form', () => {
     // Clean up kilo entry
     await db.deleteFrom('kilo').where('user_id', '=', testUser.id).execute();
 
+    // Clean up profile
+    await db.deleteFrom('profiles').where('user_id', '=', testUser.id).execute();
+
     // Clean up test user from the database
     await db.deleteFrom('users').where('id', '=', testUser.id).execute();
   });
 
-  test('allows a user to submit a kilo entry with audio & skip questions', async ({ page }) => {
+  test('allows a user to submit a kilo entry with all required questions', async ({ page }) => {
     // Log in as test user
     await loginAsUser(page);
 
     // Navigate to Kilo Entry Form
-    await page.click('text=Try the KILO Entry Form');
+    await page.click('text=Start a new KILO');
 
-    // "Answer" first question form
-    const recordButton = page.locator('#audio-recorder-button');
-    await recordButton.click(); // Start recording
-    await page.waitForTimeout(1000);
-    await recordButton.click(); // Stop recording
+    // Dismiss install dialog if it appears on the kilo page
+    await dismissInstallDialog(page);
 
-    // Wait for transcription to complete and text input to appear
-    await page.waitForSelector('textarea');
+    // Use text input instead of audio (audio recording may not work in headless browsers)
+    const preferToTypeBtn = page.locator('text=Prefer to type instead?');
+    await expect(preferToTypeBtn).toBeVisible();
+    await preferToTypeBtn.click();
 
-    // Allow to edit transcribed text and proceed through questions
-    await page.fill('textarea', 'This is my response to question 1');
+    // Wait for textarea to appear and fill in Q1
+    const textarea = page.locator('textarea');
+    await expect(textarea).toBeVisible();
+    await textarea.fill('This is my response to question 1');
     await page.click('text=Next');
 
-    // Skip through remaining questions without answering
+    // Answer Q2 (required)
+    await preferToTypeBtn.click();
+    await expect(textarea).toBeVisible();
+    await textarea.fill('This is my response to question 2');
     await page.click('text=Next');
+
+    // Answer Q3 (required)
+    await preferToTypeBtn.click();
+    await expect(textarea).toBeVisible();
+    await textarea.fill('This is my response to question 3');
 
     // Submit the form
     await page.click('text=Save Entry');
@@ -60,18 +87,17 @@ test.describe('Kilo Entry Form', () => {
     // Wait for navigation to dashboard after saving
     await page.waitForURL('/dashboard');
     // Wait for the entry list to load
-    await page.waitForSelector('text=Recent KILO Entries');
+    await page.waitForSelector('text=Your KILO Entries');
 
     // Verify entry is saved in the database
     const entry = await db.selectFrom('kilo').selectAll().where('user_id', '=', testUser.id).executeTakeFirst();
     expect(entry).not.toBeNull();
-    expect(entry?.q1).toContain('This is my response to question 1');
-    expect(entry?.q2).toBeNull();
-    expect(entry?.q3).toBeNull();
+    expect(entry?.q1).toBe('This is my response to question 1');
+    expect(entry?.q2).toBe('This is my response to question 2');
+    expect(entry?.q3).toBe('This is my response to question 3');
     expect(entry?.user_id).toBe(testUser.id);
 
     // Verify entry appears in the entry list on the dashboard
-    // The entry content appears after "Question 1:" label in the card
     await expect(page.locator('p:has-text("This is my response to question 1")').first()).toBeVisible();
   });
 
@@ -80,7 +106,10 @@ test.describe('Kilo Entry Form', () => {
     await loginAsUser(page);
 
     // Navigate to Kilo Entry Form
-    await page.click('text=Try the KILO Entry Form');
+    await page.click('text=Start a new KILO');
+
+    // Dismiss install dialog if it appears on the kilo page
+    await dismissInstallDialog(page);
 
     // Skip audio recording and answer questions with text
     // Wait for "Prefer to type instead?" button to be visible
@@ -96,8 +125,11 @@ test.describe('Kilo Entry Form', () => {
     // Click Next to move to Q2
     await page.click('text=Next');
 
-    // Wait for the question to change (we should see "question 2" in the card title)
-    await expect(page.locator('text=question 2')).toBeVisible();
+    // Dismiss install dialog if it appears
+    await dismissInstallDialog(page);
+
+    // Wait for the question to change to Q2 (use the progress indicator "2 / 3")
+    await expect(page.locator('text=2 / 3')).toBeVisible();
 
     // Click "Prefer to type instead?" for Q2
     await preferToTypeBtn.click();
@@ -107,8 +139,8 @@ test.describe('Kilo Entry Form', () => {
     // Click Next to move to Q3
     await page.click('text=Next');
 
-    // Wait for the question to change to Q3
-    await expect(page.locator('text=question 3')).toBeVisible();
+    // Wait for the question to change to Q3 (use the progress indicator "3 / 3")
+    await expect(page.locator('text=3 / 3')).toBeVisible();
 
     // Click "Prefer to type instead?" for Q3
     await preferToTypeBtn.click();
@@ -135,7 +167,10 @@ test.describe('Kilo Entry Form', () => {
     await loginAsUser(page);
 
     // Navigate to Kilo Entry Form
-    await page.click('text=Try the KILO Entry Form');
+    await page.click('text=Start a new KILO');
+
+    // Dismiss install dialog if it appears on the kilo page
+    await dismissInstallDialog(page);
 
     // Try to submit without answering first question
     await page.click('text=Next');
@@ -159,7 +194,7 @@ test.describe('Kilo Entry Form', () => {
     // Navigate to home/dashboard
     await page.goto('/dashboard');
     // Wait for the entry list to load
-    await page.waitForSelector('text=Recent KILO Entries');
+    await page.waitForSelector('text=Your KILO Entries');
 
     // Wait for the entry to appear before clicking edit
     await expect(page.locator('text=Edit Test Original Q1')).toBeVisible();
@@ -180,7 +215,7 @@ test.describe('Kilo Entry Form', () => {
     // Wait for navigation to dashboard after saving
     await page.waitForURL('/dashboard');
     // Wait for the entry list to load
-    await page.waitForSelector('text=Recent KILO Entries');
+    await page.waitForSelector('text=Your KILO Entries');
 
     // Verify the updated entry appears in the entry list
     // The entry content appears after "Question 1:" label in the card
@@ -202,7 +237,7 @@ test.describe('Kilo Entry Form', () => {
     // Navigate to home/dashboard
     await page.goto('/dashboard');
     // Wait for the entry list to load
-    await page.waitForSelector('text=Recent KILO Entries');
+    await page.waitForSelector('text=Your KILO Entries');
 
     // Wait for the specific entry to be visible on the page
     const entryText = page.locator('text=Entry to be deleted');

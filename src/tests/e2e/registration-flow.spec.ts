@@ -110,7 +110,8 @@ test.describe('Registration Flow', () => {
     expect(session).toBeDefined();
   });
 
-  test('should successfully register a new user with organization', async ({ page }) => {
+  test.skip('should successfully register a new user with organization', async ({ page }) => {
+    // SKIPPED: Organization selection checkbox is currently disabled in the UI (commented out in RegisterForm.tsx)
     // First create an organization in the database
     const orgName = `TestOrg${randomSuffix}`;
     const orgResult = await db
