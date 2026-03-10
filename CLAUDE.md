@@ -4,7 +4,7 @@ This document helps AI assistants understand how to implement features, write te
 
 ## Project Overview
 
-KILO Tracker is a Next.js 16 application using the **App Router**. It's designed to eventually become a React Native + Expo mobile app, so all data operations use **API routes** rather than server actions.
+KILO Tracker is a Next.js 16 application using the **App Router**. It's a Progressive Web App (PWA) designed for mobile-first usage, with plans to eventually become a React Native + Expo mobile app. All data operations use **API routes** rather than server actions.
 
 ### Key Architectural Decisions
 
@@ -12,6 +12,8 @@ KILO Tracker is a Next.js 16 application using the **App Router**. It's designed
 2. **Multi-tenant** - Organizations (tenants) with user roles (admin/member)
 3. **Type-safe database** - Kysely ORM with auto-generated TypeScript types
 4. **Session-based auth** - Secure sessions with hashed tokens stored in DB
+5. **PWA support** - Service worker, manifest, and install prompts for mobile home screen installation
+6. **Voice-first input** - Audio transcription via Speaches API for hands-free KILO entry
 
 ## Directory Structure
 
@@ -19,13 +21,24 @@ KILO Tracker is a Next.js 16 application using the **App Router**. It's designed
 src/
 ├── app/                    # Next.js App Router
 │   ├── api/               # API routes (all data operations)
+│   │   ├── audio/         # Speech-to-text transcription
+│   │   ├── kilo/          # KILO entry CRUD
+│   │   ├── photo/         # Photo upload
+│   │   ├── profile/       # User profile management
+│   │   └── olelo-noeau/   # Daily Hawaiian proverbs
 │   ├── (auth)/            # Auth pages (login, register)
 │   ├── dashboard/         # Dashboard pages
+│   │   └── survey/        # Onboarding survey
 │   └── kilo/              # KILO entry pages
 ├── components/
 │   ├── ui/                # Shadcn primitives (don't modify)
 │   ├── kilo/              # KILO feature components
+│   │   ├── audio-recorder.tsx  # Voice recording component
+│   │   ├── photo-taker.tsx     # Camera/photo capture
+│   │   └── kilo-entry-form.tsx # Multi-step entry wizard
 │   ├── dashboard/         # Dashboard components
+│   ├── pwa/               # PWA install prompts
+│   ├── shared/            # Shared components (DailyON, etc.)
 │   └── auth/              # Auth components
 ├── db/
 │   ├── kysely/            # Database client
@@ -33,12 +46,22 @@ src/
 │   └── types.ts           # Auto-generated types (don't edit manually)
 ├── lib/
 │   ├── auth/              # Auth utilities
+│   ├── data/              # Data access helpers (admin, member, sysadmin, profile)
 │   └── errors.ts          # Error classes
 ├── hooks/
-│   └── contexts/          # React context providers
-└── tests/
-    ├── e2e/               # Playwright tests
-    └── lib/               # Unit tests
+│   ├── contexts/          # React context providers
+│   └── use-kilo.tsx       # KILO entries hook
+├── types/
+│   └── kilo.ts            # KILO types and question definitions
+├── tests/
+│   ├── e2e/               # Playwright tests
+│   ├── lib/               # Unit tests
+│   └── helpers.ts         # Shared test utilities
+├── public/
+│   ├── manifest.json      # PWA manifest
+│   ├── sw.js              # Service worker
+│   └── icons/             # PWA icons
+└── uploads/               # User file uploads (photos, not in git)
 ```
 
 ## Database Schema
@@ -51,10 +74,12 @@ src/
 | `sessions` | Session tokens with expiry |
 | `tenants` | Organizations |
 | `members` | User-tenant relationships with role |
-| `kilo` | KILO observation entries |
-| `profiles` | Extended user profiles |
+| `kilo` | KILO observation entries (q1, q2, q3, location, photo_path, audio) |
+| `profiles` | Extended user profiles (first_name, last_name, dob, mauna, aina, wai, kula, role) |
 | `oauth_accounts` | OAuth provider links |
 | `login_attempts` | Security audit log |
+| `olelo_noeau` | Hawaiian proverbs (daily rotating display) |
+| `activity_categories` | Activity category definitions per tenant |
 
 ### User Roles
 
@@ -69,6 +94,14 @@ pnpm migrate:up d && pnpm codegen
 ```
 
 Types are in `src/db/types.ts` - never edit manually.
+
+### Recent Migrations
+
+| Migration | Purpose |
+|-----------|---------|
+| `000004_add_role_to_profiles` | Added `role` column to profiles |
+| `000005_add_unique_constraint_profiles_user_id` | Added unique constraint on `profiles.user_id` |
+| `000006_add_photo_path_to_kilo` | Added `photo_path` column, removed `image` column |
 
 ## Implementing Features
 
@@ -183,6 +216,113 @@ DROP TABLE IF EXISTS examples;
 Run migration and regenerate types:
 ```bash
 pnpm migrate:up d && pnpm codegen
+```
+
+### KILO Entry API
+
+The KILO API (`/api/kilo`) supports full CRUD operations with pagination:
+
+```typescript
+// POST - Create new entry
+const response = await fetch("/api/kilo", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    q1: "My internal weather is calm",
+    q2: "I see sunshine outside",
+    q3: "Excited to work on my project",
+    photo_path: "/api/uploads/kilo/user-id/timestamp.jpg", // optional
+  }),
+});
+
+// GET - Paginated list
+const entries = await fetch("/api/kilo?page=1&limit=5");
+// Returns: { entries: [...], total, page, totalPages }
+
+// GET - Single entry (for editing)
+const entry = await fetch("/api/kilo?id=123");
+// Returns: { entry: {...} }
+
+// PUT - Update entry
+await fetch("/api/kilo", {
+  method: "PUT",
+  body: JSON.stringify({ id: 123, q1: "Updated answer", ... }),
+});
+
+// DELETE - Remove entry
+await fetch("/api/kilo", {
+  method: "DELETE",
+  body: JSON.stringify({ id: 123 }),
+});
+```
+
+### Audio Transcription API
+
+Voice-to-text transcription using the Speaches API:
+
+```typescript
+// POST /api/audio/transcribe
+const formData = new FormData();
+formData.append("file", audioBlob);
+
+const response = await fetch("/api/audio/transcribe", {
+  method: "POST",
+  body: formData,
+});
+
+const { text } = await response.json();
+```
+
+Required environment variables:
+- `SPEACHES_BASE_URL` - Speaches API base URL
+- `SPEACHES_API_KEY` - Speaches API key
+- `SPEACHES_STT_MODEL` - Model name (default: `Systran/faster-whisper-large-v3`)
+
+### Photo Upload API
+
+Photo uploads are stored in `uploads/kilo/{userId}/` and served via API:
+
+```typescript
+// POST /api/photo
+const formData = new FormData();
+formData.append("photo", file);
+
+const response = await fetch("/api/photo", {
+  method: "POST",
+  body: formData,
+});
+
+const { path } = await response.json();
+// path: "/api/uploads/kilo/{userId}/{timestamp}.jpg"
+```
+
+Constraints:
+- Max file size: 5MB
+- Only image files allowed
+- Photo path validation regex: `/^\/api\/uploads\/kilo\/[a-zA-Z0-9-]+\/\d+-[a-f0-9]{8}\.(jpg|jpeg|png|gif|webp)$/i`
+
+### Profile API
+
+User profile management with upsert support:
+
+```typescript
+// GET /api/profile - Get current user's profile
+const { profile } = await fetch("/api/profile").then(r => r.json());
+
+// PUT /api/profile - Create or update profile
+await fetch("/api/profile", {
+  method: "PUT",
+  body: JSON.stringify({
+    first_name: "John",
+    last_name: "Doe",
+    dob: "1990-01-15",      // ISO date string
+    mauna: "Mauna Kea",      // Hawaiian cultural fields
+    aina: "Kailua",
+    wai: "Nuʻuanu",
+    kula: "Punahou",
+    role: "student",
+  }),
+});
 ```
 
 ### Creating a Client Component
@@ -365,15 +505,43 @@ pnpm test:e2e
 
 ### Test Helpers
 
-Use `src/tests/helpers.ts` for shared test utilities:
+Use `src/tests/helpers.ts` for shared test utilities. The helpers provide factory functions for isolated test data:
 
 ```typescript
-export const testUser = {
-  id: 'test-user-uuid',
-  email: 'test@example.com',
-  username: 'testuser',
-  password: 'TestPassword123!',
-};
+import {
+  createTestUser,
+  createTestAdmin,
+  createTestOrg,
+  createMockRequest,
+  createMockGetRequest,
+  clearFailedLoginAttempts,
+  loginAsUser,
+  logout,
+  dismissInstallDialog,
+} from '../helpers';
+
+// Factory functions generate unique data per test file
+const user = createTestUser();
+const admin = createTestAdmin();
+const org = createTestOrg();
+
+// Mock request helpers for unit tests
+const request = createMockRequest(
+  { email: 'test@example.com' },         // body
+  { 'custom-header': 'value' },          // headers
+  { 'session-token': 'abc123' }          // cookies
+);
+
+// E2E helpers
+await loginAsUser(page);                  // Login with test user
+await logout(page);                       // Handle logout
+await dismissInstallDialog(page);         // Dismiss PWA install prompt
+await clearFailedLoginAttempts();         // Clear rate limiting
+```
+
+Static test data (for backwards compatibility):
+```typescript
+import { testUser, testAdmin, testOrg } from '../helpers';
 ```
 
 ## Authentication
@@ -512,6 +680,69 @@ Use the Shadcn CLI:
 npx shadcn@latest add [component-name]
 ```
 
+## PWA Features
+
+The app is configured as a Progressive Web App with install prompts for iOS, Android, and desktop.
+
+### PWA Components
+
+- `src/components/pwa/pwa-install-prompt.tsx` - Device-specific install instructions
+- `src/components/pwa/service-worker-registration.tsx` - SW registration
+- `public/manifest.json` - PWA manifest with icons
+- `public/sw.js` - Service worker for offline support
+
+### Install Prompt Behavior
+
+- Auto-shows after 2 seconds on first visit
+- Dismissible for 7 days with "Don't show again"
+- Device detection for iOS (Safari only), Android, Desktop
+- Checks if already installed as standalone PWA
+
+## Custom Hooks
+
+### useKiloEntries
+
+Hook for managing KILO entries with delete functionality:
+
+```typescript
+import useKiloEntries from "@/hooks/use-kilo";
+
+const {
+  entries, setEntries,
+  initialLoading, setInitialLoading,
+  error,
+  deletingId, deleteEntry
+} = useKiloEntries();
+
+// Delete an entry
+await deleteEntry(entryId);
+```
+
+## KILO Questions
+
+Questions are defined in `src/types/kilo.ts`:
+
+```typescript
+export const QUESTIONS: Question[] = [
+  {
+    id: "q1",
+    question: "What is your internal weather today?",
+    required: true,
+  },
+  {
+    id: "q2",
+    question: "What do you see outside today?",
+    required: true,
+    picture: true,  // Enables photo capture
+  },
+  {
+    id: "q3",
+    question: "What are you excited to do today?",
+    required: true,
+  },
+];
+```
+
 ## Environment Variables
 
 Access in server code:
@@ -524,6 +755,18 @@ For client-side access, prefix with `NEXT_PUBLIC_`:
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 ```
 
+### Required Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SPEACHES_BASE_URL` | Speech-to-text API base URL |
+| `SPEACHES_API_KEY` | Speech-to-text API key |
+| `SPEACHES_STT_MODEL` | STT model name (optional) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `NEXT_PUBLIC_BASE_URL` | App base URL for OAuth callbacks |
+
 ## Commands Reference
 
 | Command | Description |
@@ -532,11 +775,17 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 | `pnpm build` | Build for production |
 | `pnpm test:unit` | Run Jest unit tests |
 | `pnpm test:e2e` | Run Playwright E2E tests |
+| `pnpm test` | Run all tests |
 | `pnpm migrate:create <name>` | Create new migration |
 | `pnpm migrate:up d` | Run migrations (dev) |
 | `pnpm migrate:up p` | Run migrations (prod) |
 | `pnpm codegen` | Regenerate DB types |
 | `pnpm lint` | Run ESLint |
+
+### Server Scripts (Dokku deployment)
+
+- `server/start.sh` - Production server startup script
+- `server/test.sh` - Server health check script
 
 ## File Naming Conventions
 
@@ -546,6 +795,8 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 - **Components**: `kebab-case.tsx` (e.g., `kilo-entry-form.tsx`)
 - **Tests**: `*.test.ts` (unit) or `*.spec.ts` (E2E)
 - **Types**: `types.ts` or in `src/types/`
+- **Hooks**: `use-*.tsx` (e.g., `use-kilo.tsx`)
+- **Photo uploads**: `uploads/kilo/{userId}/{timestamp}-{userId.slice(0,8)}.{ext}`
 
 ## Tips for AI Assistants
 
@@ -558,3 +809,8 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 7. **Follow existing patterns** in similar files
 8. **Write tests** for new features (unit + E2E)
 9. **Handle errors** consistently with AppError
+10. **Use test factory functions** (`createTestUser()`, etc.) for isolated test data
+11. **Handle PWA install dialog** in E2E tests with `dismissInstallDialog(page)`
+12. **Photo paths** must match the validation regex pattern
+13. **Profile API uses upsert** - `ON CONFLICT (user_id) DO UPDATE`
+14. **KILO questions** are defined in `src/types/kilo.ts` - modify there to change the wizard

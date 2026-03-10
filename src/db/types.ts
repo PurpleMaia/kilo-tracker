@@ -42,6 +42,8 @@ export interface Kilo {
   created_at: Generated<Timestamp | null>;
   id: Generated<number>;
   location: string | null;
+  photo_data: Buffer | null;
+  photo_mime_type: string | null;
   photo_path: string | null;
   q1: string | null;
   q2: string | null;

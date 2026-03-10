@@ -44,9 +44,9 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
       if (initialData.q1) data.q1 = initialData.q1;
       if (initialData.q2) data.q2 = initialData.q2;
       if (initialData.q3) data.q3 = initialData.q3;
-      if (initialData.photo_path) {
-        data.photo_path = initialData.photo_path;
-        setPhotoPreview(`${initialData.photo_path}`);
+      if (initialData.has_photo) {
+        // Set preview to API URL for existing photo
+        setPhotoPreview(`/api/kilo/photo?id=${initialData.id}`);
       }
       setFormData(data);
 
@@ -115,36 +115,41 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
     setIsSubmitting(true);
 
     try {
-      let photoPath = null;
+      // Determine if we have a new photo (data URL) or keeping existing
+      const isNewPhoto = photoPreview && photoPreview.startsWith("data:");
+      const isExistingPhoto = photoPreview && photoPreview.startsWith("/api/kilo/photo");
 
-      // Upload photo if available (data URL from camera capture)
-      if (photoPreview && photoPreview.startsWith("data:")) {
-        const formData = new FormData();
-        // Convert data URL to blob
-        const response = await fetch(photoPreview);
-        const blob = await response.blob();
-        const file = new File([blob], "photo.jpg", { type: "image/jpeg" });
-        formData.append("photo", file);
-
-        const uploadRes = await fetch("/api/photo", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          throw new Error("Failed to upload photo");
-        }
-
-        const { path } = await uploadRes.json();
-        photoPath = path;
+      // Extract mime type from data URL
+      let photoMimeType: string | null = null;
+      if (isNewPhoto) {
+        const mimeMatch = photoPreview.match(/^data:(image\/\w+);base64,/);
+        photoMimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
       }
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         q1: formData.q1 || "",
         q2: formData.q2 || null,
         q3: formData.q3 || null,
-        photo_path: photoPath,
       };
+
+      if (isEditMode) {
+        payload.id = initialData!.id;
+        if (isExistingPhoto) {
+          // Keep existing photo
+          payload.keep_photo = true;
+        } else if (isNewPhoto) {
+          // New photo uploaded
+          payload.photo_base64 = photoPreview;
+          payload.photo_mime_type = photoMimeType;
+        }
+        // If neither, photo will be cleared
+      } else {
+        // New entry
+        if (isNewPhoto) {
+          payload.photo_base64 = photoPreview;
+          payload.photo_mime_type = photoMimeType;
+        }
+      }
 
       const method = isEditMode ? "PUT" : "POST";
 
@@ -153,7 +158,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(isEditMode ? { id: initialData!.id, ...payload } : payload),
+        body: JSON.stringify(payload),
       });
 
       if (!apiResponse.ok) {
