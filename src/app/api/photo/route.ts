@@ -40,14 +40,16 @@ export async function POST(request: NextRequest) {
     const ext = file.name.split(".").pop() || "jpg";
     const filename = `${Date.now()}-${user.id.slice(0, 8)}.${ext}`;
 
-    // Save to public/uploads/kilo/{userId}/
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "kilo", user.id);
+    // Save to uploads/kilo/{userId}/ (outside public, served via API)
+    const uploadDir = path.join(process.cwd(), "uploads", "kilo", user.id);
     await mkdir(uploadDir, { recursive: true });
     await writeFile(path.join(uploadDir, filename), buffer);
 
-    console.log("[POST /api/photo] Uploaded photo to", `/uploads/kilo/${user.id}/${filename}`);
+    // Return API path that will serve the file dynamically
+    const apiPath = `/api/uploads/kilo/${user.id}/${filename}`;
+    console.log("[POST /api/photo] Uploaded photo to", apiPath);
 
-    return NextResponse.json({ path: `/public/uploads/kilo/${user.id}/${filename}` });
+    return NextResponse.json({ path: apiPath });
   } catch (error) {
     console.error("[POST /api/photo]", error);
     return NextResponse.json(
