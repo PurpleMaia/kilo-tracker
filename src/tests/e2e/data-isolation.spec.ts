@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { db } from '@/db/kysely/client';
 import { hashPassword } from '@/lib/auth/password';
 import { randomInt, randomUUID } from 'crypto';
+import { clearFailedLoginAttempts, dismissInstallDialog } from '../helpers';
 
 /**
  * E2E Data Isolation Tests
@@ -30,7 +31,15 @@ const userB = {
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Data Isolation Security', () => {
+  // Clear login attempts before each test to prevent rate limiting from parallel tests
+  test.beforeEach(async () => {
+    await clearFailedLoginAttempts();
+  });
+
   test.beforeAll(async () => {
+    // Clear any failed login attempts from other tests to avoid rate limiting
+    await clearFailedLoginAttempts();
+
     // Create both test users
     const passwordHashA = await hashPassword(userA.password);
     const passwordHashB = await hashPassword(userB.password);
@@ -129,6 +138,10 @@ test.describe('Data Isolation Security', () => {
     // Login as User A
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
+
+    // Dismiss install dialog if it appears on login page
+    await dismissInstallDialog(page);
+
     await page.waitForSelector('input#identifier', { state: 'visible' });
 
     await page.fill('input#identifier', userA.email);
@@ -136,6 +149,7 @@ test.describe('Data Isolation Security', () => {
     await page.click('button[type="submit"]');
 
     await page.waitForURL(/.*dashboard/, { timeout: 10000 });
+    await dismissInstallDialog(page);
 
     // Try to access User B's entry via edit URL
     await page.goto(`/kilo?edit=${userBEntry!.id}`);

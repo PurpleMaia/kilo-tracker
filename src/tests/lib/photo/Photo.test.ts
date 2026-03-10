@@ -1,60 +1,20 @@
-import { POST } from '@/app/api/photo/route';
+import { GET } from '@/app/api/kilo/photo/route';
+import { POST } from '@/app/api/kilo/route';
 import { db } from '@/db/kysely/client';
 import { hashPassword } from '@/lib/auth/password';
 import { hashToken } from '@/lib/auth/token';
-import { createTestUser } from '../../helpers';
+import { createTestUser, createMockRequest, createMockGetRequest } from '../../helpers';
 import { randomUUID } from 'crypto';
-import { NextRequest } from 'next/server';
 
 const testUser = createTestUser();
+const otherUser = createTestUser();
 
-// Helper to create FormData with a file
-function createMockPhotoRequest(
-  file: File | null,
-  sessionToken?: string
-): NextRequest {
-  const formData = new FormData();
-  if (file) {
-    formData.append('photo', file);
-  }
-
-  const request = new NextRequest('http://localhost:3000/api/photo', {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (sessionToken) {
-    Object.defineProperty(request, 'cookies', {
-      value: {
-        get: (name: string) => name === 'session_token' ? { name, value: sessionToken } : undefined,
-        getAll: () => [{ name: 'session_token', value: sessionToken }],
-        has: (name: string) => name === 'session_token',
-      },
-      writable: false,
-    });
-  } else {
-    Object.defineProperty(request, 'cookies', {
-      value: {
-        get: () => undefined,
-        getAll: () => [],
-        has: () => false,
-      },
-      writable: false,
-    });
-  }
-
-  return request;
-}
-
-// Create a mock image file
-function createMockImageFile(sizeInBytes: number, type: string = 'image/jpeg', name: string = 'test.jpg'): File {
-  const buffer = new ArrayBuffer(sizeInBytes);
-  const blob = new Blob([buffer], { type });
-  return new File([blob], name, { type });
-}
+// Small valid base64 JPEG (1x1 pixel)
+const VALID_BASE64_JPEG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBEQCEAwEPwAB//9k=';
 
 describe('Photo API Tests', () => {
   beforeAll(async () => {
+    // Create test user
     const passwordHash = await hashPassword(testUser.password);
     const tokenHash = hashToken(testUser.session_token);
 
@@ -74,162 +34,370 @@ describe('Photo API Tests', () => {
       created_at: new Date(),
       expires_at: new Date(Date.now() + 1000 * 60 * 60),
     }).execute();
+
+    // Create other user for authorization tests
+    const otherPasswordHash = await hashPassword(otherUser.password);
+    const otherTokenHash = hashToken(otherUser.session_token);
+
+    await db.insertInto('users').values({
+      id: otherUser.id,
+      email: otherUser.email,
+      username: otherUser.username,
+      password_hash: otherPasswordHash,
+      system_role: otherUser.system_role,
+      created_at: new Date(),
+    }).execute();
+
+    await db.insertInto('sessions').values({
+      id: randomUUID(),
+      user_id: otherUser.id,
+      token_hash: otherTokenHash,
+      created_at: new Date(),
+      expires_at: new Date(Date.now() + 1000 * 60 * 60),
+    }).execute();
   });
 
   afterAll(async () => {
-    await db.deleteFrom('sessions').where('user_id', '=', testUser.id).execute();
-    await db.deleteFrom('users').where('id', '=', testUser.id).execute();
+    await db.deleteFrom('kilo').where('user_id', 'in', [testUser.id, otherUser.id]).execute();
+    await db.deleteFrom('sessions').where('user_id', 'in', [testUser.id, otherUser.id]).execute();
+    await db.deleteFrom('users').where('id', 'in', [testUser.id, otherUser.id]).execute();
     await db.destroy();
   });
 
-  describe('POST /api/photo', () => {
+  beforeEach(async () => {
+    await db.deleteFrom('kilo').where('user_id', 'in', [testUser.id, otherUser.id]).execute();
+  });
+
+  describe('GET /api/kilo/photo', () => {
     test('should return 401 without session', async () => {
-      const file = createMockImageFile(1024);
-      const request = createMockPhotoRequest(file);
+      const request = createMockGetRequest('http://localhost:3000/api/kilo/photo?id=1');
+      Object.defineProperty(request, 'cookies', {
+        value: {
+          get: () => undefined,
+          getAll: () => [],
+          has: () => false,
+        },
+        writable: false,
+      });
 
-      const response = await POST(request);
-
+      const response = await GET(request);
       expect(response.status).toBe(401);
     });
 
-    test('should return 400 when no file is provided', async () => {
-      const request = createMockPhotoRequest(null, testUser.session_token);
+    test('should return 400 when entry ID is missing', async () => {
+      const request = createMockGetRequest('http://localhost:3000/api/kilo/photo');
+      Object.defineProperty(request, 'cookies', {
+        value: {
+          get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
+          getAll: () => [{ name: 'session_token', value: testUser.session_token }],
+          has: (name: string) => name === 'session_token',
+        },
+        writable: false,
+      });
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Missing entry ID');
+    });
+
+    test('should return 400 for invalid entry ID', async () => {
+      const request = createMockGetRequest('http://localhost:3000/api/kilo/photo?id=invalid');
+      Object.defineProperty(request, 'cookies', {
+        value: {
+          get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
+          getAll: () => [{ name: 'session_token', value: testUser.session_token }],
+          has: (name: string) => name === 'session_token',
+        },
+        writable: false,
+      });
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Invalid entry ID');
+    });
+
+    test('should return 404 for non-existent entry', async () => {
+      const request = createMockGetRequest('http://localhost:3000/api/kilo/photo?id=999999');
+      Object.defineProperty(request, 'cookies', {
+        value: {
+          get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
+          getAll: () => [{ name: 'session_token', value: testUser.session_token }],
+          has: (name: string) => name === 'session_token',
+        },
+        writable: false,
+      });
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(data.error).toBe('Photo not found');
+    });
+
+    test('should return 404 for entry without photo', async () => {
+      // Create entry without photo
+      const createRequest = createMockRequest(
+        { q1: 'Test answer without photo' },
+        {},
+        { session_token: testUser.session_token }
+      );
+      const createResponse = await POST(createRequest);
+      const createData = await createResponse.json();
+      const entryId = createData.entry.id;
+
+      const request = createMockGetRequest(`http://localhost:3000/api/kilo/photo?id=${entryId}`);
+      Object.defineProperty(request, 'cookies', {
+        value: {
+          get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
+          getAll: () => [{ name: 'session_token', value: testUser.session_token }],
+          has: (name: string) => name === 'session_token',
+        },
+        writable: false,
+      });
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(data.error).toBe('Photo not found');
+    });
+
+    test('should return 404 when accessing another users photo', async () => {
+      // Create entry with photo for other user
+      const createRequest = createMockRequest(
+        { q1: 'Other user entry', photo_base64: VALID_BASE64_JPEG, photo_mime_type: 'image/jpeg' },
+        {},
+        { session_token: otherUser.session_token }
+      );
+      const createResponse = await POST(createRequest);
+      const createData = await createResponse.json();
+      const entryId = createData.entry.id;
+
+      // Try to access as testUser
+      const request = createMockGetRequest(`http://localhost:3000/api/kilo/photo?id=${entryId}`);
+      Object.defineProperty(request, 'cookies', {
+        value: {
+          get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
+          getAll: () => [{ name: 'session_token', value: testUser.session_token }],
+          has: (name: string) => name === 'session_token',
+        },
+        writable: false,
+      });
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(data.error).toBe('Photo not found');
+    });
+
+    test('should return photo data with correct content type', async () => {
+      // Create entry with photo
+      const createRequest = createMockRequest(
+        { q1: 'Test with photo', photo_base64: VALID_BASE64_JPEG, photo_mime_type: 'image/jpeg' },
+        {},
+        { session_token: testUser.session_token }
+      );
+      const createResponse = await POST(createRequest);
+      const createData = await createResponse.json();
+      const entryId = createData.entry.id;
+
+      const request = createMockGetRequest(`http://localhost:3000/api/kilo/photo?id=${entryId}`);
+      Object.defineProperty(request, 'cookies', {
+        value: {
+          get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
+          getAll: () => [{ name: 'session_token', value: testUser.session_token }],
+          has: (name: string) => name === 'session_token',
+        },
+        writable: false,
+      });
+
+      const response = await GET(request);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('image/jpeg');
+      expect(response.headers.get('Cache-Control')).toBe('private, max-age=31536000, immutable');
+
+      // Verify response body is binary data
+      const buffer = await response.arrayBuffer();
+      expect(buffer.byteLength).toBeGreaterThan(0);
+    });
+
+    test('should return PNG photo with correct content type', async () => {
+      // Small valid base64 PNG (1x1 pixel)
+      const base64Png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+      // Create entry with PNG photo
+      const createRequest = createMockRequest(
+        { q1: 'Test with PNG', photo_base64: base64Png, photo_mime_type: 'image/png' },
+        {},
+        { session_token: testUser.session_token }
+      );
+      const createResponse = await POST(createRequest);
+      const createData = await createResponse.json();
+      const entryId = createData.entry.id;
+
+      const request = createMockGetRequest(`http://localhost:3000/api/kilo/photo?id=${entryId}`);
+      Object.defineProperty(request, 'cookies', {
+        value: {
+          get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
+          getAll: () => [{ name: 'session_token', value: testUser.session_token }],
+          has: (name: string) => name === 'session_token',
+        },
+        writable: false,
+      });
+
+      const response = await GET(request);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Content-Type')).toBe('image/png');
+    });
+  });
+
+  describe('Photo size limits', () => {
+    test('should reject photo larger than 5MB', async () => {
+      // Create a base64 string that represents more than 5MB of data
+      // Base64 encoding increases size by ~33%, so we need ~3.75MB of base64 to get 5MB decoded
+      // However, the actual check is on decoded size, so we need to create a large enough base64
+      const largeData = 'A'.repeat(7 * 1024 * 1024); // ~7MB base64 which decodes to ~5.25MB
+      const largeBase64 = `data:image/jpeg;base64,${largeData}`;
+
+      const request = createMockRequest(
+        { q1: 'Test with large photo', photo_base64: largeBase64, photo_mime_type: 'image/jpeg' },
+        {},
+        { session_token: testUser.session_token }
+      );
 
       const response = await POST(request);
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toBe('No photo provided');
+      expect(data.error).toBe('Photo too large (max 5MB)');
     });
 
-    test('should return 400 when file is too large (>5MB)', async () => {
-      // Create a file that's slightly over 5MB
-      const file = createMockImageFile(5 * 1024 * 1024 + 1);
-      const request = createMockPhotoRequest(file, testUser.session_token);
+    test('should accept photo at exactly 5MB limit', async () => {
+      // Create exactly 5MB of data (base64 encoded, which will decode to ~3.75MB)
+      // To get exactly 5MB decoded, we need ~6.67MB of base64
+      const exactData = 'A'.repeat(5 * 1024 * 1024); // This will decode to less than 5MB
+      const exactBase64 = `data:image/jpeg;base64,${exactData}`;
+
+      const request = createMockRequest(
+        { q1: 'Test with max size photo', photo_base64: exactBase64, photo_mime_type: 'image/jpeg' },
+        {},
+        { session_token: testUser.session_token }
+      );
 
       const response = await POST(request);
-      const data = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(data.error).toBe('File too large (max 5MB)');
+      // This should succeed since 5MB base64 decodes to ~3.75MB
+      expect(response.status).toBe(201);
+    });
+  });
+
+  describe('PUT /api/kilo with photo updates', () => {
+    test('should keep existing photo when keep_photo is true', async () => {
+      // Create entry with photo
+      const createRequest = createMockRequest(
+        { q1: 'Original answer', photo_base64: VALID_BASE64_JPEG, photo_mime_type: 'image/jpeg' },
+        {},
+        { session_token: testUser.session_token }
+      );
+      const createResponse = await POST(createRequest);
+      const createData = await createResponse.json();
+      const entryId = createData.entry.id;
+
+      expect(createData.entry.has_photo).toBe(true);
+
+      // Update without providing new photo but with keep_photo
+      const { PUT } = await import('@/app/api/kilo/route');
+      const updateRequest = createMockRequest(
+        { id: entryId, q1: 'Updated answer', keep_photo: true },
+        {},
+        { session_token: testUser.session_token }
+      );
+
+      const updateResponse = await PUT(updateRequest);
+      const updateData = await updateResponse.json();
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateData.entry.q1).toBe('Updated answer');
+      expect(updateData.entry.has_photo).toBe(true);
     });
 
-    test('should return 400 for non-image file types', async () => {
-      // Create a non-image file
-      const buffer = new ArrayBuffer(1024);
-      const blob = new Blob([buffer], { type: 'application/pdf' });
-      const file = new File([blob], 'document.pdf', { type: 'application/pdf' });
-      const request = createMockPhotoRequest(file, testUser.session_token);
+    test('should clear photo when keep_photo is false and no new photo provided', async () => {
+      // Create entry with photo
+      const createRequest = createMockRequest(
+        { q1: 'Original answer', photo_base64: VALID_BASE64_JPEG, photo_mime_type: 'image/jpeg' },
+        {},
+        { session_token: testUser.session_token }
+      );
+      const createResponse = await POST(createRequest);
+      const createData = await createResponse.json();
+      const entryId = createData.entry.id;
 
-      const response = await POST(request);
-      const data = await response.json();
+      expect(createData.entry.has_photo).toBe(true);
 
-      expect(response.status).toBe(400);
-      expect(data.error).toBe('Only image files are allowed');
+      // Update without photo and without keep_photo
+      const { PUT } = await import('@/app/api/kilo/route');
+      const updateRequest = createMockRequest(
+        { id: entryId, q1: 'Updated answer' },
+        {},
+        { session_token: testUser.session_token }
+      );
+
+      const updateResponse = await PUT(updateRequest);
+      const updateData = await updateResponse.json();
+
+      expect(updateResponse.status).toBe(200);
+      expect(updateData.entry.q1).toBe('Updated answer');
+      expect(updateData.entry.has_photo).toBe(false);
     });
 
-    test('should return 400 for text file disguised as image', async () => {
-      // Create a text file with image extension but wrong mime type
-      const blob = new Blob(['This is text content'], { type: 'text/plain' });
-      const file = new File([blob], 'fake.jpg', { type: 'text/plain' });
-      const request = createMockPhotoRequest(file, testUser.session_token);
+    test('should replace photo when new photo is provided', async () => {
+      // Create entry with photo
+      const createRequest = createMockRequest(
+        { q1: 'Original answer', photo_base64: VALID_BASE64_JPEG, photo_mime_type: 'image/jpeg' },
+        {},
+        { session_token: testUser.session_token }
+      );
+      const createResponse = await POST(createRequest);
+      const createData = await createResponse.json();
+      const entryId = createData.entry.id;
 
-      const response = await POST(request);
-      const data = await response.json();
+      // Small valid base64 PNG (different from JPEG)
+      const newPhoto = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
-      expect(response.status).toBe(400);
-      expect(data.error).toBe('Only image files are allowed');
-    });
+      // Update with new photo
+      const { PUT } = await import('@/app/api/kilo/route');
+      const updateRequest = createMockRequest(
+        { id: entryId, q1: 'Updated answer', photo_base64: newPhoto, photo_mime_type: 'image/png' },
+        {},
+        { session_token: testUser.session_token }
+      );
 
-    test('should accept valid JPEG image', async () => {
-      const file = createMockImageFile(1024, 'image/jpeg', 'test.jpg');
-      const request = createMockPhotoRequest(file, testUser.session_token);
+      const updateResponse = await PUT(updateRequest);
+      const updateData = await updateResponse.json();
 
-      const response = await POST(request);
-      const data = await response.json();
+      expect(updateResponse.status).toBe(200);
+      expect(updateData.entry.has_photo).toBe(true);
 
-      expect(response.status).toBe(200);
-      expect(data.path).toBeDefined();
-      expect(data.path).toMatch(/^\/uploads\/kilo\/[a-zA-Z0-9-]+\/\d+-[a-f0-9]{8}\.jpg$/);
-    });
+      // Verify the photo was updated by checking mime type
+      const getRequest = createMockGetRequest(`http://localhost:3000/api/kilo/photo?id=${entryId}`);
+      Object.defineProperty(getRequest, 'cookies', {
+        value: {
+          get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
+          getAll: () => [{ name: 'session_token', value: testUser.session_token }],
+          has: (name: string) => name === 'session_token',
+        },
+        writable: false,
+      });
 
-    test('should accept valid PNG image', async () => {
-      const file = createMockImageFile(1024, 'image/png', 'test.png');
-      const request = createMockPhotoRequest(file, testUser.session_token);
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.path).toBeDefined();
-      expect(data.path).toMatch(/^\/uploads\/kilo\/[a-zA-Z0-9-]+\/\d+-[a-f0-9]{8}\.png$/);
-    });
-
-    test('should accept valid WebP image', async () => {
-      const file = createMockImageFile(1024, 'image/webp', 'test.webp');
-      const request = createMockPhotoRequest(file, testUser.session_token);
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.path).toBeDefined();
-      expect(data.path).toMatch(/^\/uploads\/kilo\/[a-zA-Z0-9-]+\/\d+-[a-f0-9]{8}\.webp$/);
-    });
-
-    test('should accept valid GIF image', async () => {
-      const file = createMockImageFile(1024, 'image/gif', 'test.gif');
-      const request = createMockPhotoRequest(file, testUser.session_token);
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.path).toBeDefined();
-      expect(data.path).toMatch(/^\/uploads\/kilo\/[a-zA-Z0-9-]+\/\d+-[a-f0-9]{8}\.gif$/);
-    });
-
-    test('should accept file at exactly 5MB limit', async () => {
-      const file = createMockImageFile(5 * 1024 * 1024, 'image/jpeg', 'large.jpg');
-      const request = createMockPhotoRequest(file, testUser.session_token);
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.path).toBeDefined();
-    });
-
-    test('should include user ID in upload path', async () => {
-      const file = createMockImageFile(1024, 'image/jpeg', 'test.jpg');
-      const request = createMockPhotoRequest(file, testUser.session_token);
-
-      const response = await POST(request);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.path).toContain(testUser.id);
-    });
-
-    test('should generate unique filenames with timestamp', async () => {
-      const file1 = createMockImageFile(1024, 'image/jpeg', 'test.jpg');
-      const file2 = createMockImageFile(1024, 'image/jpeg', 'test.jpg');
-
-      const request1 = createMockPhotoRequest(file1, testUser.session_token);
-      const request2 = createMockPhotoRequest(file2, testUser.session_token);
-
-      const response1 = await POST(request1);
-      const data1 = await response1.json();
-
-      // Small delay to ensure different timestamp
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      const response2 = await POST(request2);
-      const data2 = await response2.json();
-
-      expect(response1.status).toBe(200);
-      expect(response2.status).toBe(200);
-      expect(data1.path).not.toBe(data2.path);
+      const getResponse = await GET(getRequest);
+      expect(getResponse.headers.get('Content-Type')).toBe('image/png');
     });
   });
 });

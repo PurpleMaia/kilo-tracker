@@ -40,15 +40,11 @@ test.describe('Authentication Flow', () => {
     }).execute();
   });
 
-  // Clear rate limits before each test
-  test.beforeEach(async () => {
-    await db.deleteFrom('login_attempts').where('identifier', '=', testUser.email).execute();
-  });
-
   // Cleanup: Remove test user after tests
   test.afterAll(async () => {
     await db.deleteFrom('sessions').where('user_id', '=', testUser.id).execute();
-    await db.deleteFrom('login_attempts').where('identifier', '=', testUser.email).execute();
+    // Clear ALL failed login attempts to prevent IP-based rate limiting from affecting other parallel tests
+    await db.deleteFrom('login_attempts').where('successful', '=', false).execute();
     await db.deleteFrom('users').where('id', '=', testUser.id).execute();
     await db.destroy();
   });
@@ -128,7 +124,7 @@ test.describe('Authentication Flow', () => {
       await page.fill('input#identifier', testUser.email);
       await page.fill('input#password', 'WrongPassword!');
       await page.click('button[type="submit"]');
-      await page.waitForSelector('[id="login-errors"]', { state: 'visible' });      
+      await page.waitForSelector('[id="login-errors"]', { state: 'visible' });
     }
 
     const lockoutMessage = await page.waitForSelector('[id="login-errors"]', { state: 'visible' });
@@ -136,7 +132,11 @@ test.describe('Authentication Flow', () => {
     expect(await lockoutMessage.textContent()).toContain(Errors.TOO_MANY_REQUESTS.message);
 
     // Verify we're still on the login page
-    expect(page.url()).toContain('/login'); 
+    expect(page.url()).toContain('/login');
+
+    // Clear ALL failed login attempts after this test to prevent IP-based rate limiting
+    // from affecting other parallel tests (all tests share localhost IP)
+    await db.deleteFrom('login_attempts').where('successful', '=', false).execute();
   });
 
   // NOTE: Google Oauth flow tests are limited to verifying the redirect to the authorization endpoint and handling of callback parameters.

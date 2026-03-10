@@ -50,14 +50,17 @@ test.describe('Kilo Entry Form', () => {
   });
 
   test('allows a user to submit a kilo entry with all required questions', async ({ page }) => {
+    // Set localStorage to prevent PWA install dialog from appearing during test
+    await page.goto('/login');
+    await page.evaluate(() => {
+      localStorage.setItem('pwa-install-prompt-dismissed', Date.now().toString());
+    });
+
     // Log in as test user
     await loginAsUser(page);
 
     // Navigate to Kilo Entry Form
     await page.click('text=Start a new KILO');
-
-    // Dismiss install dialog if it appears on the kilo page
-    await dismissInstallDialog(page);
 
     // Use text input instead of audio (audio recording may not work in headless browsers)
     const preferToTypeBtn = page.locator('text=Prefer to type instead?');

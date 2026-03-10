@@ -130,10 +130,11 @@ describe('KILO API Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    test('should accept valid photo path format', async () => {
-      const validPath = `/uploads/kilo/${testUser.id}/1234567890-${testUser.id.slice(0, 8)}.jpg`;
+    test('should accept valid base64 photo', async () => {
+      // Small valid base64 JPEG (1x1 pixel)
+      const base64Photo = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBEQCEAwEPwAB//9k=';
       const request = createMockRequest(
-        { q1: 'Test answer', photo_path: validPath },
+        { q1: 'Test answer', photo_base64: base64Photo, photo_mime_type: 'image/jpeg' },
         {},
         { session_token: testUser.session_token }
       );
@@ -142,13 +143,13 @@ describe('KILO API Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.entry.photo_path).toBe(validPath);
+      expect(data.entry.has_photo).toBe(true);
     });
 
-    test('should reject invalid photo path format', async () => {
-      const invalidPath = '/etc/passwd';
+    test('should reject invalid photo mime type', async () => {
+      const base64Photo = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
       const request = createMockRequest(
-        { q1: 'Test answer', photo_path: invalidPath },
+        { q1: 'Test answer', photo_base64: base64Photo, photo_mime_type: 'application/pdf' },
         {},
         { session_token: testUser.session_token }
       );
@@ -157,20 +158,21 @@ describe('KILO API Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toBe('Invalid input');
+      expect(data.error).toContain('Invalid input');
     });
 
-    test('should reject path traversal attempts in photo_path', async () => {
-      const maliciousPath = '/uploads/kilo/../../../etc/passwd';
+    test('should create entry without photo when photo fields not provided', async () => {
       const request = createMockRequest(
-        { q1: 'Test answer', photo_path: maliciousPath },
+        { q1: 'Test answer without photo' },
         {},
         { session_token: testUser.session_token }
       );
 
       const response = await POST(request);
+      const data = await response.json();
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(201);
+      expect(data.entry.has_photo).toBe(false);
     });
 
     test('should store location when provided', async () => {

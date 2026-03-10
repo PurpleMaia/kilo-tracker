@@ -235,13 +235,34 @@ export async function logout(page: Page) {
 
 /**
  * Helper function to dismiss the "Install KILO App" dialog if it appears
+ * Uses "Don't show again" to prevent dialog from reappearing during the test session
  */
 export async function dismissInstallDialog(page: Page) {
   try {
-    const maybeLaterBtn = page.getByRole('button', { name: 'Maybe later' });
-    if (await maybeLaterBtn.isVisible({ timeout: 2000 })) {
-      await maybeLaterBtn.click();
-      await page.waitForTimeout(300); // Wait for dialog to close
+    // Wait for the dialog to potentially appear (it has a 2s delay after page load)
+    // We need to wait longer to ensure we catch it
+    await page.waitForTimeout(2500);
+
+    // Check if the sheet dialog is visible
+    const dialog = page.locator('[role="dialog"][data-slot="sheet-content"]');
+    const isDialogVisible = await dialog.isVisible({ timeout: 500 }).catch(() => false);
+
+    if (isDialogVisible) {
+      // Click "Don't show again" to permanently dismiss for this session via localStorage
+      const dontShowBtn = page.locator('button').filter({ hasText: /show again/i });
+      if (await dontShowBtn.isVisible({ timeout: 500 })) {
+        await dontShowBtn.click();
+      } else {
+        // Fallback to "Maybe later" if "Don't show again" not found
+        const maybeLaterBtn = page.locator('button').filter({ hasText: /maybe later/i });
+        if (await maybeLaterBtn.isVisible({ timeout: 500 })) {
+          await maybeLaterBtn.click();
+        }
+      }
+      // Wait for sheet animation to complete (Radix Sheet has 500ms animation)
+      await page.waitForTimeout(700);
+      // Wait for dialog to disappear
+      await dialog.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
     }
   } catch {
     // Dialog not present, continue
