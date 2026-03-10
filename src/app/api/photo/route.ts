@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     console.log("[POST /api/photo] Uploaded photo to", `/uploads/kilo/${user.id}/${filename}`);
 
-    return NextResponse.json({ path: `/uploads/kilo/${user.id}/${filename}` });
+    return NextResponse.json({ path: `/public/uploads/kilo/${user.id}/${filename}` });
   } catch (error) {
     console.error("[POST /api/photo]", error);
     return NextResponse.json(
