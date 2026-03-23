@@ -6,6 +6,7 @@ import {
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { Audio } from "expo-av";
+import { Ionicons } from "@expo/vector-icons";
 import { apiFetch, getToken } from "@/lib/api";
 
 const QUESTIONS = [
@@ -17,19 +18,19 @@ const QUESTIONS = [
 type PhotoData = { uri: string; base64: string; mimeType: string };
 
 export default function KiloScreen() {
-  const [step, setStep]           = useState(0);
-  const [answers, setAnswers]     = useState({ q1: "", q2: "", q3: "" });
+  const [step, setStep]             = useState(0);
+  const [answers, setAnswers]       = useState({ q1: "", q2: "", q3: "" });
   const [showTyping, setShowTyping] = useState(false);
-  const [photo, setPhoto]         = useState<PhotoData | null>(null);
-  const [isRecording, setIsRecording]     = useState(false);
+  const [photo, setPhoto]           = useState<PhotoData | null>(null);
+  const [isRecording, setIsRecording]       = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isSubmitting, setIsSubmitting]   = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting]     = useState(false);
+  const [error, setError]           = useState<string | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
 
-  const current  = QUESTIONS[step];
-  const answer   = answers[current.id as keyof typeof answers];
-  const isLast   = step === QUESTIONS.length - 1;
+  const current = QUESTIONS[step];
+  const answer  = answers[current.id as keyof typeof answers];
+  const isLast  = step === QUESTIONS.length - 1;
 
   const setAnswer = (val: string) =>
     setAnswers((a) => ({ ...a, [current.id]: val }));
@@ -41,7 +42,7 @@ export default function KiloScreen() {
     else setStep((s) => s - 1);
   };
 
-  // Voice recording
+  // ── Voice recording ────────────────────────────────────────────
   const handleStartRecording = async () => {
     try {
       const { status } = await Audio.requestPermissionsAsync();
@@ -86,8 +87,10 @@ export default function KiloScreen() {
         const { text } = await res.json();
         if (text) {
           setAnswer((answer ? answer + " " : "") + text);
-          setShowTyping(true); // show result in text box
+          setShowTyping(true);
         }
+      } else {
+        setShowTyping(true);
       }
     } catch {
       // Transcription not configured — show typing fallback
@@ -97,7 +100,7 @@ export default function KiloScreen() {
     }
   };
 
-  // Photo
+  // ── Photo ──────────────────────────────────────────────────────
   const handleTakePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
@@ -113,7 +116,7 @@ export default function KiloScreen() {
     }
   };
 
-  // Submit
+  // ── Submit ─────────────────────────────────────────────────────
   const handleSubmit = async () => {
     setError(null);
     setIsSubmitting(true);
@@ -151,41 +154,48 @@ export default function KiloScreen() {
       className="flex-1 bg-white"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* Header */}
-      <View className="px-6 pt-14 pb-3 border-b border-gray-100 flex-row items-center justify-between">
-        <Text className="text-lg font-bold text-gray-900">{current.question}</Text>
-        <View className="flex-row items-center gap-x-3">
-          <TouchableOpacity onPress={goBack} className="flex-row items-center gap-x-1">
-            <Text className="text-gray-500 text-sm">✕  Cancel</Text>
-          </TouchableOpacity>
-          <Text className="text-gray-400 text-sm">{step + 1} / {QUESTIONS.length}</Text>
-        </View>
+      {/* ── Header: title · step counter · cancel ── */}
+      <View className="px-6 pt-14 pb-4 border-b border-gray-100 flex-row items-center justify-between">
+        <Text className="text-lg font-bold text-gray-900">KILO</Text>
+        <Text className="text-sm text-gray-400">
+          {step + 1} / {QUESTIONS.length}
+        </Text>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text className="text-sm text-gray-500 font-medium">Cancel</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Progress bar */}
+      {/* ── Progress bar ── */}
       <View className="bg-gray-100 h-1">
-        <View className="bg-gray-900 h-1" style={{ width: `${((step + 1) / QUESTIONS.length) * 100}%` }} />
+        <View
+          className="bg-gray-900 h-1"
+          style={{ width: `${((step + 1) / QUESTIONS.length) * 100}%` }}
+        />
       </View>
 
       <ScrollView
-        contentContainerClassName="flex-grow px-6 py-8 gap-y-6"
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 28, paddingBottom: 16 }}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ── Question in content area ── */}
+        <Text className="text-xl font-bold text-gray-900 leading-snug mb-1">
+          {current.question}
+        </Text>
         {current.required && (
-          <Text className="text-red-500 text-sm font-medium">* Required</Text>
+          <Text className="text-red-500 text-xs mb-6">* Required</Text>
         )}
 
         {error && (
-          <View className="bg-red-50 border border-red-200 rounded-xl p-3">
+          <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5">
             <Text className="text-red-700 text-sm">{error}</Text>
           </View>
         )}
 
-        {/* Voice recording — primary input */}
+        {/* ── Voice recording (primary input) ── */}
         {!showTyping && (
-          <View className="items-center gap-y-4 py-6">
+          <View className="items-center" style={{ paddingVertical: 32, gap: 16 }}>
             {isTranscribing ? (
-              <View className="items-center gap-y-3">
+              <View className="items-center" style={{ gap: 12 }}>
                 <ActivityIndicator size="large" color="#16a34a" />
                 <Text className="text-gray-500 text-sm">Transcribing your response...</Text>
               </View>
@@ -193,15 +203,29 @@ export default function KiloScreen() {
               <>
                 <TouchableOpacity
                   onPress={isRecording ? handleStopRecording : handleStartRecording}
-                  className={`w-24 h-24 rounded-full items-center justify-center ${isRecording ? "bg-red-500" : "bg-green-600"}`}
+                  style={{
+                    width: 112, height: 112, borderRadius: 56,
+                    alignItems: "center", justifyContent: "center",
+                    backgroundColor: isRecording ? "#ef4444" : "#16a34a",
+                    shadowColor: "#000", shadowOpacity: 0.12,
+                    shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
+                    elevation: 4,
+                  }}
                 >
-                  <Text className="text-4xl">{isRecording ? "⏹" : "🎙"}</Text>
+                  <Ionicons
+                    name={isRecording ? "stop" : "mic"}
+                    size={44}
+                    color="white"
+                  />
                 </TouchableOpacity>
                 <Text className="text-gray-500 text-sm">
                   {isRecording ? "Tap to stop recording" : "Tap to start recording"}
                 </Text>
                 {answer.trim() !== "" && (
-                  <View className="bg-gray-50 rounded-xl px-4 py-3 w-full">
+                  <View
+                    className="bg-gray-50 border border-gray-200 rounded-xl w-full"
+                    style={{ paddingHorizontal: 16, paddingVertical: 12, marginTop: 4 }}
+                  >
                     <Text className="text-gray-700 text-sm italic">"{answer}"</Text>
                   </View>
                 )}
@@ -210,51 +234,63 @@ export default function KiloScreen() {
           </View>
         )}
 
-        {/* Typing fallback */}
+        {/* ── Typing fallback ── */}
         {showTyping ? (
           <TextInput
-            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-4 text-gray-900 text-base min-h-32"
+            style={{
+              backgroundColor: "#f9fafb", borderWidth: 1, borderColor: "#e5e7eb",
+              borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+              fontSize: 16, color: "#111827", minHeight: 128, textAlignVertical: "top",
+            }}
             placeholder="Type your answer here..."
             placeholderTextColor="#9ca3af"
             value={answer}
             onChangeText={setAnswer}
             multiline
-            textAlignVertical="top"
             autoFocus
             editable={!isSubmitting}
           />
         ) : (
           <TouchableOpacity
             onPress={() => setShowTyping(true)}
-            className="flex-row items-center justify-center gap-x-2"
+            style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}
           >
-            <Text className="text-gray-400 text-base">⌨️</Text>
+            <Ionicons name="keyboard-outline" size={18} color="#9ca3af" />
             <Text className="text-gray-500 text-sm">Prefer to type instead?</Text>
           </TouchableOpacity>
         )}
 
-        {/* Photo (Q2 only) */}
+        {/* ── Photo (Q2 only) ── */}
         {current.picture && (
-          <View className="gap-y-2">
+          <View style={{ marginTop: 24, gap: 8 }}>
             {photo ? (
               <View>
                 <Image
                   source={{ uri: photo.uri }}
-                  className="w-full h-48 rounded-xl"
+                  style={{ width: "100%", height: 192, borderRadius: 12 }}
                   resizeMode="cover"
                 />
-                <TouchableOpacity onPress={() => setPhoto(null)} className="mt-2 items-center">
-                  <Text className="text-red-500 text-sm">Remove photo</Text>
+                <TouchableOpacity
+                  onPress={() => setPhoto(null)}
+                  style={{ marginTop: 8, alignItems: "center" }}
+                >
+                  <Text className="text-red-500 text-sm font-medium">Remove photo</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <View>
-                <Text className="text-gray-400 text-xs mb-2">Take a photo of your Kilo (optional)</Text>
+                <Text className="text-gray-400 text-xs mb-2">
+                  Optional: take a photo of your Kilo
+                </Text>
                 <TouchableOpacity
                   onPress={handleTakePhoto}
-                  className="flex-row items-center gap-x-2 border border-gray-300 rounded-xl px-4 py-3 self-start"
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 8,
+                    borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12,
+                    paddingHorizontal: 16, paddingVertical: 12, alignSelf: "flex-start",
+                  }}
                 >
-                  <Text className="text-base">📷</Text>
+                  <Ionicons name="camera-outline" size={20} color="#374151" />
                   <Text className="text-gray-700 text-sm font-medium">Open Camera</Text>
                 </TouchableOpacity>
               </View>
@@ -263,26 +299,42 @@ export default function KiloScreen() {
         )}
       </ScrollView>
 
-      {/* Bottom nav */}
-      <View className="flex-row items-center justify-between px-6 py-4 border-t border-gray-100 bg-white">
+      {/* ── Bottom navigation ── */}
+      <View
+        className="border-t border-gray-100 bg-white"
+        style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, paddingVertical: 16 }}
+      >
         <TouchableOpacity
           onPress={goBack}
-          className="flex-row items-center gap-x-1 border border-gray-200 rounded-xl px-5 py-3"
+          style={{
+            flexDirection: "row", alignItems: "center", gap: 4,
+            borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 12,
+            paddingHorizontal: 20, paddingVertical: 12,
+          }}
         >
-          <Text className="text-gray-600 text-sm font-medium">‹  Back</Text>
+          <Ionicons name="chevron-back" size={16} color="#4b5563" />
+          <Text className="text-gray-600 text-sm font-medium">Back</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={handleNext}
           disabled={isSubmitting}
-          className={`flex-row items-center gap-x-1 rounded-xl px-6 py-3 ${isSubmitting ? "bg-gray-400" : "bg-gray-900"}`}
+          style={{
+            flexDirection: "row", alignItems: "center", gap: 4,
+            borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12,
+            backgroundColor: isSubmitting ? "#9ca3af" : "#111827",
+          }}
         >
-          {isSubmitting
-            ? <ActivityIndicator color="#fff" size="small" />
-            : <Text className="text-white text-sm font-semibold">
-                {isLast ? "Save Entry" : "Next  ›"}
+          {isSubmitting ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Text className="text-white text-sm font-semibold">
+                {isLast ? "Save Entry" : "Next"}
               </Text>
-          }
+              {!isLast && <Ionicons name="chevron-forward" size={16} color="white" />}
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
