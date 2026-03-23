@@ -169,9 +169,7 @@ export default function DashboardScreen() {
   const profileDone = isProfileComplete(profile);
   const fullName = profile?.first_name && profile?.last_name
     ? `${profile.first_name} ${profile.last_name}` : null;
-  const initials = profile?.first_name && profile?.last_name
-    ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
-    : user?.username?.slice(0, 2).toUpperCase() ?? "??";
+  const initials = user?.username?.slice(0, 2).toUpperCase() ?? "??";
 
   return (
     <ScrollView
@@ -184,7 +182,12 @@ export default function DashboardScreen() {
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-bold text-gray-900 tracking-wide">KILO</Text>
           <TouchableOpacity
-            onPress={() => router.push("/(protected)/profile")}
+            onPress={() =>
+              Alert.alert(user?.username ?? "", user?.email ?? "", [
+                { text: "Log Out", style: "destructive", onPress: handleLogout },
+                { text: "Cancel", style: "cancel" },
+              ])
+            }
             className="w-9 h-9 rounded-full bg-gray-800 items-center justify-center"
           >
             <Text className="text-white text-sm font-bold">{initials}</Text>
