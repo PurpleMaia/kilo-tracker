@@ -87,7 +87,7 @@ export default function DashboardScreen() {
     setIsRefreshing(true);
     await load();
     setIsRefreshing(false);
-  );
+  }, [load]);
 
   const handleLogout = async () => {
     await logout();
