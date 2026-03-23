@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { Audio } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
+import { Keyboard } from "lucide-react-native";
 import { apiFetch, getToken } from "@/lib/api";
 
 const QUESTIONS = [
@@ -51,9 +52,28 @@ export default function KiloScreen() {
         return;
       }
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
+      const { recording } = await Audio.Recording.createAsync({
+        android: {
+          extension: ".wav",
+          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: ".wav",
+          outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {},
+      });
       recordingRef.current = recording;
       setIsRecording(true);
     } catch {
@@ -73,7 +93,7 @@ export default function KiloScreen() {
 
       const session = await getToken();
       const formData = new FormData();
-      formData.append("file", { uri, name: "audio.m4a", type: "audio/m4a" } as never);
+      formData.append("file", { uri, name: "audio.wav", type: "audio/wav" } as never);
 
       const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
       const res = await fetch(`${BASE_URL}/api/audio/transcribe`, {
@@ -88,12 +108,17 @@ export default function KiloScreen() {
         if (text) {
           setAnswer((answer ? answer + " " : "") + text);
           setShowTyping(true);
+        } else {
+          setError("Transcription returned no text. Try again or type your answer.");
+          setShowTyping(true);
         }
       } else {
+        const body = await res.json().catch(() => ({}));
+        setError(`Transcription failed (${res.status}): ${body.error ?? "Unknown error"}`);
         setShowTyping(true);
       }
-    } catch {
-      // Transcription not configured — show typing fallback
+    } catch (e) {
+      setError(`Transcription error: ${e instanceof Error ? e.message : String(e)}`);
       setShowTyping(true);
     } finally {
       setIsTranscribing(false);
@@ -255,7 +280,7 @@ export default function KiloScreen() {
             onPress={() => setShowTyping(true)}
             style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}
           >
-            <Ionicons name="keyboard-outline" size={18} color="#9ca3af" />
+            <Keyboard size={18} color="#9ca3af" />
             <Text className="text-gray-500 text-sm">Prefer to type instead?</Text>
           </TouchableOpacity>
         )}

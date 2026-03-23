@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,52 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
+  Image,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getToken } from "@/lib/api";
+
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+
+function KiloPhoto({ entryId }: { entryId: number }) {
+  const [uri, setUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const session = await getToken();
+        const res = await fetch(`${BASE_URL}/api/kilo/photo?id=${entryId}`, {
+          headers: session
+            ? { "x-session-token": session.token, "x-session-type": session.tokenType }
+            : {},
+        });
+        if (!res.ok || cancelled) return;
+        const blob = await res.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (!cancelled) setUri(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch {
+        // silently skip if photo fails to load
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [entryId]);
+
+  if (!uri) return null;
+  return (
+    <Image
+      source={{ uri }}
+      style={{ width: "100%", height: 180, borderRadius: 8, marginTop: 10 }}
+      resizeMode="cover"
+    />
+  );
+}
 
 type UserProfile = {
   first_name: string | null;
@@ -26,6 +68,7 @@ type KiloEntry = {
   id: number;
   q1: string;
   q2: string | null;
+  q3: string | null;
   created_at: string;
   has_photo: boolean;
 };
@@ -88,6 +131,26 @@ export default function DashboardScreen() {
     await load();
     setIsRefreshing(false);
   }, [load]);
+
+  const handleDelete = (id: number) => {
+    Alert.alert("Delete Entry", "Are you sure you want to delete this entry?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive",
+        onPress: async () => {
+          try {
+            await apiFetch("/api/kilo", {
+              method: "DELETE",
+              body: JSON.stringify({ id }),
+            });
+            await load();
+          } catch {
+            Alert.alert("Error", "Failed to delete entry. Please try again.");
+          }
+        },
+      },
+    ]);
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -206,12 +269,47 @@ export default function DashboardScreen() {
             <Text className="text-gray-400 text-sm text-center py-4">No entries yet.</Text>
           ) : (
             data?.entries.map((entry) => (
-              <View key={entry.id} className="py-3 border-b border-gray-100">
-                <View className="flex-row justify-between mb-1">
-                  <Text className="text-xs text-gray-400">{formatDate(entry.created_at)}</Text>
-                  {entry.has_photo && <Text className="text-xs text-blue-500">📷</Text>}
+              <View key={entry.id} className="border border-gray-100 rounded-xl p-4 mb-3">
+                {/* Entry header: timestamp + actions */}
+                <View className="flex-row items-center justify-between mb-3">
+                  <View className="flex-row items-center gap-x-1">
+                    <Ionicons name="time-outline" size={13} color="#9ca3af" />
+                    <Text className="text-xs text-gray-400">{formatDate(entry.created_at)}</Text>
+                  </View>
+                  <View className="flex-row items-center gap-x-3">
+                    <TouchableOpacity
+                      onPress={() => router.push(`/(protected)/kilo/edit?id=${entry.id}`)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="pencil-outline" size={16} color="#9ca3af" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDelete(entry.id)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <Text className="text-gray-800 text-sm" numberOfLines={2}>{entry.q1}</Text>
+
+                {/* Q1 */}
+                <View className="mb-2 pb-2 border-b border-gray-100">
+                  <Text className="text-xs text-gray-500 mb-0.5">What is your internal weather today?</Text>
+                  <Text className="text-sm text-gray-900">{entry.q1}</Text>
+                </View>
+
+                {/* Q2 */}
+                <View className="mb-2 pb-2 border-b border-gray-100">
+                  <Text className="text-xs text-gray-500 mb-0.5">What do you see outside today?</Text>
+                  <Text className="text-sm text-gray-900">{entry.q2 ?? "—"}</Text>
+                  {entry.has_photo && <KiloPhoto entryId={entry.id} />}
+                </View>
+
+                {/* Q3 */}
+                <View>
+                  <Text className="text-xs text-gray-500 mb-0.5">What are you excited to do today?</Text>
+                  <Text className="text-sm text-gray-900">{entry.q3 ?? "—"}</Text>
+                </View>
               </View>
             ))
           )}

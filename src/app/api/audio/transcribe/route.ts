@@ -1,47 +1,38 @@
-import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import { NextRequest, NextResponse } from "next/server";
+import OpenAI, { toFile } from "openai";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const audio = formData.get("file") as File;
+    const audio = formData.get("file") as File | null;
 
     if (!audio) {
       return NextResponse.json({ error: "No audio sent" }, { status: 400 });
     }
 
-    const baseUrl = process.env.SPEACHES_BASE_URL?.trim();
-    const apiKey = process.env.SPEACHES_API_KEY?.trim();
-    if (!baseUrl || !apiKey) {
-      console.error("[speaches] Missing SPEACHES_BASE_URL or SPEACHES_API_KEY environment variables");
+    console.log("[transcribe] Received audio file:", audio.name, audio.size, "bytes", audio.type);
+    const apiKey = process.env.OPENAI_API_KEY?.trim();
+    if (!apiKey) {
+      console.error("[transcribe] Missing OPENAI_API_KEY environment variable");
       return NextResponse.json(
-        { error: "Speaches configuration is missing. Please contact the administrator." },
+        { error: "Transcription configuration is missing. Please contact the administrator." },
         { status: 500 }
       );
     }
-    const openai = new OpenAI({
-      baseURL: `${baseUrl}/v1`,
-      apiKey,
-    });
+    const openai = new OpenAI({ apiKey });
 
+    // Re-wrap with explicit mp4 MIME type so OpenAI accepts it
+    const buffer = Buffer.from(await audio.arrayBuffer());
+    const file = await toFile(buffer, "audio.wav", { type: "audio/wav" });
 
-    // Transcribe the audio file using Speaches API
     const response = await openai.audio.transcriptions.create({
-      file: audio,
-      model: process.env.SPEACHES_STT_MODEL || "Systran/faster-whisper-large-v3",
+      file,
+      model: "whisper-1",
     });
-
-    // const response = await fetch(`${process.env.SPEACHES_BASE_URL}/v1/audio/transcriptions`, {
-    //   method: "POST",
-    //   headers: {
-    //     "Authorization": `Bearer ${process.env.SPEACHES_API_KEY?.trim()}`,
-    //   },
-    //   body: form,
-    // }).then(res => res.json());
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("[speaches] Error processing request:", error);
+    console.error("[transcribe] Error processing request:", JSON.stringify(error, null, 2));
     return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }
