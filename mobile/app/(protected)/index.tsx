@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 
@@ -77,15 +77,17 @@ export default function DashboardScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    load().finally(() => setIsLoading(false));
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load().finally(() => setIsLoading(false));
+    }, [load])
+  );
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await load();
     setIsRefreshing(false);
-  }, [load]);
+  );
 
   const handleLogout = async () => {
     await logout();
