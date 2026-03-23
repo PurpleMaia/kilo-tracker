@@ -136,23 +136,23 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* Welcome + New KILO button */}
-        <View className="flex-row items-start justify-between">
-          <Text className="text-2xl font-bold text-gray-900">Welcome, {user?.username}!</Text>
-          <View className="items-end">
-            <TouchableOpacity
-              className={`px-4 py-2 rounded-xl ${profileDone ? "bg-gray-900" : "bg-gray-200"}`}
-              onPress={() => profileDone && router.push("/(protected)/kilo")}
-              disabled={!profileDone}
-            >
-              <Text className={`text-sm font-semibold ${profileDone ? "text-white" : "text-gray-400"}`}>
-                Start a new KILO
-              </Text>
-            </TouchableOpacity>
-            {!profileDone && (
-              <Text className="text-xs text-gray-400 mt-1">Complete your profile to unlock.</Text>
-            )}
-          </View>
+        {/* Welcome */}
+        <Text className="text-2xl font-bold text-gray-900">Welcome, {user?.username}!</Text>
+
+        {/* New KILO button */}
+        <View>
+          <TouchableOpacity
+            className={`py-3 rounded-xl items-center ${profileDone ? "bg-gray-900" : "bg-gray-200"}`}
+            onPress={() => profileDone && router.push("/(protected)/kilo")}
+            disabled={!profileDone}
+          >
+            <Text className={`text-sm font-semibold ${profileDone ? "text-white" : "text-gray-400"}`}>
+              Start a new KILO
+            </Text>
+          </TouchableOpacity>
+          {!profileDone && (
+            <Text className="text-xs text-gray-400 mt-1 text-center">Complete your profile to unlock.</Text>
+          )}
         </View>
 
         {/* Your Account Card */}
