@@ -1,33 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI, { toFile } from "openai";
+import OpenAI from "openai";
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const audio = formData.get("file") as File | null;
+    const audio = formData.get("file") as File;
 
     if (!audio) {
       return NextResponse.json({ error: "No audio sent" }, { status: 400 });
     }
 
     console.log("[transcribe] Received audio file:", audio.name, audio.size, "bytes", audio.type);
-    const apiKey = process.env.OPENAI_API_KEY?.trim();
-    if (!apiKey) {
-      console.error("[transcribe] Missing OPENAI_API_KEY environment variable");
+    const baseUrl = process.env.SPEACHES_BASE_URL?.trim();
+    const apiKey = process.env.SPEACHES_API_KEY?.trim();
+
+    if (!baseUrl || !apiKey) {
+      console.error("[transcribe] Missing SPEACHES_BASE_URL or SPEACHES_API_KEY environment variables");
       return NextResponse.json(
         { error: "Transcription configuration is missing. Please contact the administrator." },
         { status: 500 }
       );
     }
-    const openai = new OpenAI({ apiKey });
 
-    // Re-wrap with explicit mp4 MIME type so OpenAI accepts it
-    const buffer = Buffer.from(await audio.arrayBuffer());
-    const file = await toFile(buffer, "audio.wav", { type: "audio/wav" });
+   const openai = new OpenAI({ baseURL: `${baseUrl}/v1`, apiKey });
 
     const response = await openai.audio.transcriptions.create({
-      file,
-      model: "whisper-1",
+      file: audio,
+      model: process.env.SPEACHES_STT_MODEL || "Systran/faster-whisper-large-v3"      
     });
 
     return NextResponse.json(response);
