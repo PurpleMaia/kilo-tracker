@@ -23,7 +23,7 @@ export default async function DashboardPage() {
     return <AdminDashboardClient user={user} data={data} />;
   }
 
-  if (user.role === "member") {
+  if (user.role === "worker") {
     const data = await fetchMemberDashboardData(user.id);
     return <MemberDashboardClient user={user} data={data} />;
   }

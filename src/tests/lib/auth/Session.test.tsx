@@ -93,7 +93,7 @@ describe('Session Validation Tests', () => {
             id: randomUUID(),
             user_id: testUser.id,
             tenant_id: testOrg.id,
-            user_role: 'member' as const,
+            user_role: 'worker' as const,
          }).execute();
 
          const request = createMockRequest({}, {}, {
@@ -108,7 +108,7 @@ describe('Session Validation Tests', () => {
          expect(data.user.id).toBe(testUser.id);
          expect(data.user.email).toBe(testUser.email);
          expect(data.user.username).toBe(testUser.username);
-         expect(data.user.role).toBe('member') // test user has member role assigned
+         expect(data.user.role).toBe('worker') // test user has member role assigned
 
          // Clean up role assignment
          await db.deleteFrom('members').where('user_id', '=', testUser.id).execute();

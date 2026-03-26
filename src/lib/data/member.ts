@@ -26,7 +26,7 @@ export async function fetchMemberDashboardData(userId: string): Promise<MemberDa
       ref("o.slug").as("tenantslug"),
     ])
     .where("m.user_id", "=", userId)
-    .where("m.user_role", "=", "member")
+    .where("m.user_role", "=", "worker")
     .executeTakeFirst();
 
   if (!orgMembership) {

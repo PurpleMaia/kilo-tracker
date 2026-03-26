@@ -151,7 +151,7 @@ describe('Registration Tests', () => {
          expect(data.user).toBeDefined();
          expect(data.user.email).toBe(registerTestUser.email);
          expect(data.user.username).toBe(registerTestUser.username);
-         expect(data.user.role).toBe('member'); // Should have member role
+         expect(data.user.role).toBe('worker'); // Should have member role
 
          // Verify user was created in database
          const dbUser = await db
@@ -171,7 +171,7 @@ describe('Registration Tests', () => {
             .executeTakeFirst();
 
          expect(memberRecord).toBeDefined();
-         expect(memberRecord?.user_role).toBe('member');
+         expect(memberRecord?.user_role).toBe('worker');
       });
 
       test('should create session cookie on successful registration', async () => {

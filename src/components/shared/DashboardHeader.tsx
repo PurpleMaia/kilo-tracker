@@ -19,7 +19,7 @@ type HeaderUser = {
   username: string;
   email: string;
   systemRole: "sysadmin" | "user";
-  role: "admin" | "member" | "worker" | null;
+  role: "admin" | "worker" | null;
   orgName: string | null;
 };
 
@@ -38,7 +38,6 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
   const getRoleBadge = () => {
     if (isSysAdmin) return <Badge variant="destructive">System Admin</Badge>;
     if (user.role === "admin") return <Badge className="bg-purple-600">Org Admin</Badge>;
-    if (user.role === "member") return <Badge variant="secondary">Member</Badge>;
     if (user.role === "worker") return <Badge variant="secondary">Worker</Badge>;
     return <Badge variant="outline">Guest</Badge>;
   };

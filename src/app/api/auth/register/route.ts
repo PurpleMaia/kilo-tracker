@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         .values({
           user_id: newUser.id,
           tenant_id: organizationId,
-          user_role: 'member' as Role, // Default role for new members
+          user_role: 'worker' as Role, // Default role for new members
         })
         .execute();
     }
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
         username: newUser.username,
         system_role: newUser.system_role,
         created_at: newUser.created_at,
-        role: organizationId ? 'member' : null
+        role: organizationId ? 'worker' : null
       }
     }, { status: 201 });
 

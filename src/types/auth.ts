@@ -7,7 +7,7 @@ import { Org, SystemRole, User, UserRole } from "./db";
  * - username
  * - created_at
  * - system_role ('sysadmin' | 'user')
- * - role ('admin' | 'member' | null)
+ * - role ('admin' | 'worker' | null)
  */
 export interface AuthUser extends Omit<User, 'password_hash'> {
     role: UserRole | null
