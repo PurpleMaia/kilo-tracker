@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Camera, CameraOff, RotateCcw, X } from "lucide-react";
+import { Camera, CameraOff, RotateCcw, SwitchCamera, X } from "lucide-react";
 import Image from "next/image";
 import {
   Dialog,
@@ -23,15 +23,49 @@ export function PhotoTaker({ photoPreview, onPhotoCapture, onPhotoRemove }: Phot
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Start camera when dialog opens
+  const startCamera = useCallback(async (facing: "environment" | "user") => {
+    try {
+      // Stop any existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      setIsCameraReady(false);
+      setCameraError(null);
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: facing,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play();
+          setIsCameraReady(true);
+        };
+      }
+    } catch (err) {
+      console.error("Camera error:", err);
+      setCameraError("Unable to access camera. Please check permissions.");
+    }
+  }, []);
+
+  // Start camera when dialog opens or facing mode changes
   useEffect(() => {
     if (!isDialogOpen) {
-      // Clean up when dialog closes
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
@@ -41,44 +75,15 @@ export function PhotoTaker({ photoPreview, onPhotoCapture, onPhotoRemove }: Phot
       return;
     }
 
-    const startCamera = async () => {
-      try {
-        setCameraError(null);
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
-          audio: false,
-        });
+    startCamera(facingMode);
 
-        streamRef.current = stream;
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          // Wait for video to be ready
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play();
-            setIsCameraReady(true);
-          };
-        }
-      } catch (err) {
-        console.error("Camera error:", err);
-        setCameraError("Unable to access camera. Please check permissions.");
-      }
-    };
-
-    startCamera();
-
-    // Cleanup on unmount
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
     };
-  }, [isDialogOpen]);
+  }, [isDialogOpen, facingMode, startCamera]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -102,13 +107,23 @@ export function PhotoTaker({ photoPreview, onPhotoCapture, onPhotoRemove }: Phot
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Mirror the capture if using front camera to match the preview
+    if (facingMode === "user") {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+
     ctx.drawImage(video, 0, 0);
 
     // Convert to data URL
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
     onPhotoCapture(dataUrl);
     stopCamera();
-  }, [onPhotoCapture, stopCamera]);
+  }, [onPhotoCapture, stopCamera, facingMode]);
+
+  const flipCamera = useCallback(() => {
+    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
+  }, []);
 
   const retakePhoto = useCallback(() => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
@@ -167,7 +182,7 @@ export function PhotoTaker({ photoPreview, onPhotoCapture, onPhotoRemove }: Phot
               <>
                 <video
                   ref={videoRef}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover${facingMode === "user" ? " -scale-x-100" : ""}`}
                   playsInline
                   muted
                   autoPlay
@@ -186,7 +201,15 @@ export function PhotoTaker({ photoPreview, onPhotoCapture, onPhotoRemove }: Phot
             )}
           </div>
 
-            <div className="flex justify-center my-4">
+            <div className="flex items-center justify-center gap-6 my-4">
+              <Button
+                onClick={flipCamera}
+                disabled={!isCameraReady}
+                variant="ghost"
+                className="h-10 w-10 rounded-full text-gray-600 hover:bg-gray-100 p-0"
+              >
+                <SwitchCamera className="h-6 w-6" />
+              </Button>
               <Button
                 onClick={capturePhoto}
                 disabled={!isCameraReady}
@@ -194,6 +217,8 @@ export function PhotoTaker({ photoPreview, onPhotoCapture, onPhotoRemove }: Phot
               >
                 <Camera className="h-12 w-12" />
               </Button>
+              {/* Spacer to keep capture button centered */}
+              <div className="h-10 w-10" />
             </div>
         </DialogContent>        
       </Dialog>      
