@@ -5,6 +5,7 @@ import { createSession } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { getClientIP, getUserAgent, checkRegistrationRateLimit, recordRegistrationAttempt, recordLoginAttempt } from "@/lib/auth/rate-limit";
 import { Errors } from "@/lib/errors";
+import { Role } from "@/db/types";
 
 const registerSchema = z.object({
   email: z.email({ message: "Please enter a valid email address" }),
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
         .values({
           user_id: newUser.id,
           tenant_id: organizationId,
-          user_role: 'member', // Default role for new members
+          user_role: 'member' as Role, // Default role for new members
         })
         .execute();
     }
