@@ -5,7 +5,6 @@
 // - view picture
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { KiloEntry, QUESTIONS } from '@/types/kilo'
 import { Clock, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -18,7 +17,7 @@ interface KiloCardProps {
     deleteEntry: (id: number) => void
 }
 export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardProps) {
-  const hasPhoto = !!entry.photo_path;
+  const hasPhoto = entry.has_photo;
   const date = entry.created_at ? new Date(entry.created_at).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
@@ -90,10 +89,10 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
             )}
             </div>  
 
-            {hasPhoto && entry.photo_path && (
+            {hasPhoto && (
                 <>
                   <div className='border-b'></div>
-                  <PicturePreviewDialog photoPath={entry.photo_path} date={date} />
+                  <PicturePreviewDialog entryId={entry.id} date={date} />
                 </>
             )}
         </CardContent>
@@ -101,30 +100,32 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
   )
 }
 
-function PicturePreviewDialog({ photoPath, date }: { photoPath: string, date: string }) {
+function PicturePreviewDialog({ entryId, date }: { entryId: number, date: string }) {
+    const photoUrl = `/api/kilo/photo?id=${entryId}`;
+
     return (
       <Dialog>
         <DialogTrigger asChild>
-          <Button className="relative w-full h-24 sm:h-28 md:h-32 lg:h-36 cursor-pointer">
-            <Image
-                src={photoPath}
+          <div className="relative w-full h-24 sm:h-28 md:h-32 lg:h-36 cursor-pointer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                src={photoUrl}
                 alt="KILO Entry Photo"
-                fill
-                className="object-cover rounded-lg"/>
-            </Button>
+                className="object-cover rounded-lg w-full h-full"/>
+            </div>
         </DialogTrigger>
         <DialogContent className={
-            "h-[70vh]"            
+            "h-[70vh]"
         }>
           <DialogHeader className=''>
             <DialogTitle>{date}</DialogTitle>
           </DialogHeader>
           <div className='w-full h-108 relative'>
-            <Image
-              src={photoPath}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photoUrl}
               alt="KILO Entry Photo"
-              fill
-              className="object-contain rounded-lg"
+              className="object-contain rounded-lg w-full h-full"
               />
           </div>
         </DialogContent>

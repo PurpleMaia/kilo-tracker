@@ -37,8 +37,8 @@ export default defineConfig({
     /* Record video on failure */
     video: 'retain-on-failure',
 
-    /* Run tests in headed mode so you can see the browser */
-    headless: false,
+    /* Run headless in CI, headed locally for debugging */
+    headless: !!process.env.CI,
 
     /* Ignore HTTPS errors for self-signed certificates */
     ignoreHTTPSErrors: true,

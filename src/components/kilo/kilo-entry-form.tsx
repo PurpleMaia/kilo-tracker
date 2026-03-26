@@ -45,9 +45,9 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
       if (initialData.q1) data.q1 = initialData.q1;
       if (initialData.q2) data.q2 = initialData.q2;
       if (initialData.q3) data.q3 = initialData.q3;
-      if (initialData.photo_path) {
-        data.photo_path = initialData.photo_path;
-        setPhotoPreview(`${initialData.photo_path}`);
+      if (initialData.has_photo) {
+        // Set preview to API URL for existing photo
+        setPhotoPreview(`/api/kilo/photo?id=${initialData.id}`);
       }
       setFormData(data);
 
@@ -146,12 +146,30 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
         }
       }
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         q1: formData.q1 || "",
         q2: formData.q2 || null,
         q3: formData.q3 || null,
-        photo_path: photoPath,
       };
+
+      if (isEditMode) {
+        payload.id = initialData!.id;
+        if (isExistingPhoto) {
+          // Keep existing photo
+          payload.keep_photo = true;
+        } else if (isNewPhoto) {
+          // New photo uploaded
+          payload.photo_base64 = photoPreview;
+          payload.photo_mime_type = photoMimeType;
+        }
+        // If neither, photo will be cleared
+      } else {
+        // New entry
+        if (isNewPhoto) {
+          payload.photo_base64 = photoPreview;
+          payload.photo_mime_type = photoMimeType;
+        }
+      }
 
       const method = isEditMode ? "PUT" : "POST";
 
@@ -160,7 +178,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(isEditMode ? { id: initialData!.id, ...payload } : payload),
+        body: JSON.stringify(payload),
       });
 
       if (!apiResponse.ok) {

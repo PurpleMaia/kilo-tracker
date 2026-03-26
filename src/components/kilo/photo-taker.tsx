@@ -129,7 +129,7 @@ export function PhotoTaker({ photoPreview, onPhotoCapture, onPhotoRemove }: Phot
       {photoPreview ? (
         <div className="space-y-2">
           <div className="relative w-fit">
-            <Image src={photoPreview} alt="Kilo photo" width={300} height={200} className="rounded-md max-h-48 object-cover" />
+            <img src={photoPreview} alt="Kilo photo" width={300} height={200} className="rounded-md max-h-48 object-cover" />
             <button
               type="button"
               onClick={handleRemove}

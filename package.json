@@ -20,9 +20,8 @@
     "migrate:down": "./scripts/migrate/down.sh",
     "migrate:version": "./scripts/migrate/version.sh",
     "migrate:force": "./scripts/migrate/force.sh",
-    "test": "pnpm build && playwright test",
+    "test": "pnpm build && playwright test --project=chromium",
     "test:e2e": "playwright test --project=chromium",
-    "test:unit": "jest",
     "sync": "./scripts/sync-template.sh"
   },
   "dependencies": {

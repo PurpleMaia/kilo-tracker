@@ -5,7 +5,7 @@ export type KiloEntry = {
   q2: string | null;
   q3: string | null;
   location: string | null;
-  photo_path: string | null;
+  has_photo: boolean;
   created_at: string | null;
 };
 
