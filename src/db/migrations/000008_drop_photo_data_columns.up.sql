@@ -1,0 +1,2 @@
+ALTER TABLE kilo DROP COLUMN IF EXISTS photo_data;
+ALTER TABLE kilo DROP COLUMN IF EXISTS photo_mime_type;

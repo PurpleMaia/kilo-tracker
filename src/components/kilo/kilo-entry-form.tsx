@@ -154,20 +154,18 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
 
       if (isEditMode) {
         payload.id = initialData!.id;
-        if (isExistingPhoto) {
-          // Keep existing photo
+        if (photoPath) {
+          // New photo was uploaded
+          payload.photo_path = photoPath;
+        } else if (photoPreview && photoPreview.startsWith("/api/")) {
+          // Existing photo URL from edit mode — keep it
           payload.keep_photo = true;
-        } else if (isNewPhoto) {
-          // New photo uploaded
-          payload.photo_base64 = photoPreview;
-          payload.photo_mime_type = photoMimeType;
         }
-        // If neither, photo will be cleared
+        // If photoPreview is null, photo was removed — don't set keep_photo
       } else {
         // New entry
-        if (isNewPhoto) {
-          payload.photo_base64 = photoPreview;
-          payload.photo_mime_type = photoMimeType;
+        if (photoPath) {
+          payload.photo_path = photoPath;
         }
       }
 

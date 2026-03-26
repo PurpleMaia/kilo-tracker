@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/kysely/client";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
+import { readFile } from "fs/promises";
+import path from "path";
+
+const EXT_TO_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,22 +30,30 @@ export async function GET(request: NextRequest) {
 
     const entry = await db
       .selectFrom("kilo")
-      .select(["photo_data", "photo_mime_type"])
+      .select(["photo_path"])
       .where("id", "=", entryId)
       .where("user_id", "=", user.id)
       .executeTakeFirst();
 
-    if (!entry || !entry.photo_data) {
+    if (!entry || !entry.photo_path) {
       return NextResponse.json({ error: "Photo not found" }, { status: 404 });
     }
 
-    // Convert Buffer to Uint8Array for NextResponse
-    const photoBytes = new Uint8Array(entry.photo_data);
+    // Path traversal protection
+    const fullPath = path.resolve(process.cwd(), entry.photo_path);
+    const uploadsDir = path.resolve(process.cwd(), "uploads");
+    if (!fullPath.startsWith(uploadsDir)) {
+      return NextResponse.json({ error: "Invalid photo path" }, { status: 400 });
+    }
 
-    return new NextResponse(photoBytes, {
+    const fileBuffer = await readFile(fullPath);
+    const ext = path.extname(fullPath).slice(1).toLowerCase();
+    const mimeType = EXT_TO_MIME[ext] || "image/jpeg";
+
+    return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
-        "Content-Type": entry.photo_mime_type || "image/jpeg",
+        "Content-Type": mimeType,
         "Cache-Control": "private, max-age=31536000, immutable",
       },
     });

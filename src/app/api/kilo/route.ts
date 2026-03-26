@@ -3,24 +3,15 @@ import { z } from "zod";
 import { db } from "@/db/kysely/client";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
-
-const VALID_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
+import { unlink } from "fs/promises";
+import path from "path";
 
 const kiloEntrySchema = z.object({
   q1: z.string().min(1, "Question 1 is required"),
   q2: z.string().nullable().optional(),
   q3: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
-  photo_base64: z.string().nullable().optional(),
-  photo_mime_type: z
-    .string()
-    .nullable()
-    .optional()
-    .refine(
-      (val) => !val || VALID_MIME_TYPES.includes(val),
-      "Invalid image type"
-    ),
+  photo_path: z.string().nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -38,21 +29,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { q1, q2, q3, location, photo_base64, photo_mime_type } = parsed.data;
-
-    // Convert base64 to buffer if photo is provided
-    let photoData: Buffer | null = null;
-    if (photo_base64 && photo_mime_type) {
-      const base64Data = photo_base64.replace(/^data:image\/\w+;base64,/, "");
-      photoData = Buffer.from(base64Data, "base64");
-
-      if (photoData.length > MAX_PHOTO_SIZE) {
-        return NextResponse.json(
-          { error: "Photo too large (max 5MB)" },
-          { status: 400 }
-        );
-      }
-    }
+    const { q1, q2, q3, location, photo_path } = parsed.data;
 
     const newEntry = await db
       .insertInto("kilo")
@@ -62,8 +39,7 @@ export async function POST(request: NextRequest) {
         q2: q2 ?? null,
         q3: q3 ?? null,
         location: location ?? null,
-        photo_data: photoData,
-        photo_mime_type: photo_mime_type ?? null,
+        photo_path: photo_path ?? null,
       })
       .returning(["id", "q1", "q2", "q3", "location", "created_at"])
       .executeTakeFirst();
@@ -71,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Add has_photo flag to response
     const entryWithPhoto = {
       ...newEntry,
-      has_photo: !!photoData,
+      has_photo: !!photo_path,
     };
 
     return NextResponse.json({ entry: entryWithPhoto }, { status: 201 });
@@ -118,7 +94,7 @@ export async function GET(request: NextRequest) {
 
       const entry = await db
         .selectFrom("kilo")
-        .select(["id", "q1", "q2", "q3", "location", "photo_data", "created_at"])
+        .select(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
         .where("id", "=", entryId)
         .where("user_id", "=", user.id)
         .executeTakeFirst();
@@ -130,11 +106,11 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Return has_photo flag instead of the actual data
-      const { photo_data, ...rest } = entry;
+      // Return has_photo flag instead of the path
+      const { photo_path, ...rest } = entry;
       const entryWithPhoto = {
         ...rest,
-        has_photo: !!photo_data,
+        has_photo: !!photo_path,
       };
 
       return NextResponse.json({ entry: entryWithPhoto }, { status: 200 });
@@ -160,7 +136,7 @@ export async function GET(request: NextRequest) {
     const [entries, countResult] = await Promise.all([
       db
         .selectFrom("kilo")
-        .select(["id", "q1", "q2", "q3", "location", "photo_data", "created_at"])
+        .select(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
         .where("user_id", "=", user.id)
         .orderBy("created_at", "desc")
         .limit(limit)
@@ -173,10 +149,10 @@ export async function GET(request: NextRequest) {
         .executeTakeFirst(),
     ]);
 
-    // Map entries to include has_photo flag instead of actual data
-    const entriesWithPhotoFlag = entries.map(({ photo_data, ...rest }) => ({
+    // Map entries to include has_photo flag instead of path
+    const entriesWithPhotoFlag = entries.map(({ photo_path, ...rest }) => ({
       ...rest,
-      has_photo: !!photo_data,
+      has_photo: !!photo_path,
     }));
 
     const total = Number(countResult?.total ?? 0);
@@ -219,6 +195,14 @@ export async function DELETE(request: NextRequest) {
 
     const { id } = parsed.data;
 
+    // Fetch photo path before deleting for file cleanup
+    const existing = await db
+      .selectFrom("kilo")
+      .select(["photo_path"])
+      .where("id", "=", id)
+      .where("user_id", "=", user.id)
+      .executeTakeFirst();
+
     // Delete the entry only if it belongs to the user
     const result = await db
       .deleteFrom("kilo")
@@ -231,6 +215,11 @@ export async function DELETE(request: NextRequest) {
         { error: "Entry not found or not authorized" },
         { status: 404 }
       );
+    }
+
+    // Clean up photo file from disk
+    if (existing?.photo_path) {
+      await deletePhotoFile(existing.photo_path);
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
@@ -255,6 +244,18 @@ const updateKiloSchema = kiloEntrySchema.extend({
   keep_photo: z.boolean().optional(), // If true, don't update photo
 });
 
+/** Best-effort delete of a photo file from disk */
+async function deletePhotoFile(photoPath: string) {
+  try {
+    const fullPath = path.resolve(process.cwd(), photoPath);
+    const uploadsDir = path.resolve(process.cwd(), "uploads");
+    if (!fullPath.startsWith(uploadsDir)) return; // path traversal guard
+    await unlink(fullPath);
+  } catch {
+    // File may already be gone — ignore
+  }
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const user = await validateSession(request);
@@ -269,7 +270,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { id, q1, q2, q3, location, photo_base64, photo_mime_type, keep_photo } = parsed.data;
+    const { id, q1, q2, q3, location, photo_path, keep_photo } = parsed.data;
 
     // Build update object
     const updateData: Record<string, unknown> = {
@@ -279,26 +280,21 @@ export async function PUT(request: NextRequest) {
       location: location ?? null,
     };
 
-    // Only update photo if not keeping existing and new photo provided
+    // Fetch old photo path for cleanup if replacing/clearing
+    let oldPhotoPath: string | null = null;
     if (!keep_photo) {
-      if (photo_base64 && photo_mime_type) {
-        const base64Data = photo_base64.replace(/^data:image\/\w+;base64,/, "");
-        const photoData = Buffer.from(base64Data, "base64");
+      const existing = await db
+        .selectFrom("kilo")
+        .select(["photo_path"])
+        .where("id", "=", id)
+        .where("user_id", "=", user.id)
+        .executeTakeFirst();
+      oldPhotoPath = existing?.photo_path ?? null;
+    }
 
-        if (photoData.length > MAX_PHOTO_SIZE) {
-          return NextResponse.json(
-            { error: "Photo too large (max 5MB)" },
-            { status: 400 }
-          );
-        }
-
-        updateData.photo_data = photoData;
-        updateData.photo_mime_type = photo_mime_type;
-      } else {
-        // Clear photo if no new photo and not keeping
-        updateData.photo_data = null;
-        updateData.photo_mime_type = null;
-      }
+    // Only update photo if not keeping existing
+    if (!keep_photo) {
+      updateData.photo_path = photo_path ?? null;
     }
 
     // Update the entry only if it belongs to the user
@@ -307,7 +303,7 @@ export async function PUT(request: NextRequest) {
       .set(updateData)
       .where("id", "=", id)
       .where("user_id", "=", user.id)
-      .returning(["id", "q1", "q2", "q3", "location", "photo_data", "created_at"])
+      .returning(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
       .executeTakeFirst();
 
     if (!updatedEntry) {
@@ -317,11 +313,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Return has_photo flag instead of actual data
-    const { photo_data, ...rest } = updatedEntry;
+    // Clean up old file if photo was replaced or cleared
+    if (oldPhotoPath && oldPhotoPath !== updatedEntry.photo_path) {
+      await deletePhotoFile(oldPhotoPath);
+    }
+
+    // Return has_photo flag instead of path
+    const { photo_path: photoPath, ...rest } = updatedEntry;
     const entryWithPhoto = {
       ...rest,
-      has_photo: !!photo_data,
+      has_photo: !!photoPath,
     };
 
     return NextResponse.json({ entry: entryWithPhoto }, { status: 200 });

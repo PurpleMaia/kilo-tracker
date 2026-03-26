@@ -23,7 +23,7 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
-export type Role = "admin" | "member";
+export type Role = "admin" | "worker";
 
 export type Sysrole = "sysadmin" | "user";
 
@@ -34,16 +34,15 @@ export interface ActivityCategories {
   emoji: string | null;
   id: Generated<string>;
   label: string;
-  tenant_id: string | null;
+  tenant_id: string;
 }
 
 export interface Kilo {
   audio: Buffer | null;
   created_at: Generated<Timestamp | null>;
   id: Generated<number>;
+  image: Buffer | null;
   location: string | null;
-  photo_data: Buffer | null;
-  photo_mime_type: string | null;
   photo_path: string | null;
   q1: string | null;
   q2: string | null;
@@ -111,7 +110,7 @@ export interface Sessions {
 }
 
 export interface Tenants {
-  branding_config: Json | null;
+  branding_config: Generated<Json | null>;
   created_at: Generated<Timestamp | null>;
   id: Generated<string>;
   name: string;
@@ -119,7 +118,9 @@ export interface Tenants {
 }
 
 export interface Users {
+  avatar_url: string | null;
   created_at: Generated<Timestamp | null>;
+  display_name: string | null;
   email: string;
   id: Generated<string>;
   password_hash: string;

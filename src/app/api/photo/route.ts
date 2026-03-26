@@ -58,16 +58,18 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     // Generate unique filename using safe extension derived from MIME type
+    const folderName = user.username.replace(/[^a-zA-Z0-9._-]/g, "_").toLowerCase();
     const filename = `${Date.now()}-${user.id.slice(0, 8)}.${safeExt}`;
 
-    // Save to public/uploads/kilo/{userId}/
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "kilo", user.id);
+    // Save to uploads/kilo/{username}/ (outside public/ for auth-protected serving)
+    const uploadDir = path.join(process.cwd(), "uploads", "kilo", folderName);
     await mkdir(uploadDir, { recursive: true });
     await writeFile(path.join(uploadDir, filename), buffer);
 
-    if (process.env.NODE_ENV !== "production") console.log("[POST /api/photo] Uploaded photo to", `/uploads/kilo/${user.id}/${filename}`);
+    const relativePath = `uploads/kilo/${folderName}/${filename}`;
+    if (process.env.NODE_ENV !== "production") console.log("[POST /api/photo] Uploaded photo to", relativePath);
 
-    return NextResponse.json({ path: `/uploads/kilo/${user.id}/${filename}` });
+    return NextResponse.json({ path: relativePath });
   } catch (error) {
     console.error("[POST /api/photo]", error);
     return NextResponse.json(
