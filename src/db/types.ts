@@ -34,14 +34,13 @@ export interface ActivityCategories {
   emoji: string | null;
   id: Generated<string>;
   label: string;
-  tenant_id: string;
+  tenant_id: string | null;
 }
 
 export interface Kilo {
   audio: Buffer | null;
   created_at: Generated<Timestamp | null>;
   id: Generated<number>;
-  image: Buffer | null;
   location: string | null;
   photo_path: string | null;
   q1: string | null;
@@ -109,8 +108,18 @@ export interface Sessions {
   user_id: string | null;
 }
 
+export interface Tasks {
+  created_at: Generated<Timestamp | null>;
+  id: Generated<number>;
+  kilo_id: number;
+  priority: Generated<string>;
+  summary: string | null;
+  title: string;
+  user_id: string;
+}
+
 export interface Tenants {
-  branding_config: Generated<Json | null>;
+  branding_config: Json | null;
   created_at: Generated<Timestamp | null>;
   id: Generated<string>;
   name: string;
@@ -118,9 +127,7 @@ export interface Tenants {
 }
 
 export interface Users {
-  avatar_url: string | null;
   created_at: Generated<Timestamp | null>;
-  display_name: string | null;
   email: string;
   id: Generated<string>;
   password_hash: string;
@@ -138,6 +145,7 @@ export interface DB {
   profiles: Profiles;
   schema_migrations: SchemaMigrations;
   sessions: Sessions;
+  tasks: Tasks;
   tenants: Tenants;
   users: Users;
 }
