@@ -226,8 +226,8 @@ After initialization, your `.env` file will contain:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth credentials |
 | `GOOGLE_REDIRECT_URI` | OAuth callback URL |
 | `NEXT_PUBLIC_BASE_URL` | Application base URL |
-| `SPEACHES_BASE_URL` | Audio transcription API endpoint |
-| `SPEACHES_API_KEY` | Speaches API authentication |
+| `MODEL_BASE_URL` | Audio transcription API endpoint |
+| `MODEL_API_KEY` | Speaches API authentication |
 | `SPEACHES_STT_MODEL` | Speech-to-text model name |
 
 **Never commit the `.env` file to version control.**

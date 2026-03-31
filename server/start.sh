@@ -5,10 +5,10 @@
 # Optimized for Apple Silicon (M-series)
 # ============================================================
 
-SPEACHES_API_KEY=$(grep SPEACHES_API_KEY .env | cut -d '=' -f2)
+MODEL_API_KEY=$(grep MODEL_API_KEY .env | cut -d '=' -f2)
 
 # ── Config ───────────────────────────────────────────────────
-API_KEY="${SPEACHES_API_KEY:-}"
+API_KEY="${MODEL_API_KEY:-}"
 PORT="${PORT:-8000}"
 HOST="${HOST:-0.0.0.0}"
 LOG_LEVEL="${LOG_LEVEL:-info}"

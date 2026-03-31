@@ -274,8 +274,8 @@ const { text } = await response.json();
 ```
 
 Required environment variables:
-- `SPEACHES_BASE_URL` - Speaches API base URL
-- `SPEACHES_API_KEY` - Speaches API key
+- `MODEL_BASE_URL` - Speaches API base URL
+- `MODEL_API_KEY` - Speaches API key
 - `SPEACHES_STT_MODEL` - Model name (default: `Systran/faster-whisper-large-v3`)
 
 ### Photo Upload API
@@ -747,7 +747,7 @@ export const QUESTIONS: Question[] = [
 
 Access in server code:
 ```typescript
-const apiKey = process.env.SPEACHES_API_KEY;
+const apiKey = process.env.MODEL_API_KEY;
 ```
 
 For client-side access, prefix with `NEXT_PUBLIC_`:
@@ -760,8 +760,8 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `SPEACHES_BASE_URL` | Speech-to-text API base URL |
-| `SPEACHES_API_KEY` | Speech-to-text API key |
+| `MODEL_BASE_URL` | Speech-to-text API base URL |
+| `MODEL_API_KEY` | Speech-to-text API key |
 | `SPEACHES_STT_MODEL` | STT model name (optional) |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |

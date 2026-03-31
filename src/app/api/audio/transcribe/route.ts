@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const baseUrl = process.env.SPEACHES_BASE_URL?.trim();
-    const apiKey = process.env.SPEACHES_API_KEY?.trim();
+    const baseUrl = process.env.MODEL_BASE_URL?.trim();
+    const apiKey = process.env.MODEL_API_KEY?.trim();
     if (!baseUrl || !apiKey) {
-      console.error("[speaches] Missing SPEACHES_BASE_URL or SPEACHES_API_KEY environment variables");
+      console.error("[speaches] Missing MODEL_BASE_URL or MODEL_API_KEY environment variables");
       return NextResponse.json(
         { error: "Speaches configuration is missing. Please contact the administrator." },
         { status: 500 }
@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
       model: process.env.SPEACHES_STT_MODEL || "Systran/faster-whisper-large-v3",
     });
 
-    // const response = await fetch(`${process.env.SPEACHES_BASE_URL}/v1/audio/transcriptions`, {
+    // const response = await fetch(`${process.env.MODEL_BASE_URL}/v1/audio/transcriptions`, {
     //   method: "POST",
     //   headers: {
-    //     "Authorization": `Bearer ${process.env.SPEACHES_API_KEY?.trim()}`,
+    //     "Authorization": `Bearer ${process.env.MODEL_API_KEY?.trim()}`,
     //   },
     //   body: form,
     // }).then(res => res.json());
