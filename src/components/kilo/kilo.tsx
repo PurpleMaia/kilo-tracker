@@ -4,7 +4,7 @@
 // - edit, delete, view kilo
 // - view picture
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { KiloEntry, QUESTIONS } from '@/types/kilo'
 import { Clock, Pencil, Trash2, Sparkles, Loader2 } from 'lucide-react'
@@ -20,6 +20,23 @@ interface KiloCardProps {
 }
 export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardProps) {
   const [generating, setGenerating] = useState(false);
+
+  // Check if task generation was triggered from the entry form
+  useEffect(() => {
+    const pendingId = sessionStorage.getItem("generatingTasksFor");
+    if (pendingId && Number(pendingId) === entry.id) {
+      setGenerating(true);
+      // Poll sessionStorage until the fetch completes
+      const interval = setInterval(() => {
+        if (!sessionStorage.getItem("generatingTasksFor")) {
+          setGenerating(false);
+          clearInterval(interval);
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    }
+  }, [entry.id]);
+
   const hasPhoto = entry.has_photo;
   const date = entry.created_at ? new Date(entry.created_at).toLocaleDateString("en-US", {
         year: "numeric",

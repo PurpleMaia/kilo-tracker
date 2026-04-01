@@ -191,9 +191,33 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
         throw new Error(errorMessage);
       }
 
+      const savedEntry = await apiResponse.json();
+
       toast.success(isEditMode ? "Entry updated" : "Entry saved", {
         description: "Your KILO entry has been saved successfully.",
       });
+
+      // Trigger task extraction and store pending state for KiloCard
+      if (savedEntry.entry?.id) {
+        const kiloId = savedEntry.entry.id;
+        sessionStorage.setItem("generatingTasksFor", String(kiloId));
+
+        fetch("/api/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kiloId,
+            q1: formData.q1 || null,
+            q2: formData.q2 || null,
+            q3: formData.q3 || null,
+          }),
+        })
+          .then(() => sessionStorage.removeItem("generatingTasksFor"))
+          .catch((err) => {
+            console.error("[KiloEntryForm] Task extraction failed:", err);
+            sessionStorage.removeItem("generatingTasksFor");
+          });
+      }
 
       setFormData({});
       setCurrentStep(0);
