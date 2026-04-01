@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getLLMClient, getLLMModel } from "./client";
-import { TASK_EXTRACTION_SYSTEM_PROMPT } from "./prompts";
+import { TASK_EXTRACTION_SYSTEM_PROMPT, DAILY_SUMMARY_SYSTEM_PROMPT } from "./prompts";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
 const MAX_RETRIES = 3;
@@ -51,8 +51,6 @@ function tryParseAndValidate(raw: string | null | undefined): {
     };
   }
 
-  console.log("LLM output successfully parsed and validated:", validated.data);
-
   return { success: true, data: validated.data };
 }
 
@@ -100,7 +98,6 @@ export async function extractTasksFromEntry(
   ];
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    console.log(`Attempt ${attempt} to extract tasks from LLM...`);
     const completion = await client.chat.completions.create({
       model,
       messages,
@@ -133,4 +130,77 @@ export class LLMValidationError extends Error {
     this.name = "LLMValidationError";
     this.attempts = attempts;
   }
+}
+
+const dailySummarySchema = z.object({
+  summary: z.string().min(1),
+});
+
+/**
+ * Generate a richer daily summary from KILO entry answers and extracted tasks.
+ */
+export async function generateDailySummary(
+  q1: string | null,
+  q2: string | null,
+  q3: string | null,
+  tasks: { title: string; priority: string }[]
+): Promise<string> {
+  const entryText = buildUserMessage(q1, q2, q3);
+
+  if (entryText === "(empty entry)") {
+    return "Brief entry with limited detail.";
+  }
+
+  const taskList = tasks.length > 0
+    ? `\n\nExtracted tasks:\n${tasks.map((t) => `- [${t.priority}] ${t.title}`).join("\n")}`
+    : "";
+
+  const client = getLLMClient();
+  const model = getLLMModel();
+
+  const messages: ChatCompletionMessageParam[] = [
+    { role: "system", content: DAILY_SUMMARY_SYSTEM_PROMPT },
+    { role: "user", content: entryText + taskList },
+  ];
+
+  console.log(`[generateDailySummary] Using model: ${model}`);
+  console.log(`[generateDailySummary] Input length: ${(entryText + taskList).length} chars`);
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const attemptStart = Date.now();
+    console.log(`[generateDailySummary] Attempt ${attempt}/${MAX_RETRIES} — calling LLM...`);
+
+    const completion = await client.chat.completions.create({
+      model,
+      messages,
+      temperature: 0.4,
+    });
+
+    console.log(`[generateDailySummary] Attempt ${attempt} LLM responded in ${Date.now() - attemptStart}ms`);
+
+    const raw = completion.choices[0]?.message?.content;
+    console.log(`[generateDailySummary] Raw response (${raw?.length ?? 0} chars): ${raw?.slice(0, 200)}`);
+    const cleaned = raw?.trim().replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+
+    try {
+      const parsed = JSON.parse(cleaned ?? "");
+      const validated = dailySummarySchema.safeParse(parsed);
+      if (validated.success) {
+        console.log(`[generateDailySummary] Parsed successfully on attempt ${attempt}`);
+        return validated.data.summary;
+      }
+      console.log(`[generateDailySummary] Schema validation failed on attempt ${attempt}:`, validated.error.issues);
+    } catch (e) {
+      console.log(`[generateDailySummary] JSON parse failed on attempt ${attempt}:`, e instanceof Error ? e.message : e);
+    }
+
+    messages.push({ role: "assistant", content: raw ?? "" });
+    messages.push({
+      role: "user",
+      content: "Your response was not valid JSON with a \"summary\" field. Please try again.",
+    });
+  }
+
+  console.log(`[generateDailySummary] All ${MAX_RETRIES} attempts failed, returning fallback`);
+  return "Brief entry with limited detail.";
 }
