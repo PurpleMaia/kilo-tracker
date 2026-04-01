@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { login } from "@/lib/auth/login";
 import { AppError } from "@/lib/errors";
-import { createSession } from "@/lib/auth/session";
+import { createSessionWithToken } from "@/lib/auth/session";
 import { checkLoginRateLimit, getClientIP, getUserAgent, recordLoginAttempt, clearFailedAttempts } from "@/lib/auth/rate-limit";
 
 // Login input validation schema (linient on local dev)
@@ -58,16 +58,16 @@ export async function POST(request: NextRequest) {
       await clearFailedAttempts(ip, identifier);
       await recordLoginAttempt(ip, userAgent, identifier, true);
 
+      const sessionType = user.system_role;
       const res = NextResponse.json({ user }, { status: 200 });
-
-      const sessionType = user.system_role
-
-      const sessionSetResponse = await createSession(user.id, sessionType, res);
+      const { response: sessionSetResponse, rawToken } = await createSessionWithToken(user.id, sessionType, res);
 
       if (process.env.NODE_ENV !== "production") {
           console.log('[LOGIN] Logged in successfully');
       }
-      return sessionSetResponse;
+      const finalRes = NextResponse.json({ user, token: rawToken, tokenType: sessionType }, { status: 200 });
+      sessionSetResponse.headers.forEach((value: string, key: string) => finalRes.headers.set(key, value));
+      return finalRes;
   } catch (error) {
       if (error instanceof AppError) {
             // Record failed login attempt if not due to rate limit (which is handled in checkLoginRateLimit)

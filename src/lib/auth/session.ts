@@ -80,8 +80,16 @@ export async function createSession(userID: string, sessionType: SessionType, re
 
     await storeTokenInDB(userID, hashedToken, expiresAt);
 
-    const res = setSessionCookieInBrowser(sessionType, response, rawToken, expiresAt);    
+    const res = setSessionCookieInBrowser(sessionType, response, rawToken, expiresAt);
     return res;
+}
+
+export async function createSessionWithToken(userID: string, sessionType: SessionType, response: NextResponse): Promise<{ response: NextResponse<unknown>; rawToken: string }> {
+    const expiresAt = getExpirationDate();
+    const { rawToken, hashedToken } = await generateToken();
+    await storeTokenInDB(userID, hashedToken, expiresAt);
+    const res = setSessionCookieInBrowser(sessionType, response, rawToken, expiresAt);
+    return { response: res, rawToken };
 }
 
 /**

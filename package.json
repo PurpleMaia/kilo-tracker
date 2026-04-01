@@ -22,7 +22,9 @@
     "migrate:force": "./scripts/migrate/force.sh",
     "test": "pnpm build && playwright test --project=chromium",
     "test:e2e": "playwright test --project=chromium",
-    "sync": "./scripts/sync-template.sh"
+    "sync": "./scripts/sync-template.sh",
+    "dev:mobile": "next dev",
+    "test:unit": "jest"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
