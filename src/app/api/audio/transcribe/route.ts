@@ -30,40 +30,21 @@ export async function POST(request: NextRequest) {
     if (!baseUrl || !apiKey) {
       console.error("[speaches] Missing MODEL_BASE_URL or MODEL_API_KEY environment variables");
       return NextResponse.json(
-        { error: "Speaches configuration is missing. Please contact the administrator." },
+        { error: "Transcription configuration is missing. Please contact the administrator." },
         { status: 500 }
       );
     }
-    const openai = new OpenAI({
-      baseURL: `${baseUrl}/v1`,
-      apiKey,
-    });
 
+   const openai = new OpenAI({ baseURL: `${baseUrl}/v1`, apiKey });
 
-    // Transcribe the audio file using Speaches API
     const response = await openai.audio.transcriptions.create({
       file: audio,
-      model: process.env.SPEACHES_STT_MODEL || "Systran/faster-whisper-large-v3",
+      model: process.env.SPEACHES_STT_MODEL || "Systran/faster-whisper-large-v3"      
     });
-
-    // const response = await fetch(`${process.env.MODEL_BASE_URL}/v1/audio/transcriptions`, {
-    //   method: "POST",
-    //   headers: {
-    //     "Authorization": `Bearer ${process.env.MODEL_API_KEY?.trim()}`,
-    //   },
-    //   body: form,
-    // }).then(res => res.json());
 
     return NextResponse.json(response);
   } catch (error) {
-    if (error instanceof AppError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.statusCode }
-      );
-    }
-
-    console.error("[POST /api/audio/transcribe]", error);
+    console.error("[transcribe] Error processing request:", JSON.stringify(error, null, 2));
     return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }

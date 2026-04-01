@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db/kysely/client";
-import { createSession } from "@/lib/auth/session";
+import { createSessionWithToken } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
 import { getClientIP, getUserAgent, checkRegistrationRateLimit, recordRegistrationAttempt, recordLoginAttempt } from "@/lib/auth/rate-limit";
 import { Errors } from "@/lib/errors";
@@ -112,20 +112,20 @@ export async function POST(request: NextRequest) {
     await recordRegistrationAttempt(ip, userAgent);
 
     // Create session and return response
-    const res = NextResponse.json({
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        username: newUser.username,
-        system_role: newUser.system_role,
-        created_at: newUser.created_at,
-        role: organizationId ? 'worker' : null
-      }
-    }, { status: 201 });
+    const user = {
+      id: newUser.id,
+      email: newUser.email,
+      username: newUser.username,
+      system_role: newUser.system_role,
+      created_at: newUser.created_at,
+      role: organizationId ? 'member' : null
+    };
 
-    const sessionSetResponse = await createSession(newUser.id, 'user', res);
-
-    return sessionSetResponse;
+    const res = NextResponse.json({ user }, { status: 201 });
+    const { response, rawToken } = await createSessionWithToken(newUser.id, 'user', res);
+    const finalRes = NextResponse.json({ user, token: rawToken, tokenType: 'user' }, { status: 201 });
+    response.headers.forEach((value: string, key: string) => finalRes.headers.set(key, value));
+    return finalRes;
 
   } catch (error) {
     // Record failed registration attempt for any error path
