@@ -28,8 +28,6 @@ export async function POST(request: NextRequest) {
 
     const { kiloId, q1, q2, q3 } = parsed.data;
 
-    console.log(`[POST /api/tasks] Extracting tasks for user ${user.id.slice(0, 6)} and kilo answers:`, { kiloId, q1, q2, q3 });
-
     // Verify the kilo entry exists and belongs to the user
     const kiloEntry = await db
       .selectFrom("kilo")
@@ -46,11 +44,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract tasks from the questions via LLM
+    const start = Date.now();
+    console.log("[POST /api/tasks] Starting LLM task extraction...");
     const result = await extractTasksFromEntry(
       q1 ?? null,
       q2 ?? null,
       q3 ?? null
     );
+    console.log(`[POST /api/tasks] LLM task extraction completed in ${Date.now() - start}ms (${result.tasks.length} tasks)`);
 
     // Delete any existing tasks for this kilo entry (idempotent re-extraction)
     await db.deleteFrom("tasks").where("kilo_id", "=", kiloId).execute();
