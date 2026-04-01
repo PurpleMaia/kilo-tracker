@@ -100,6 +100,7 @@ export async function extractTasksFromEntry(
   ];
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    console.log(`Attempt ${attempt} to extract tasks from LLM...`);
     const completion = await client.chat.completions.create({
       model,
       messages,
