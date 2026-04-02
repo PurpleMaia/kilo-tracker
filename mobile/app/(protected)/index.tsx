@@ -11,6 +11,7 @@ import { apiFetch } from "@/lib/api";
 import { HeroSection } from "@/components/landing/hero-section";
 import { OleloNoeau } from "@/components/landing/olelo-noeau";
 import { TodaySummary } from "@/components/landing/today-summary";
+import { FadeIn } from "@/components/shared/fade-in";
 
 type UserProfile = {
   first_name: string | null;
@@ -54,8 +55,8 @@ export default function LandingScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-koa-bg">
-        <ActivityIndicator size="large" color="#B0A48E" />
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#15803D" />
       </View>
     );
   }
@@ -64,21 +65,27 @@ export default function LandingScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-koa-bg"
+      className="flex-1 bg-white"
       contentContainerClassName="pb-28"
       refreshControl={
         <RefreshControl
           refreshing={isRefreshing}
           onRefresh={onRefresh}
-          tintColor="#B0A48E"
+          tintColor="#15803D"
         />
       }
     >
-      <HeroSection userName={displayName} />
+      <FadeIn>
+        <HeroSection userName={displayName} />
+      </FadeIn>
 
-      <OleloNoeau />
+      <FadeIn delay={100}>
+        <OleloNoeau />
+      </FadeIn>
 
-      <TodaySummary />
+      <FadeIn delay={200}>
+        <TodaySummary />
+      </FadeIn>
     </ScrollView>
   );
 }

@@ -9,11 +9,12 @@ import { Audio } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 import { Keyboard } from "lucide-react-native";
 import { apiFetch, getToken } from "@/lib/api";
+import { FadeIn } from "@/components/shared/fade-in";
 
 const QUESTIONS = [
-  { id: "q1", question: "What is your internal weather today?", required: true },
-  { id: "q2", question: "What do you see outside today?",       required: true, picture: true },
-  { id: "q3", question: "What are you excited to do today?",   required: true },
+  { id: "q1", question: "Lani (Air) — What do you observe in the sky and air around you today?", required: true },
+  { id: "q2", question: "Honua (Earth & Ocean) — What do you notice about the land and water today?", required: true, picture: true },
+  { id: "q3", question: "Hānaumoku (All Life Forces) — What living things do you observe today?", required: true },
 ];
 
 type PhotoData = { uri: string; base64: string; mimeType: string };
@@ -179,149 +180,156 @@ export default function KiloScreen() {
       className="flex-1 bg-white"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* ── Header: title · step counter · cancel ── */}
-      <View className="px-6 pt-14 pb-4 border-b border-gray-100 flex-row items-center justify-between">
-        <Text className="text-lg font-bold text-gray-900">KILO</Text>
-        <Text className="text-sm text-gray-400">
-          {step + 1} / {QUESTIONS.length}
-        </Text>
+      {/* ── Header ── */}
+      <View className="px-6 pt-14 pb-3 flex-row items-center justify-between">
+        <Text className="text-xl font-bold text-gray-900">KILO</Text>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text className="text-sm text-gray-500 font-medium">Cancel</Text>
+          <Ionicons name="close" size={24} color="#78716C" />
         </TouchableOpacity>
       </View>
 
       {/* ── Progress bar ── */}
-      <View className="bg-gray-100 h-1">
-        <View
-          className="bg-gray-900 h-1"
-          style={{ width: `${((step + 1) / QUESTIONS.length) * 100}%` }}
-        />
+      <View className="flex-row items-center px-6 mb-4" style={{ gap: 6 }}>
+        {QUESTIONS.map((_, i) => (
+          <View
+            key={i}
+            className="rounded-full"
+            style={{
+              height: 5,
+              flex: i === step ? 2 : 1,
+              backgroundColor: i === step ? "#15803D" : i < step ? "#6EBE80" : "#E7E5E4",
+            }}
+          />
+        ))}
       </View>
 
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 28, paddingBottom: 16 }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Question in content area ── */}
-        <Text className="text-xl font-bold text-gray-900 leading-snug mb-1">
-          {current.question}
-        </Text>
-        {current.required && (
-          <Text className="text-red-500 text-xs mb-6">* Required</Text>
-        )}
+        <FadeIn key={step}>
+          {/* ── Question ── */}
+          <Text className="text-2xl font-bold text-gray-900 leading-snug mb-1">
+            {current.question}
+          </Text>
+          {current.required && (
+            <Text className="text-sm font-semibold mb-6" style={{ color: "#B91C1C" }}>Required</Text>
+          )}
 
-        {error && (
-          <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5">
-            <Text className="text-red-700 text-sm">{error}</Text>
-          </View>
-        )}
+          {error && (
+            <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5">
+              <Text className="text-red-700 text-base">{error}</Text>
+            </View>
+          )}
 
-        {/* ── Voice recording (primary input) ── */}
-        {!showTyping && (
-          <View className="items-center" style={{ paddingVertical: 32, gap: 16 }}>
-            {isTranscribing ? (
-              <View className="items-center" style={{ gap: 12 }}>
-                <ActivityIndicator size="large" color="#16a34a" />
-                <Text className="text-gray-500 text-sm">Transcribing your response...</Text>
-              </View>
-            ) : (
-              <>
-                <TouchableOpacity
-                  onPress={isRecording ? handleStopRecording : handleStartRecording}
-                  style={{
-                    width: 112, height: 112, borderRadius: 56,
-                    alignItems: "center", justifyContent: "center",
-                    backgroundColor: isRecording ? "#ef4444" : "#16a34a",
-                    shadowColor: "#000", shadowOpacity: 0.12,
-                    shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
-                    elevation: 4,
-                  }}
-                >
-                  <Ionicons
-                    name={isRecording ? "stop" : "mic"}
-                    size={44}
-                    color="white"
-                  />
-                </TouchableOpacity>
-                <Text className="text-gray-500 text-sm">
-                  {isRecording ? "Tap to stop recording" : "Tap to start recording"}
-                </Text>
-                {answer.trim() !== "" && (
-                  <View
-                    className="bg-gray-50 border border-gray-200 rounded-xl w-full"
-                    style={{ paddingHorizontal: 16, paddingVertical: 12, marginTop: 4 }}
+          {/* ── Voice recording (primary input) ── */}
+          {!showTyping && (
+            <View className="items-center" style={{ paddingVertical: 32, gap: 16 }}>
+              {isTranscribing ? (
+                <View className="items-center" style={{ gap: 12 }}>
+                  <ActivityIndicator size="large" color="#D97706" />
+                  <Text className="text-gray-500 text-base">Transcribing your response...</Text>
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    onPress={isRecording ? handleStopRecording : handleStartRecording}
+                    style={{
+                      width: 112, height: 112, borderRadius: 56,
+                      alignItems: "center", justifyContent: "center",
+                      backgroundColor: isRecording ? "#B91C1C" : "#15803D",
+                      shadowColor: isRecording ? "#B91C1C" : "#15803D",
+                      shadowOpacity: 0.3,
+                      shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
+                      elevation: 6,
+                    }}
                   >
-                    <Text className="text-gray-700 text-sm italic">"{answer}"</Text>
-                  </View>
-                )}
-              </>
-            )}
-          </View>
-        )}
+                    <Ionicons
+                      name={isRecording ? "stop" : "mic"}
+                      size={44}
+                      color="white"
+                    />
+                  </TouchableOpacity>
+                  <Text className="text-base font-medium" style={{ color: isRecording ? "#B91C1C" : "#78716C" }}>
+                    {isRecording ? "Tap to stop recording" : "Tap to start recording"}
+                  </Text>
+                  {answer.trim() !== "" && (
+                    <View
+                      className="bg-gray-50 rounded-xl w-full"
+                      style={{ paddingHorizontal: 16, paddingVertical: 12, marginTop: 4, borderWidth: 1, borderColor: "#E7E5E4" }}
+                    >
+                      <Text className="text-gray-700 text-base italic">"{answer}"</Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          )}
 
-        {/* ── Typing fallback ── */}
-        {showTyping ? (
-          <TextInput
-            style={{
-              backgroundColor: "#f9fafb", borderWidth: 1, borderColor: "#e5e7eb",
-              borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-              fontSize: 16, color: "#111827", minHeight: 128, textAlignVertical: "top",
-            }}
-            placeholder="Type your answer here..."
-            placeholderTextColor="#9ca3af"
-            value={answer}
-            onChangeText={setAnswer}
-            multiline
-            autoFocus
-            editable={!isSubmitting}
-          />
-        ) : (
-          <TouchableOpacity
-            onPress={() => setShowTyping(true)}
-            style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}
-          >
-            <Keyboard size={18} color="#9ca3af" />
-            <Text className="text-gray-500 text-sm">Prefer to type instead?</Text>
-          </TouchableOpacity>
-        )}
+          {/* ── Typing fallback ── */}
+          {showTyping ? (
+            <TextInput
+              style={{
+                backgroundColor: "#FAFAF9", borderWidth: 1, borderColor: "#E7E5E4",
+                borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14,
+                fontSize: 17, color: "#1C1917", minHeight: 128, textAlignVertical: "top",
+              }}
+              placeholder="Type your answer here..."
+              placeholderTextColor="#9CA3AF"
+              value={answer}
+              onChangeText={setAnswer}
+              multiline
+              autoFocus
+              editable={!isSubmitting}
+            />
+          ) : (
+            <TouchableOpacity
+              onPress={() => setShowTyping(true)}
+              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}
+            >
+              <Keyboard size={18} color="#9CA3AF" />
+              <Text className="text-gray-500 text-base">Prefer to type instead?</Text>
+            </TouchableOpacity>
+          )}
 
-        {/* ── Photo (Q2 only) ── */}
-        {current.picture && (
-          <View style={{ marginTop: 24, gap: 8 }}>
-            {photo ? (
-              <View>
-                <Image
-                  source={{ uri: photo.uri }}
-                  style={{ width: "100%", height: 192, borderRadius: 12 }}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity
-                  onPress={() => setPhoto(null)}
-                  style={{ marginTop: 8, alignItems: "center" }}
-                >
-                  <Text className="text-red-500 text-sm font-medium">Remove photo</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View>
-                <Text className="text-gray-400 text-xs mb-2">
-                  Optional: take a photo of your Kilo
-                </Text>
-                <TouchableOpacity
-                  onPress={handleTakePhoto}
-                  style={{
-                    flexDirection: "row", alignItems: "center", gap: 8,
-                    borderWidth: 1, borderColor: "#d1d5db", borderRadius: 12,
-                    paddingHorizontal: 16, paddingVertical: 12, alignSelf: "flex-start",
-                  }}
-                >
-                  <Ionicons name="camera-outline" size={20} color="#374151" />
-                  <Text className="text-gray-700 text-sm font-medium">Open Camera</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        )}
+          {/* ── Photo (Q2 only) ── */}
+          {current.picture && (
+            <View style={{ marginTop: 24, gap: 8 }}>
+              {photo ? (
+                <View>
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={{ width: "100%", height: 192, borderRadius: 16 }}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setPhoto(null)}
+                    style={{ marginTop: 8, alignItems: "center" }}
+                  >
+                    <Text className="text-base font-semibold" style={{ color: "#B91C1C" }}>Remove photo</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View>
+                  <Text className="text-gray-500 text-sm mb-2">
+                    Optional: take a photo of your Kilo
+                  </Text>
+                  <TouchableOpacity
+                    onPress={handleTakePhoto}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 8,
+                      borderWidth: 1, borderColor: "#E7E5E4", borderRadius: 16, borderStyle: "dashed",
+                      paddingHorizontal: 16, paddingVertical: 12, alignSelf: "flex-start",
+                    }}
+                  >
+                    <Ionicons name="camera-outline" size={20} color="#15803D" />
+                    <Text className="text-gray-700 text-base font-semibold">Open Camera</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+        </FadeIn>
       </ScrollView>
 
       {/* ── Bottom navigation ── */}
@@ -333,12 +341,12 @@ export default function KiloScreen() {
           onPress={goBack}
           style={{
             flexDirection: "row", alignItems: "center", gap: 4,
-            borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 12,
-            paddingHorizontal: 20, paddingVertical: 12,
+            borderWidth: 1, borderColor: "#E7E5E4", borderRadius: 16,
+            paddingHorizontal: 20, paddingVertical: 14,
           }}
         >
-          <Ionicons name="chevron-back" size={16} color="#4b5563" />
-          <Text className="text-gray-600 text-sm font-medium">Back</Text>
+          <Ionicons name="chevron-back" size={16} color="#78716C" />
+          <Text className="text-gray-600 text-base font-semibold">Back</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -346,15 +354,19 @@ export default function KiloScreen() {
           disabled={isSubmitting}
           style={{
             flexDirection: "row", alignItems: "center", gap: 4,
-            borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12,
-            backgroundColor: isSubmitting ? "#9ca3af" : "#111827",
+            borderRadius: 16, paddingHorizontal: 24, paddingVertical: 14,
+            backgroundColor: isSubmitting ? "#6EBE80" : "#15803D",
+            shadowColor: "#15803D",
+            shadowOpacity: 0.2,
+            shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
+            elevation: 3,
           }}
         >
           {isSubmitting ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
             <>
-              <Text className="text-white text-sm font-semibold">
+              <Text className="text-white text-base font-bold">
                 {isLast ? "Save Entry" : "Next"}
               </Text>
               {!isLast && <Ionicons name="chevron-forward" size={16} color="white" />}

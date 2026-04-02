@@ -19,18 +19,18 @@ export type Question = {
 export const QUESTIONS: Question[] = [
   {
     id: "q1",
-    question: "What is your internal weather today?",
-    required: true,    
+    question: "Lani (Air) — What do you observe in the sky and air around you today?",
+    required: true,
   },
   {
     id: "q2",
-    question: "What do you see outside today?",
-    required: true,    
+    question: "Honua (Earth & Ocean) — What do you notice about the land and water today?",
+    required: true,
     picture: true,
   },
   {
     id: "q3",
-    question: "What are you excited to do today?",
+    question: "Hānaumoku (All Life Forces) — What living things do you observe today?",
     required: true,
   },
 ];

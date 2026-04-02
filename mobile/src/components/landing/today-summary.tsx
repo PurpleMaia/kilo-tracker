@@ -31,12 +31,12 @@ interface SummaryData {
   createdAt: string | null;
 }
 
-// ── Palette (inline styles only — tailwind handles the rest) ─────────
+// ── Palette ─────────────────────────────────────────────────────────
 
 const PRIORITY_COLORS: Record<string, string> = {
-  high: "#D4695A",
-  medium: "#D4A878",
-  low: "#7A9E7D",
+  high: "#B91C1C",
+  medium: "#D97706",
+  low: "#15803D",
 };
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -109,11 +109,11 @@ function KiloPhoto({ entryId }: { entryId: number }) {
 function SectionDivider({ label }: { label: string }) {
   return (
     <View className="flex-row items-center my-5">
-      <View className="h-px flex-1 bg-koa-stone/15" />
-      <Text className="text-xs text-koa-stone uppercase tracking-widest mx-3">
+      <View className="h-px flex-1 bg-gray-100" />
+      <Text className="text-sm font-bold uppercase tracking-widest mx-3" style={{ color: "#15803D", opacity: 0.7 }}>
         {label}
       </Text>
-      <View className="h-px flex-1 bg-koa-stone/15" />
+      <View className="h-px flex-1 bg-gray-100" />
     </View>
   );
 }
@@ -129,11 +129,11 @@ function ReflectionRow({
 }) {
   return (
     <View className="mb-4">
-      <Text className="text-xs text-koa-stone tracking-wide mb-1.5">
+      <Text className="text-sm font-bold uppercase tracking-wide mb-1.5" style={{ color: "#15803D", opacity: 0.7 }}>
         {label}
       </Text>
       <Text
-        className="text-sm text-koa-sand leading-6"
+        className="text-base text-gray-700 leading-6"
         style={{ fontFamily: "Newsreader_400Regular" }}
       >
         &ldquo;{truncate(text, 120)}&rdquo;
@@ -145,15 +145,14 @@ function ReflectionRow({
 
 function TaskRow({ task }: { task: TaskItem }) {
   const isDone = task.status === "done";
-  const color = PRIORITY_COLORS[task.priority] ?? "#B0A48E";
+  const color = PRIORITY_COLORS[task.priority] ?? "#78716C";
   const priorityLabel = PRIORITY_LABELS[task.priority] ?? task.priority;
 
   return (
     <View className="flex-row items-center py-2">
-      {/* Status icon */}
       <View className="w-5 items-center mr-2">
         {isDone ? (
-          <Ionicons name="checkmark-circle" size={16} color="#7A9E7D" />
+          <Ionicons name="checkmark-circle" size={16} color="#15803D" />
         ) : (
           <View
             className="h-2.5 w-2.5 rounded-full"
@@ -162,21 +161,19 @@ function TaskRow({ task }: { task: TaskItem }) {
         )}
       </View>
 
-      {/* Title */}
       <Text
-        className={`flex-1 text-sm ${
-          isDone ? "text-koa-stone line-through" : "text-koa-sand"
+        className={`flex-1 text-base ${
+          isDone ? "text-gray-400 line-through" : "text-gray-700"
         }`}
       >
         {task.title}
       </Text>
 
-      {/* Priority badge */}
       <View
         className="rounded-full px-2 py-0.5 ml-2"
         style={{ backgroundColor: `${color}18` }}
       >
-        <Text style={{ color, fontSize: 10, fontWeight: "500" }}>
+        <Text style={{ color, fontSize: 11, fontWeight: "600" }}>
           {priorityLabel}
         </Text>
       </View>
@@ -187,57 +184,50 @@ function TaskRow({ task }: { task: TaskItem }) {
 function SkeletonBlock() {
   return (
     <View className="px-7 py-4">
-      {/* Kilo section skeleton */}
       <View className="flex-row items-center justify-center mb-5">
-        <View className="h-px flex-1 bg-koa-stone/10" />
-        <View className="h-3 w-24 rounded bg-koa-stone/10 mx-3" />
-        <View className="h-px flex-1 bg-koa-stone/10" />
+        <View className="h-px flex-1 bg-gray-100" />
+        <View className="h-3 w-24 rounded-full bg-gray-100 mx-3" />
+        <View className="h-px flex-1 bg-gray-100" />
       </View>
       <View className="gap-y-4">
         <View>
-          <View className="h-2.5 w-24 rounded bg-koa-stone/10 mb-2" />
-          <View className="h-4 w-full rounded bg-koa-stone/8" />
+          <View className="h-2.5 w-24 rounded-full bg-gray-100 mb-2" />
+          <View className="h-4 w-full rounded-full bg-gray-50" />
         </View>
         <View>
-          <View className="h-2.5 w-20 rounded bg-koa-stone/10 mb-2" />
-          <View className="h-4 w-3/4 rounded bg-koa-stone/8" />
+          <View className="h-2.5 w-20 rounded-full bg-gray-100 mb-2" />
+          <View className="h-4 w-3/4 rounded-full bg-gray-50" />
         </View>
         <View>
-          <View className="h-2.5 w-28 rounded bg-koa-stone/10 mb-2" />
-          <View className="h-4 w-5/6 rounded bg-koa-stone/8" />
+          <View className="h-2.5 w-28 rounded-full bg-gray-100 mb-2" />
+          <View className="h-4 w-5/6 rounded-full bg-gray-50" />
         </View>
       </View>
 
-      {/* Summary section skeleton */}
       <View className="flex-row items-center justify-center my-5">
-        <View className="h-px flex-1 bg-koa-stone/10" />
-        <View className="h-3 w-28 rounded bg-koa-stone/10 mx-3" />
-        <View className="h-px flex-1 bg-koa-stone/10" />
+        <View className="h-px flex-1 bg-gray-100" />
+        <View className="h-3 w-28 rounded-full bg-gray-100 mx-3" />
+        <View className="h-px flex-1 bg-gray-100" />
       </View>
       <View className="gap-y-2">
-        <View className="h-3.5 w-full rounded bg-koa-stone/8" />
-        <View className="h-3.5 w-11/12 rounded bg-koa-stone/8" />
-        <View className="h-3.5 w-4/5 rounded bg-koa-stone/8" />
+        <View className="h-3.5 w-full rounded-full bg-gray-50" />
+        <View className="h-3.5 w-11/12 rounded-full bg-gray-50" />
+        <View className="h-3.5 w-4/5 rounded-full bg-gray-50" />
       </View>
 
-      {/* Tasks section skeleton */}
       <View className="flex-row items-center justify-center my-5">
-        <View className="h-px flex-1 bg-koa-stone/10" />
-        <View className="h-3 w-12 rounded bg-koa-stone/10 mx-3" />
-        <View className="h-px flex-1 bg-koa-stone/10" />
+        <View className="h-px flex-1 bg-gray-100" />
+        <View className="h-3 w-12 rounded-full bg-gray-100 mx-3" />
+        <View className="h-px flex-1 bg-gray-100" />
       </View>
       <View className="gap-y-2">
         <View className="flex-row items-center gap-x-2">
-          <View className="h-2.5 w-2.5 rounded-full bg-koa-stone/10" />
-          <View className="h-3.5 w-3/5 rounded bg-koa-stone/8" />
+          <View className="h-2.5 w-2.5 rounded-full bg-gray-100" />
+          <View className="h-3.5 w-3/5 rounded-full bg-gray-50" />
         </View>
         <View className="flex-row items-center gap-x-2">
-          <View className="h-2.5 w-2.5 rounded-full bg-koa-stone/10" />
-          <View className="h-3.5 w-2/5 rounded bg-koa-stone/8" />
-        </View>
-        <View className="flex-row items-center gap-x-2">
-          <View className="h-2.5 w-2.5 rounded-full bg-koa-stone/10" />
-          <View className="h-3.5 w-1/2 rounded bg-koa-stone/8" />
+          <View className="h-2.5 w-2.5 rounded-full bg-gray-100" />
+          <View className="h-3.5 w-2/5 rounded-full bg-gray-50" />
         </View>
       </View>
     </View>
@@ -273,71 +263,70 @@ export function TodaySummary() {
     }, [])
   );
 
-  // Loading skeleton
   if (loading) {
     return <SkeletonBlock />;
   }
 
-  // No kilo today — gentle invitation
   if (!entry) {
     return (
-      <View className="px-7 py-6 items-center">
-        <Ionicons name="leaf-outline" size={24} color="#7A9E7D" />
+      <View className="px-7 py-8 items-center">
+        <View
+          className="w-14 h-14 rounded-2xl items-center justify-center mb-3"
+          style={{ backgroundColor: "#D1E7D5" }}
+        >
+          <Ionicons name="leaf-outline" size={26} color="#15803D" />
+        </View>
         <Text
-          className="text-base text-koa-sand mt-3 text-center"
+          className="text-lg text-gray-900 mt-1 text-center font-semibold"
           style={{ fontFamily: "Newsreader_400Regular" }}
         >
           No observations yet today
         </Text>
-        <Text className="text-xs text-koa-stone mt-1 text-center">
+        <Text className="text-sm text-gray-500 mt-1 text-center">
           Tap the kilo button below to begin
         </Text>
       </View>
     );
   }
 
-  // Today's reflection + tasks
   return (
     <View className="px-7">
       <SectionDivider label="Today's Kilo" />
 
-      <ReflectionRow label="Internal Weather" text={entry.q1} />
+      <ReflectionRow label="Papahulilani" text={entry.q1} />
 
-      <ReflectionRow label="What I See" text={entry.q2}>
+      <ReflectionRow label="Papahulihonua" text={entry.q2}>
         {entry.has_photo && <KiloPhoto entryId={entry.id} />}
       </ReflectionRow>
 
-      <ReflectionRow label="What Excites Me" text={entry.q3} />
+      <ReflectionRow label="Papahānaumoku" text={entry.q3} />
 
-      {/* Edit link */}
       <TouchableOpacity
         className="flex-row items-center self-end mt-1 mb-1"
         onPress={() => router.push(`/(protected)/kilo/edit?id=${entry.id}`)}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="pencil-outline" size={13} color="#B0A48E" />
-        <Text className="text-xs text-koa-stone ml-1.5">Edit entry</Text>
+        <Ionicons name="pencil-outline" size={14} color="#15803D" />
+        <Text className="text-sm font-semibold ml-1.5" style={{ color: "#15803D" }}>Edit entry</Text>
       </TouchableOpacity>
 
-      {/* AI-generated daily summary */}
       {summary && (
         <>
           <SectionDivider label="Today's Summary" />
           <View className="flex-row items-start mb-1">
             <Ionicons
               name="sparkles-outline"
-              size={14}
-              color="#D4A878"
+              size={15}
+              color="#D97706"
               style={{ marginTop: 2, marginRight: 8 }}
             />
-            <Text className="flex-1 text-sm text-koa-sand/80 leading-6">
+            <Text className="flex-1 text-base text-gray-500 leading-6">
               {summary}
             </Text>
           </View>
         </>
       )}
 
-      {/* Tasks section */}
       {tasks.length > 0 && (
         <>
           <SectionDivider label="Tasks" />

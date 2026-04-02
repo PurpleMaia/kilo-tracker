@@ -23,19 +23,19 @@ export function HeroSection({ userName }: HeroSectionProps) {
   return (
     <View className="px-7 pt-16 pb-4">
       <Text
-        className="text-3xl text-koa-sand leading-10"
+        className="text-4xl font-bold text-gray-900 leading-tight"
         style={{ fontFamily: "Newsreader_400Regular" }}
       >
         {greeting}
       </Text>
 
-      <Text className="text-base text-koa-stone mt-2">{today}</Text>
+      <Text className="text-lg text-gray-500 mt-2">{today}</Text>
 
-      <Text className="text-sm text-koa-stone mt-1">
+      <Text className="text-base font-semibold mt-1" style={{ color: "#15803D" }}>
         ☽ {mahina.name} · Day {mahina.day} · {kau}
       </Text>
 
-      <View className="h-px bg-koa-stone/20 mt-6" />
+      <View className="h-px bg-gray-100 mt-6" />
     </View>
   );
 }

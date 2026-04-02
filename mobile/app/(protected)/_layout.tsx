@@ -8,8 +8,8 @@ export default function ProtectedLayout() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-koa-bg">
-        <ActivityIndicator size="large" color="#B0A48E" />
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#15803D" />
       </View>
     );
   }
@@ -25,7 +25,7 @@ export default function ProtectedLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="history" options={{ title: "History" }} />
-      <Tabs.Screen name="chat" options={{ title: "Chat" }} />
+      <Tabs.Screen name="learn" options={{ title: "Learn" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
       <Tabs.Screen
         name="kilo"

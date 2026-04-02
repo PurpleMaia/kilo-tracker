@@ -13,10 +13,10 @@ const TABS = [
   },
   { name: "__kilo__", label: "Kilo", icon: "add", iconActive: "add" },
   {
-    name: "chat",
-    label: "Chat",
-    icon: "chatbubble-outline",
-    iconActive: "chatbubble",
+    name: "learn",
+    label: "Learn",
+    icon: "leaf-outline",
+    iconActive: "leaf",
   },
   {
     name: "profile",
@@ -31,7 +31,7 @@ export function TabBar({ state }: BottomTabBarProps) {
 
   return (
     <View
-      className="bg-koa-surface border-t border-koa-stone/10"
+      className="bg-white border-t border-gray-100"
       style={{
         paddingBottom: Platform.OS === "ios" ? 24 : 8,
       }}
@@ -46,12 +46,22 @@ export function TabBar({ state }: BottomTabBarProps) {
                 activeOpacity={0.8}
                 className="items-center -mt-5"
               >
-                <View className="w-14 h-14 rounded-full bg-koa-fern items-center justify-center shadow-lg">
-                  <Ionicons name="add" size={28} color="#F2E8D5" />
+                <View
+                  className="w-14 h-14 rounded-full items-center justify-center"
+                  style={{
+                    backgroundColor: "#15803D",
+                    shadowColor: "#15803D",
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 4 },
+                    elevation: 6,
+                  }}
+                >
+                  <Ionicons name="add" size={28} color="#FFFFFF" />
                 </View>
                 <Text
-                  className="text-koa-stone mt-1"
-                  style={{ fontSize: 10 }}
+                  className="text-gray-500 mt-1 font-medium"
+                  style={{ fontSize: 11 }}
                 >
                   {tab.label}
                 </Text>
@@ -75,17 +85,17 @@ export function TabBar({ state }: BottomTabBarProps) {
               <Ionicons
                 name={iconName as keyof typeof Ionicons.glyphMap}
                 size={22}
-                color={isActive ? "#F2E8D5" : "#B0A48E"}
+                color={isActive ? "#15803D" : "#A8A29E"}
               />
               <Text
-                className={`mt-0.5 ${isActive ? "text-koa-sand" : "text-koa-stone"}`}
-                style={{ fontSize: 10 }}
+                className={`mt-0.5 ${isActive ? "font-semibold" : "font-medium"}`}
+                style={{
+                  fontSize: 11,
+                  color: isActive ? "#15803D" : "#A8A29E",
+                }}
               >
                 {tab.label}
               </Text>
-              {isActive && (
-                <View className="w-1 h-1 rounded-full bg-koa-fern mt-0.5" />
-              )}
             </TouchableOpacity>
           );
         })}

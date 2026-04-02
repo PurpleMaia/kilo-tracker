@@ -27,8 +27,8 @@ export function OleloNoeau() {
   if (loading) {
     return (
       <View className="px-7 py-6 items-center">
-        <View className="h-4 w-3/4 rounded bg-koa-stone/10" />
-        <View className="h-3 w-1/2 rounded bg-koa-stone/10 mt-2" />
+        <View className="h-4 w-3/4 rounded-full bg-gray-100" />
+        <View className="h-3 w-1/2 rounded-full bg-gray-100 mt-2" />
       </View>
     );
   }
@@ -36,14 +36,16 @@ export function OleloNoeau() {
   if (!text) return null;
 
   return (
-    <View className="px-7 py-4 items-center">
+    <View className="mx-7 my-4 rounded-2xl bg-gray-50 p-5" style={{ borderLeftWidth: 3, borderLeftColor: "#15803D" }}>
+      <Text className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: "#15803D", opacity: 0.8 }}>
+        &#699;Olelo No&#699;eau
+      </Text>
       <Text
-        className="text-base text-koa-sand text-center italic leading-6"
+        className="text-lg text-gray-700 italic leading-7"
         style={{ fontFamily: "Newsreader_400Regular_Italic" }}
       >
         &ldquo;{text}&rdquo;
       </Text>
-      <View className="h-px bg-koa-stone/20 mt-6 w-full" />
     </View>
   );
 }

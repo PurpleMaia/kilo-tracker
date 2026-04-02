@@ -13,6 +13,7 @@ import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch, getToken } from "@/lib/api";
 import { useEffect } from "react";
+import { FadeIn } from "@/components/shared/fade-in";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -61,7 +62,7 @@ function KiloPhoto({ entryId }: { entryId: number }) {
   return (
     <Image
       source={{ uri }}
-      style={{ width: "100%", height: 160, borderRadius: 8, marginTop: 8 }}
+      style={{ width: "100%", height: 160, borderRadius: 12, marginTop: 8 }}
       resizeMode="cover"
     />
   );
@@ -128,102 +129,118 @@ export default function HistoryScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-koa-bg">
-        <ActivityIndicator size="large" color="#B0A48E" />
+      <View className="flex-1 items-center justify-center bg-white">
+        <ActivityIndicator size="large" color="#15803D" />
       </View>
     );
   }
 
   return (
     <ScrollView
-      className="flex-1 bg-koa-bg"
+      className="flex-1 bg-white"
       contentContainerClassName="pb-28"
       refreshControl={
         <RefreshControl
           refreshing={isRefreshing}
           onRefresh={onRefresh}
-          tintColor="#B0A48E"
+          tintColor="#15803D"
         />
       }
     >
-      <View className="px-7 pt-16 pb-4">
-        <Text
-          className="text-2xl text-koa-sand"
-          style={{ fontFamily: "Newsreader_400Regular" }}
-        >
-          Your Journal
-        </Text>
-        <Text className="text-sm text-koa-stone mt-1">
-          {total} {total === 1 ? "entry" : "entries"}
-        </Text>
-        <View className="h-px bg-koa-stone/20 mt-4" />
-      </View>
+      <FadeIn>
+        <View className="px-7 pt-16 pb-4">
+          <Text
+            className="text-3xl font-bold text-gray-900"
+            style={{ fontFamily: "Newsreader_400Regular" }}
+          >
+            Your Journal
+          </Text>
+          <Text className="text-base text-gray-500 mt-1">
+            {total} {total === 1 ? "entry" : "entries"}
+          </Text>
+          <View className="h-px bg-gray-100 mt-4" />
+        </View>
+      </FadeIn>
 
       {entries.length === 0 ? (
-        <View className="px-7 py-12 items-center">
-          <Ionicons name="book-outline" size={32} color="#B0A48E" />
-          <Text className="text-koa-stone text-sm mt-3">
-            No entries yet. Start your first kilo.
-          </Text>
-        </View>
-      ) : (
-        entries.map((entry) => (
-          <View
-            key={entry.id}
-            className="mx-7 mb-4 border border-koa-stone/10 rounded-2xl bg-koa-surface p-5"
-          >
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-xs text-koa-stone">
-                {formatDate(entry.created_at)}
-              </Text>
-              <View className="flex-row items-center gap-x-3">
-                <TouchableOpacity
-                  onPress={() =>
-                    router.push(`/(protected)/kilo/edit?id=${entry.id}`)
-                  }
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="pencil-outline" size={15} color="#B0A48E" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleDelete(entry.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="trash-outline" size={15} color="#D4695A" />
-                </TouchableOpacity>
-              </View>
+        <FadeIn delay={100}>
+          <View className="px-7 py-12 items-center">
+            <View
+              className="w-14 h-14 rounded-2xl items-center justify-center mb-3"
+              style={{ backgroundColor: "#D1E7D5" }}
+            >
+              <Ionicons name="book-outline" size={26} color="#15803D" />
             </View>
-
-            <View className="mb-3">
-              <Text className="text-xs text-koa-stone mb-1">
-                Internal Weather
-              </Text>
-              <Text className="text-sm text-koa-sand leading-5">
-                {entry.q1}
-              </Text>
-            </View>
-
-            {entry.q2 && (
-              <View className="mb-3">
-                <Text className="text-xs text-koa-stone mb-1">What I See</Text>
-                <Text className="text-sm text-koa-sand leading-5">
-                  {entry.q2}
-                </Text>
-                {entry.has_photo && <KiloPhoto entryId={entry.id} />}
-              </View>
-            )}
-
-            {entry.q3 && (
-              <View>
-                <Text className="text-xs text-koa-stone mb-1">
-                  What Excites Me
-                </Text>
-                <Text className="text-sm text-koa-sand leading-5">
-                  {entry.q3}
-                </Text>
-              </View>
-            )}
+            <Text className="text-gray-700 text-base font-semibold mt-1">
+              No entries yet
+            </Text>
+            <Text className="text-gray-500 text-sm mt-1">
+              Start your first kilo observation
+            </Text>
           </View>
+        </FadeIn>
+      ) : (
+        entries.map((entry, i) => (
+          <FadeIn key={entry.id} delay={100 + i * 60}>
+            <View
+              className="mx-7 mb-3 rounded-2xl bg-gray-50 p-5"
+              style={{ borderWidth: 1, borderColor: "#E7E5E4" }}
+            >
+              <View className="flex-row items-center justify-between mb-3">
+                <Text className="text-sm font-semibold text-gray-500">
+                  {formatDate(entry.created_at)}
+                </Text>
+                <View className="flex-row items-center gap-x-3">
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push(`/(protected)/kilo/edit?id=${entry.id}`)
+                    }
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color="#15803D" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDelete(entry.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#B91C1C" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View className="mb-3">
+                <Text className="text-sm font-bold uppercase tracking-wide mb-1" style={{ color: "#15803D", opacity: 0.7 }}>
+                  Papahuhlilani
+                </Text>
+                <Text className="text-base text-gray-700 leading-6">
+                  {entry.q1}
+                </Text>
+              </View>
+
+              {entry.q2 && (
+                <View className="mb-3 pt-3 border-t border-gray-100">
+                  <Text className="text-sm font-bold uppercase tracking-wide mb-1" style={{ color: "#15803D", opacity: 0.7 }}>
+                    Papahulihonua
+                  </Text>
+                  <Text className="text-base text-gray-700 leading-6">
+                    {entry.q2}
+                  </Text>
+                  {entry.has_photo && <KiloPhoto entryId={entry.id} />}
+                </View>
+              )}
+
+              {entry.q3 && (
+                <View className="pt-3 border-t border-gray-100">
+                  <Text className="text-sm font-bold uppercase tracking-wide mb-1" style={{ color: "#15803D", opacity: 0.7 }}>
+                    Papahānaumoku
+                  </Text>
+                  <Text className="text-base text-gray-700 leading-6">
+                    {entry.q3}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </FadeIn>
         ))
       )}
     </ScrollView>
