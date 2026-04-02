@@ -1,5 +1,7 @@
 packages:
-  - .
+  - "packages/*"
+  - "web"
+  - "mobile"
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
