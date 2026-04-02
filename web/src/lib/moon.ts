@@ -4,9 +4,10 @@
 
 export type MoonPhaseResult = {
   name: string;
-  night: number;
   illumination: number;
   description: string;
+  anahulu: string;
+  waning: boolean;
   date: string;
 };
 
@@ -15,39 +16,41 @@ export const KNOWN_NEW_MOON_JD = 2451550.1; // Jan 6, 2000 18:14 UTC
 
 export const HAWAIIAN_MOON_PHASES: {
   name: string;
-  night: number;
+  min_range: number;
+  max_range: number;
   description: string;
+  anahulu: string;
 }[] = [
-  { name: "Hilo", night: 1, description: "First visible crescent" },
-  { name: "Hoaka", night: 2, description: "Crescent moon" },
-  { name: "Kū Kahi", night: 3, description: "First Kū night" },
-  { name: "Kū Lua", night: 4, description: "Second Kū night" },
-  { name: "Kū Kolu", night: 5, description: "Third Kū night" },
-  { name: "Kū Pau", night: 6, description: "Last Kū night" },
-  { name: "ʻOle Kū Kahi", night: 7, description: "First ʻOle Kū night" },
-  { name: "ʻOle Kū Lua", night: 8, description: "Second ʻOle Kū night" },
-  { name: "ʻOle Kū Kolu", night: 9, description: "Third ʻOle Kū night" },
-  { name: "ʻOle Kū Pau", night: 10, description: "Last ʻOle Kū night" },
-  { name: "Huna", night: 11, description: "Hidden moon" },
-  { name: "Mohalu", night: 12, description: "Opening bud" },
-  { name: "Hua", night: 13, description: "Fruitful night" },
-  { name: "Akua", night: 14, description: "Night of the gods" },
-  { name: "Hoku", night: 15, description: "Full moon" },
-  { name: "Māhealani", night: 16, description: "Full moon glow" },
-  { name: "Kulu", night: 17, description: "Dripping moon" },
-  { name: "Lāʻau Kū Kahi", night: 18, description: "First Lāʻau Kū night" },
-  { name: "Lāʻau Kū Lua", night: 19, description: "Second Lāʻau Kū night" },
-  { name: "Lāʻau Pau", night: 20, description: "Last Lāʻau night" },
-  { name: "ʻOle Kū Kahi", night: 21, description: "First ʻOle night (waning)" },
-  { name: "ʻOle Kū Lua", night: 22, description: "Second ʻOle night (waning)" },
-  { name: "ʻOle Pau", night: 23, description: "Last ʻOle night" },
-  { name: "Kāloa Kū Kahi", night: 24, description: "First Kāloa night" },
-  { name: "Kāloa Kū Lua", night: 25, description: "Second Kāloa night" },
-  { name: "Kāloa Pau", night: 26, description: "Last Kāloa night" },
-  { name: "Kāne", night: 27, description: "Night of Kāne" },
-  { name: "Lono", night: 28, description: "Night of Lono" },
-  { name: "Mauli", night: 29, description: "Last sliver of moon" },
-  { name: "Muku", night: 30, description: "Dark moon, new cycle" },
+  { name: "Hilo", min_range: 0.5, max_range: 2.5, description: "First visible crescent", anahulu: "Hoʻonui" },
+  { name: "Hoaka", min_range: 2.5, max_range: 6, description: "Crescent moon", anahulu: "Hoʻonui" },
+  { name: "Kūkahi", min_range: 6, max_range: 12, description: "First Kū night", anahulu: "Hoʻonui" },
+  { name: "Kūlua", min_range: 12, max_range: 20, description: "Second Kū night", anahulu: "Hoʻonui" },
+  { name: "Kūkolu", min_range: 20, max_range: 24, description: "Third Kū night", anahulu: "Hoʻonui" },
+  { name: "Kūpau", min_range: 24, max_range: 34, description: "Last Kū night", anahulu: "Hoʻonui" },
+  { name: "ʻOlekūkahi", min_range: 34, max_range: 44, description: "First ʻOle Kū night", anahulu: "Hoʻonui" },
+  { name: "ʻOlekūlua", min_range: 44, max_range: 55, description: "Second ʻOle Kū night", anahulu: "Hoʻonui" },
+  { name: "ʻOlekūkolu", min_range: 55, max_range: 65, description: "Third ʻOle Kū night", anahulu: "Hoʻonui" },
+  { name: "ʻOlepau", min_range: 65, max_range: 70, description: "Last ʻOle Kū night", anahulu: "Hoʻonui" },
+  { name: "Huna", min_range: 70, max_range: 78, description: "Hidden moon", anahulu: "Poepoe" },
+  { name: "Mōhalu", min_range: 78, max_range: 87, description: "Opening bud", anahulu: "Poepoe" },
+  { name: "Hua", min_range: 87, max_range: 92, description: "Fruitful night", anahulu: "Poepoe" },
+  { name: "Akua", min_range: 92, max_range: 95, description: "Night of the gods", anahulu: "Poepoe" },
+  { name: "Hoku", min_range: 95, max_range: 100, description: "Full moon", anahulu: "Poepoe" },
+  { name: "Māhealani", min_range: 100, max_range: 98.6, description: "Full moon glow", anahulu: "Poepoe" },
+  { name: "Kulu", min_range: 98.6, max_range: 97.5, description: "Dripping moon", anahulu: "Poepoe" },
+  { name: "Lāʻaukūkahi", min_range: 97.5, max_range: 95, description: "First Lāʻau Kū night", anahulu: "Poepoe" },
+  { name: "Lāʻaukūlua", min_range: 95, max_range: 90, description: "Second Lāʻau Kū night", anahulu: "Poepoe" },
+  { name: "Lāʻaupau", min_range: 90, max_range: 82, description: "Last Lāʻau night", anahulu: "Poepoe" },
+  { name: "ʻOlekūkahi", min_range: 82, max_range: 68.5, description: "First ʻOle night (waning)", anahulu: "Hoʻēmi" },
+  { name: "ʻOlekūlua", min_range: 68.5, max_range: 56, description: "Second ʻOle night (waning)", anahulu: "Hoʻēmi" },
+  { name: "ʻOlepau", min_range: 56, max_range: 44, description: "Last ʻOle night", anahulu: "Hoʻēmi" },
+  { name: "Kāloakūkahi", min_range: 44, max_range: 33, description: "First Kāloa night", anahulu: "Hoʻēmi" },
+  { name: "Kāloakūlua", min_range: 33, max_range: 22, description: "Second Kāloa night", anahulu: "Hoʻēmi" },
+  { name: "Kāloapau", min_range: 22, max_range: 13, description: "Last Kāloa night", anahulu: "Hoʻēmi" },
+  { name: "Kāne", min_range: 13, max_range: 5, description: "Night of Kāne", anahulu: "Hoʻēmi" },
+  { name: "Lono", min_range: 5, max_range: 4, description: "Night of Lono", anahulu: "Hoʻēmi" },
+  { name: "Mauli", min_range: 4, max_range: 1, description: "Last sliver of moon", anahulu: "Hoʻēmi" },
+  { name: "Muku", min_range: 1, max_range: 0, description: "Dark moon, new cycle", anahulu: "Hoʻēmi" },
 ];
 
 export function getMoonAge(date: Date): number {
@@ -58,22 +61,58 @@ export function getMoonAge(date: Date): number {
   );
 }
 
-export function getMoonIllumination(date: Date): number {
-  const age = getMoonAge(date);
+export function getMoonIllumination(age: number): number {
   return ((1 - Math.cos((2 * Math.PI * age) / SYNODIC_MONTH)) / 2) * 100;
 }
 
 export function getHawaiianMoonPhase(date: Date): MoonPhaseResult {
   const age = getMoonAge(date);
-  const illumination = getMoonIllumination(date);
-  const nightIndex = Math.min(Math.max(Math.floor(age), 0), 29);
-  const phase = HAWAIIAN_MOON_PHASES[nightIndex];
+  const illumination = getMoonIllumination(age);
+  const isWaning = age > SYNODIC_MONTH / 2;
+
+  // Near-zero illumination with very young moon = Muku (dark moon, new cycle)
+  if (illumination < 0.5 && age < 1) {
+    const muku = HAWAIIAN_MOON_PHASES.find((p) => p.name === "Muku")!;
+    return {
+      name: muku.name,
+      waning: false,
+      illumination: Math.round(illumination * 100) / 100,
+      description: muku.description,
+      anahulu: muku.anahulu,
+      date: date.toISOString().split("T")[0],
+    };
+  }
+
+  // Filter phases by direction: waxing searches Hoʻonui + waxing Poepoe,
+  // waning searches waning Poepoe + Hoʻēmi
+  const candidates = isWaning
+    ? HAWAIIAN_MOON_PHASES.filter((p) => p.min_range > p.max_range)
+    : HAWAIIAN_MOON_PHASES.filter((p) => p.min_range <= p.max_range);
+
+  let phase = HAWAIIAN_MOON_PHASES[0];
+
+  for (const p of candidates) {
+    if (p.min_range <= p.max_range) {
+      // Waxing: min < max, match [min, max)
+      if (illumination >= p.min_range && illumination < p.max_range) {
+        phase = p;
+        break;
+      }
+    } else {
+      // Waning: min > max, match (max, min]
+      if (illumination <= p.min_range && illumination > p.max_range) {
+        phase = p;
+        break;
+      }
+    }
+  }
 
   return {
     name: phase.name,
-    night: phase.night,
+    waning: isWaning,
     illumination: Math.round(illumination * 100) / 100,
     description: phase.description,
+    anahulu: phase.anahulu,
     date: date.toISOString().split("T")[0],
   };
 }
