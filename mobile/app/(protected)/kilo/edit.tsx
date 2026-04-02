@@ -7,7 +7,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "@/lib/api";
 import { FadeIn } from "@/components/shared/fade-in";
-import { GuidingPrompts } from "@/components/shared/guiding-prompts";
+import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { getTheme } from "@/components/kilo/question-theme";
 import { QUESTIONS } from "@kilo/shared/types";
 

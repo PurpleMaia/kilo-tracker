@@ -16,13 +16,96 @@ import Animated, {
   FadeInDown,
 } from "react-native-reanimated";
 import { apiFetch } from "@/lib/api";
-import { GuidingPrompts } from "@/components/shared/guiding-prompts";
+import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { ThemedBackground } from "@/components/kilo/themed-background";
 import { StepIndicator } from "@/components/kilo/step-indicator";
 import { getTheme } from "@/components/kilo/question-theme";
 import { QUESTIONS } from "@kilo/shared/types";
 
 type PhotoData = { uri: string; base64: string; mimeType: string };
+
+  // ── Legacy: API-based transcription (commented out) ──────────
+  // const handleStartRecordingViaAPI = async () => {
+  //   try {
+  //     const { status } = await Audio.requestPermissionsAsync();
+  //     if (status !== "granted") {
+  //       Alert.alert("Permission needed", "Microphone access is required to record.");
+  //       return;
+  //     }
+  //     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+  //     const { recording } = await Audio.Recording.createAsync({
+  //       android: {
+  //         extension: ".wav",
+  //         outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+  //         audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+  //         sampleRate: 16000,
+  //         numberOfChannels: 1,
+  //         bitRate: 128000,
+  //       },
+  //       ios: {
+  //         extension: ".wav",
+  //         outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+  //         audioQuality: Audio.IOSAudioQuality.HIGH,
+  //         sampleRate: 16000,
+  //         numberOfChannels: 1,
+  //         bitRate: 128000,
+  //         linearPCMBitDepth: 16,
+  //         linearPCMIsBigEndian: false,
+  //         linearPCMIsFloat: false,
+  //       },
+  //       web: {},
+  //     });
+  //     recordingRef.current = recording;
+  //     setIsRecording(true);
+  //   } catch {
+  //     setError("Failed to start recording.");
+  //   }
+  // };
+  //
+  // const handleStopRecordingViaAPI = async () => {
+  //   if (!recordingRef.current) return;
+  //   setIsRecording(false);
+  //   setIsTranscribing(true);
+  //   try {
+  //     await recordingRef.current.stopAndUnloadAsync();
+  //     const uri = recordingRef.current.getURI();
+  //     recordingRef.current = null;
+  //     if (!uri) throw new Error("No recording found");
+  //
+  //     const session = await getToken();
+  //     const formData = new FormData();
+  //     formData.append("file", { uri, name: "audio.wav", type: "audio/wav" } as never);
+  //
+  //     const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+  //     const res = await fetch(`${BASE_URL}/api/audio/transcribe`, {
+  //       method: "POST",
+  //       headers: session
+  //         ? { "x-session-token": session.token, "x-session-type": session.tokenType }
+  //         : {},
+  //       body: formData,
+  //     });
+  //     if (res.ok) {
+  //       const { text } = await res.json();
+  //       if (text) {
+  //         setAnswer((answer ? answer + " " : "") + text);
+  //         setShowTyping(true);
+  //       } else {
+  //         setError("Transcription returned no text. Try again or type your answer.");
+  //         setShowTyping(true);
+  //       }
+  //     } else {
+  //       const body = await res.json().catch(() => ({}));
+  //       setError(`Transcription failed (${res.status}): ${body.error ?? "Unknown error"}`);
+  //       setShowTyping(true);
+  //     }
+  //   } catch (e) {
+  //     setError(`Transcription error: ${e instanceof Error ? e.message : String(e)}`);
+  //     setShowTyping(true);
+  //   } finally {
+  //     setIsTranscribing(false);
+  //   }
+  // };
+
 
 export default function KiloScreen() {
   const [step, setStep]             = useState(0);
