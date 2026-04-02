@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
-import { View, Text, TouchableOpacity, Image } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { View, Text, TouchableOpacity, Image, ActivityIndicator } from "react-native";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch, getToken } from "@/lib/api";
 
@@ -241,27 +241,47 @@ export function TodaySummary() {
   const [summary, setSummary] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const hasFetched = useRef(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
+  const fetchData = useCallback(async () => {
+    try {
+      const kiloRes = await apiFetch<{ entries: KiloEntry[]; total: number }>(
+        "/api/kilo?page=1&limit=1"
+      );
 
-      Promise.all([
-        apiFetch<{ entries: KiloEntry[]; total: number }>(
-          "/api/kilo?page=1&limit=1"
-        ),
-        apiFetch<SummaryData>("/api/tasks/summary"),
-      ])
-        .then(([kiloRes, summaryRes]) => {
-          const latest = kiloRes.entries[0];
-          setEntry(latest && isToday(latest.created_at) ? latest : null);
-          setSummary(summaryRes.summary);
-          setTasks(summaryRes.tasks ?? []);
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }, [])
-  );
+      const latest = kiloRes.entries[0];
+      const todayEntry = latest && isToday(latest.created_at) ? latest : null;
+      setEntry(todayEntry);
+
+      // Only fetch summary if there's a kilo entry today
+      if (todayEntry) {
+        const summaryRes = await apiFetch<SummaryData>("/api/tasks/summary");
+        setSummary(summaryRes.summary);
+        setTasks(summaryRes.tasks ?? []);
+      } else {
+        setSummary(null);
+        setTasks([]);
+      }
+    } catch {
+      // silently handle
+    }
+  }, []);
+
+  // Fetch once on mount
+  useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    setLoading(true);
+    fetchData().finally(() => setLoading(false));
+  }, [fetchData]);
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    await fetchData();
+    setRegenerating(false);
+  };
 
   if (loading) {
     return <SkeletonBlock />;
@@ -326,6 +346,22 @@ export function TodaySummary() {
           </View>
         </>
       )}
+
+      <TouchableOpacity
+        className="flex-row items-center justify-center mt-4 mb-2 py-2"
+        onPress={handleRegenerate}
+        disabled={regenerating}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        {regenerating ? (
+          <ActivityIndicator size="small" color="#15803D" />
+        ) : (
+          <Ionicons name="refresh-outline" size={14} color="#78716C" />
+        )}
+        <Text className="text-sm ml-1.5" style={{ color: "#78716C" }}>
+          {regenerating ? "Regenerating…" : "Regenerate summary"}
+        </Text>
+      </TouchableOpacity>
 
       {tasks.length > 0 && (
         <>

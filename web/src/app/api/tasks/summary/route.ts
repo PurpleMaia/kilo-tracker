@@ -21,6 +21,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ summary: null, tasks: [], kiloId: null });
     }
 
+    // Only generate summary for today's kilo entry
+    const kiloDate = new Date(latestKilo.created_at as string);
+    const now = new Date();
+    const isToday =
+      kiloDate.getFullYear() === now.getFullYear() &&
+      kiloDate.getMonth() === now.getMonth() &&
+      kiloDate.getDate() === now.getDate();
+
+    if (!isToday) {
+      return NextResponse.json({ summary: null, tasks: [], kiloId: null });
+    }
+
     // Get tasks for this kilo entry
     const tasks = await db
       .selectFrom("tasks")
