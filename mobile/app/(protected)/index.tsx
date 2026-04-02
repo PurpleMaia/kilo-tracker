@@ -7,7 +7,9 @@ import {
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getToken } from "@/lib/api";
+import { MoonPhaseCard } from "@/components/MoonPhaseCard";
+
 import { HeroSection } from "@/components/landing/hero-section";
 import { OleloNoeau } from "@/components/landing/olelo-noeau";
 import { TodaySummary } from "@/components/landing/today-summary";

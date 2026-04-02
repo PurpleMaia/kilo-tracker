@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import { getAloha } from "@/lib/aloha";
 import { getMahina, getKau } from "@/lib/hawaiian-calendar";
+import { MoonPhaseCard } from "../MoonPhaseCard";
 
 interface HeroSectionProps {
   userName: string;
@@ -31,9 +32,7 @@ export function HeroSection({ userName }: HeroSectionProps) {
 
       <Text className="text-lg text-gray-500 mt-2">{today}</Text>
 
-      <Text className="text-base font-semibold mt-1" style={{ color: "#15803D" }}>
-        ☽ {mahina.name} · Day {mahina.day} · {kau}
-      </Text>
+      <MoonPhaseCard />
 
       <View className="h-px bg-gray-100 mt-6" />
     </View>
