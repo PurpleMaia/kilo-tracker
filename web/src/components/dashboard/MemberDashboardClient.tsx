@@ -8,6 +8,7 @@ import type { MemberDashboardData } from "@/lib/data/member";
 import { AuthUser } from "@/types/auth";
 import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
 import { DailyOleloCard } from "@/components/shared/DailyON";
+import { MoonPhaseCard } from "@/components/shared/MoonPhaseCard";
 
 const formatCount = (value: number) => value.toLocaleString();
 
@@ -42,7 +43,10 @@ export default function MemberDashboardClient({ user, data }: MemberDashboardCli
         </div>
       </div>
 
-      <DailyOleloCard />
+      <div className="grid gap-4 md:grid-cols-2">
+        <MoonPhaseCard />
+        <DailyOleloCard />
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>

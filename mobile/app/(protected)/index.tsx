@@ -13,6 +13,7 @@ import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch, getToken } from "@/lib/api";
+import { MoonPhaseCard } from "@/components/MoonPhaseCard";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -204,6 +205,9 @@ export default function DashboardScreen() {
 
         {/* Welcome */}
         <Text className="text-2xl font-bold text-gray-900">Welcome, {user?.username}!</Text>
+
+        {/* Moon Phase */}
+        <MoonPhaseCard />
 
         {/* New KILO button */}
         <View>
