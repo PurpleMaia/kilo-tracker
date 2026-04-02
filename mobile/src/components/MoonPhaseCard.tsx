@@ -6,19 +6,20 @@ import Svg, { Circle, Path } from "react-native-svg";
 
 type MoonPhaseResult = {
   name: string;
-  night: number;
   illumination: number;
   description: string;
+  anahulu: string;
+  waning: boolean;
   date: string;
 };
 
-function MoonIcon({ illumination, night }: { illumination: number; night: number }) {
+function MoonIcon({ illumination, anahulu }: { illumination: number; anahulu: string }) {
   const size = 56;
   const r = size / 2 - 2;
   const cx = size / 2;
   const cy = size / 2;
 
-  const isWaxing = night <= 15;
+  const isWaxing = anahulu === "Hoʻonui";
   const fraction = illumination / 100;
 
   const innerX = cx + r * (1 - 2 * fraction) * (isWaxing ? 1 : -1);
@@ -73,12 +74,12 @@ export function MoonPhaseCard() {
     <View className="bg-white rounded-2xl p-5 border border-gray-100">
       <Text className="text-base font-bold text-gray-900 mb-3">Mahina — Moon Phase</Text>
       <View className="flex-row items-center gap-x-4">
-        <MoonIcon illumination={phase.illumination} night={phase.night} />
+        <MoonIcon illumination={phase.illumination} anahulu={phase.anahulu} />
         <View className="flex-1">
           <Text className="text-lg font-semibold text-gray-900">{phase.name}</Text>
           <Text className="text-sm text-gray-500">{phase.description}</Text>
           <Text className="text-xs text-gray-400 mt-1">
-            Night {phase.night} of 30 · {Math.round(phase.illumination)}% illuminated
+            {phase.anahulu} · {Math.round(phase.illumination)}% illuminated · {phase.waning ? "Waning" : "Waxing"}
           </Text>
         </View>
       </View>

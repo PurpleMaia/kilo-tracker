@@ -5,14 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import type { MoonPhaseResult } from "@/lib/moon";
 
-function MoonIcon({ illumination, night }: { illumination: number; night: number }) {
+function MoonIcon({ illumination, anahulu }: { illumination: number; anahulu: string }) {
   const size = 64;
   const r = size / 2 - 2;
   const cx = size / 2;
   const cy = size / 2;
 
-  // Determine if waxing (nights 1-15) or waning (nights 16-30)
-  const isWaxing = night <= 15;
+  const isWaxing = anahulu === "Hoʻonui";
   const fraction = illumination / 100;
 
   // The terminator curve: how far the inner edge is from center
@@ -84,12 +83,12 @@ export function MoonPhaseCard() {
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-5">
-          <MoonIcon illumination={phase.illumination} night={phase.night} />
+          <MoonIcon illumination={phase.illumination} anahulu={phase.anahulu} />
           <div className="space-y-1">
             <p className="text-xl font-semibold">{phase.name}</p>
             <p className="text-sm text-muted-foreground">{phase.description}</p>
             <p className="text-xs text-muted-foreground">
-              Night {phase.night} of 30 &middot; {Math.round(phase.illumination)}% illuminated
+              {phase.anahulu} &middot; {Math.round(phase.illumination)}% illuminated
             </p>
           </div>
         </div>
