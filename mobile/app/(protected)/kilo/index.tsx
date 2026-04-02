@@ -1,14 +1,19 @@
-import { useState, useRef } from "react";
+import { useState, useCallback } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   ActivityIndicator, KeyboardAvoidingView, Platform, Image, Alert,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { Audio } from "expo-av";
+// import { Audio } from "expo-av"; // Used by legacy API-based transcription
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
 import { Ionicons } from "@expo/vector-icons";
 import { Keyboard } from "lucide-react-native";
-import { apiFetch, getToken } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
+// import { getToken } from "@/lib/api"; // Used by legacy API-based transcription
 import { FadeIn } from "@/components/shared/fade-in";
 
 const QUESTIONS = [
@@ -28,7 +33,23 @@ export default function KiloScreen() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSubmitting, setIsSubmitting]     = useState(false);
   const [error, setError]           = useState<string | null>(null);
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  // const recordingRef = useRef<Audio.Recording | null>(null); // Used by legacy API-based transcription
+  const [liveTranscript, setLiveTranscript] = useState("");
+
+  // Reset all state whenever the screen gains focus (ensures a fresh session)
+  useFocusEffect(
+    useCallback(() => {
+      setStep(0);
+      setAnswers({ q1: "", q2: "", q3: "" });
+      setShowTyping(false);
+      setPhoto(null);
+      setIsRecording(false);
+      setIsTranscribing(false);
+      setIsSubmitting(false);
+      setError(null);
+      setLiveTranscript("");
+    }, [])
+  );
 
   const current = QUESTIONS[step];
   const answer  = answers[current.id as keyof typeof answers];
@@ -44,87 +65,137 @@ export default function KiloScreen() {
     else setStep((s) => s - 1);
   };
 
-  // ── Voice recording ────────────────────────────────────────────
+  // ── Voice recognition (on-device via expo-speech-recognition) ──
+  useSpeechRecognitionEvent("result", (event) => {
+    const transcript = event.results[0]?.transcript ?? "";
+    if (event.isFinal) {
+      const currentAnswer = answers[current.id as keyof typeof answers];
+      setAnswer((currentAnswer ? currentAnswer + " " : "") + transcript);
+      setLiveTranscript("");
+      setShowTyping(true);
+    } else {
+      setLiveTranscript(transcript);
+    }
+  });
+
+  useSpeechRecognitionEvent("end", () => {
+    setIsRecording(false);
+    setIsTranscribing(false);
+  });
+
+  useSpeechRecognitionEvent("error", (event) => {
+    setIsRecording(false);
+    setIsTranscribing(false);
+    setError(`Speech recognition error: ${event.error}`);
+    setShowTyping(true);
+  });
+
   const handleStartRecording = async () => {
     try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== "granted") {
+      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (!result.granted) {
         Alert.alert("Permission needed", "Microphone access is required to record.");
         return;
       }
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync({
-        android: {
-          extension: ".wav",
-          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 128000,
-        },
-        ios: {
-          extension: ".wav",
-          outputFormat: Audio.IOSOutputFormat.LINEARPCM,
-          audioQuality: Audio.IOSAudioQuality.HIGH,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 128000,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
-        },
-        web: {},
+      ExpoSpeechRecognitionModule.start({
+        lang: "en-US",
+        interimResults: true,
+        continuous: false,
       });
-      recordingRef.current = recording;
       setIsRecording(true);
+      setError(null);
     } catch {
-      setError("Failed to start recording.");
+      setError("Failed to start speech recognition.");
     }
   };
 
-  const handleStopRecording = async () => {
-    if (!recordingRef.current) return;
+  const handleStopRecording = () => {
     setIsRecording(false);
     setIsTranscribing(true);
-    try {
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
-      if (!uri) throw new Error("No recording found");
-
-      const session = await getToken();
-      const formData = new FormData();
-      formData.append("file", { uri, name: "audio.wav", type: "audio/wav" } as never);
-
-      const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
-      const res = await fetch(`${BASE_URL}/api/audio/transcribe`, {
-        method: "POST",
-        headers: session
-          ? { "x-session-token": session.token, "x-session-type": session.tokenType }
-          : {},
-        body: formData,
-      });
-      if (res.ok) {
-        const { text } = await res.json();
-        if (text) {
-          setAnswer((answer ? answer + " " : "") + text);
-          setShowTyping(true);
-        } else {
-          setError("Transcription returned no text. Try again or type your answer.");
-          setShowTyping(true);
-        }
-      } else {
-        const body = await res.json().catch(() => ({}));
-        setError(`Transcription failed (${res.status}): ${body.error ?? "Unknown error"}`);
-        setShowTyping(true);
-      }
-    } catch (e) {
-      setError(`Transcription error: ${e instanceof Error ? e.message : String(e)}`);
-      setShowTyping(true);
-    } finally {
-      setIsTranscribing(false);
-    }
+    ExpoSpeechRecognitionModule.stop();
   };
+
+  // ── Legacy: API-based transcription (commented out) ──────────
+  // const handleStartRecordingViaAPI = async () => {
+  //   try {
+  //     const { status } = await Audio.requestPermissionsAsync();
+  //     if (status !== "granted") {
+  //       Alert.alert("Permission needed", "Microphone access is required to record.");
+  //       return;
+  //     }
+  //     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+  //     const { recording } = await Audio.Recording.createAsync({
+  //       android: {
+  //         extension: ".wav",
+  //         outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+  //         audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+  //         sampleRate: 16000,
+  //         numberOfChannels: 1,
+  //         bitRate: 128000,
+  //       },
+  //       ios: {
+  //         extension: ".wav",
+  //         outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+  //         audioQuality: Audio.IOSAudioQuality.HIGH,
+  //         sampleRate: 16000,
+  //         numberOfChannels: 1,
+  //         bitRate: 128000,
+  //         linearPCMBitDepth: 16,
+  //         linearPCMIsBigEndian: false,
+  //         linearPCMIsFloat: false,
+  //       },
+  //       web: {},
+  //     });
+  //     recordingRef.current = recording;
+  //     setIsRecording(true);
+  //   } catch {
+  //     setError("Failed to start recording.");
+  //   }
+  // };
+  //
+  // const handleStopRecordingViaAPI = async () => {
+  //   if (!recordingRef.current) return;
+  //   setIsRecording(false);
+  //   setIsTranscribing(true);
+  //   try {
+  //     await recordingRef.current.stopAndUnloadAsync();
+  //     const uri = recordingRef.current.getURI();
+  //     recordingRef.current = null;
+  //     if (!uri) throw new Error("No recording found");
+  //
+  //     const session = await getToken();
+  //     const formData = new FormData();
+  //     formData.append("file", { uri, name: "audio.wav", type: "audio/wav" } as never);
+  //
+  //     const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+  //     const res = await fetch(`${BASE_URL}/api/audio/transcribe`, {
+  //       method: "POST",
+  //       headers: session
+  //         ? { "x-session-token": session.token, "x-session-type": session.tokenType }
+  //         : {},
+  //       body: formData,
+  //     });
+  //     if (res.ok) {
+  //       const { text } = await res.json();
+  //       if (text) {
+  //         setAnswer((answer ? answer + " " : "") + text);
+  //         setShowTyping(true);
+  //       } else {
+  //         setError("Transcription returned no text. Try again or type your answer.");
+  //         setShowTyping(true);
+  //       }
+  //     } else {
+  //       const body = await res.json().catch(() => ({}));
+  //       setError(`Transcription failed (${res.status}): ${body.error ?? "Unknown error"}`);
+  //       setShowTyping(true);
+  //     }
+  //   } catch (e) {
+  //     setError(`Transcription error: ${e instanceof Error ? e.message : String(e)}`);
+  //     setShowTyping(true);
+  //   } finally {
+  //     setIsTranscribing(false);
+  //   }
+  // };
 
   // ── Photo ──────────────────────────────────────────────────────
   const handleTakePhoto = async () => {
@@ -253,7 +324,15 @@ export default function KiloScreen() {
                   <Text className="text-base font-medium" style={{ color: isRecording ? "#B91C1C" : "#78716C" }}>
                     {isRecording ? "Tap to stop recording" : "Tap to start recording"}
                   </Text>
-                  {answer.trim() !== "" && (
+                  {isRecording && liveTranscript !== "" && (
+                    <View
+                      className="bg-amber-50 rounded-xl w-full"
+                      style={{ paddingHorizontal: 16, paddingVertical: 12, marginTop: 4, borderWidth: 1, borderColor: "#FDE68A" }}
+                    >
+                      <Text className="text-amber-800 text-base">{liveTranscript}</Text>
+                    </View>
+                  )}
+                  {!isRecording && answer.trim() !== "" && (
                     <View
                       className="bg-gray-50 rounded-xl w-full"
                       style={{ paddingHorizontal: 16, paddingVertical: 12, marginTop: 4, borderWidth: 1, borderColor: "#E7E5E4" }}
