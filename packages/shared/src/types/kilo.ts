@@ -43,7 +43,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: "q3",
-    question: "Papahānaumoku — all things that give birth, regenerate and procreate?",
+    question: "Papahānaumoku — all things that give birth, regenerate and procreate",
     required: true,
     guides: [
       "What plants do you see? Are they flowering or fruiting?",

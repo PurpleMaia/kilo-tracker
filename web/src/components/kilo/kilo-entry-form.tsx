@@ -259,11 +259,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
               </span>
           </div>
         </div>
-        {!isEditMode && currentQuestion.required && (
-          <CardDescription className="text-red-500">
-            * Required
-          </CardDescription>
-        )}
+        
       </CardHeader>
       {/* Create mode: wizard steps */}
       <CardContent className="space-y-4">

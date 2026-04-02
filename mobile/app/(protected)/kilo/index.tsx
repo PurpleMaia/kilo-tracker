@@ -5,38 +5,40 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-// import { Audio } from "expo-av"; // Used by legacy API-based transcription
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
 import { Ionicons } from "@expo/vector-icons";
 import { Keyboard } from "lucide-react-native";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+} from "react-native-reanimated";
 import { apiFetch } from "@/lib/api";
-// import { getToken } from "@/lib/api"; // Used by legacy API-based transcription
-import { FadeIn } from "@/components/shared/fade-in";
 import { GuidingPrompts } from "@/components/shared/guiding-prompts";
+import { ThemedBackground } from "@/components/kilo/themed-background";
+import { StepIndicator } from "@/components/kilo/step-indicator";
+import { getTheme } from "@/components/kilo/question-theme";
 import { QUESTIONS } from "@kilo/shared/types";
 
 type PhotoData = { uri: string; base64: string; mimeType: string };
 
 export default function KiloScreen() {
   const [step, setStep]             = useState(0);
-  const [answers, setAnswers]       = useState({ q1: "", q2: "", q3: "" });
+  const [answers, setAnswers]       = useState({ q1: "", q2: "", q3: "", q4: "" });
   const [showTyping, setShowTyping] = useState(false);
   const [photo, setPhoto]           = useState<PhotoData | null>(null);
   const [isRecording, setIsRecording]       = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSubmitting, setIsSubmitting]     = useState(false);
   const [error, setError]           = useState<string | null>(null);
-  // const recordingRef = useRef<Audio.Recording | null>(null); // Used by legacy API-based transcription
   const [liveTranscript, setLiveTranscript] = useState("");
 
-  // Reset all state whenever the screen gains focus (ensures a fresh session)
   useFocusEffect(
     useCallback(() => {
       setStep(0);
-      setAnswers({ q1: "", q2: "", q3: "" });
+      setAnswers({ q1: "", q2: "", q3: "", q4: "" });
       setShowTyping(false);
       setPhoto(null);
       setIsRecording(false);
@@ -50,6 +52,7 @@ export default function KiloScreen() {
   const current = QUESTIONS[step];
   const answer  = answers[current.id as keyof typeof answers];
   const isLast  = step === QUESTIONS.length - 1;
+  const theme   = getTheme(current.id);
 
   const setAnswer = (val: string) =>
     setAnswers((a) => ({ ...a, [current.id]: val }));
@@ -93,11 +96,7 @@ export default function KiloScreen() {
         Alert.alert("Permission needed", "Microphone access is required to record.");
         return;
       }
-      ExpoSpeechRecognitionModule.start({
-        lang: "en-US",
-        interimResults: true,
-        continuous: false,
-      });
+      ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: false });
       setIsRecording(true);
       setError(null);
     } catch {
@@ -111,89 +110,7 @@ export default function KiloScreen() {
     ExpoSpeechRecognitionModule.stop();
   };
 
-  // ── Legacy: API-based transcription (commented out) ──────────
-  // const handleStartRecordingViaAPI = async () => {
-  //   try {
-  //     const { status } = await Audio.requestPermissionsAsync();
-  //     if (status !== "granted") {
-  //       Alert.alert("Permission needed", "Microphone access is required to record.");
-  //       return;
-  //     }
-  //     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-  //     const { recording } = await Audio.Recording.createAsync({
-  //       android: {
-  //         extension: ".wav",
-  //         outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-  //         audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
-  //         sampleRate: 16000,
-  //         numberOfChannels: 1,
-  //         bitRate: 128000,
-  //       },
-  //       ios: {
-  //         extension: ".wav",
-  //         outputFormat: Audio.IOSOutputFormat.LINEARPCM,
-  //         audioQuality: Audio.IOSAudioQuality.HIGH,
-  //         sampleRate: 16000,
-  //         numberOfChannels: 1,
-  //         bitRate: 128000,
-  //         linearPCMBitDepth: 16,
-  //         linearPCMIsBigEndian: false,
-  //         linearPCMIsFloat: false,
-  //       },
-  //       web: {},
-  //     });
-  //     recordingRef.current = recording;
-  //     setIsRecording(true);
-  //   } catch {
-  //     setError("Failed to start recording.");
-  //   }
-  // };
-  //
-  // const handleStopRecordingViaAPI = async () => {
-  //   if (!recordingRef.current) return;
-  //   setIsRecording(false);
-  //   setIsTranscribing(true);
-  //   try {
-  //     await recordingRef.current.stopAndUnloadAsync();
-  //     const uri = recordingRef.current.getURI();
-  //     recordingRef.current = null;
-  //     if (!uri) throw new Error("No recording found");
-  //
-  //     const session = await getToken();
-  //     const formData = new FormData();
-  //     formData.append("file", { uri, name: "audio.wav", type: "audio/wav" } as never);
-  //
-  //     const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
-  //     const res = await fetch(`${BASE_URL}/api/audio/transcribe`, {
-  //       method: "POST",
-  //       headers: session
-  //         ? { "x-session-token": session.token, "x-session-type": session.tokenType }
-  //         : {},
-  //       body: formData,
-  //     });
-  //     if (res.ok) {
-  //       const { text } = await res.json();
-  //       if (text) {
-  //         setAnswer((answer ? answer + " " : "") + text);
-  //         setShowTyping(true);
-  //       } else {
-  //         setError("Transcription returned no text. Try again or type your answer.");
-  //         setShowTyping(true);
-  //       }
-  //     } else {
-  //       const body = await res.json().catch(() => ({}));
-  //       setError(`Transcription failed (${res.status}): ${body.error ?? "Unknown error"}`);
-  //       setShowTyping(true);
-  //     }
-  //   } catch (e) {
-  //     setError(`Transcription error: ${e instanceof Error ? e.message : String(e)}`);
-  //     setShowTyping(true);
-  //   } finally {
-  //     setIsTranscribing(false);
-  //   }
-  // };
-
-  // ── Photo ──────────────────────────────────────────────────────
+  // ── Photo ──
   const handleTakePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") {
@@ -209,7 +126,7 @@ export default function KiloScreen() {
     }
   };
 
-  // ── Submit ─────────────────────────────────────────────────────
+  // ── Submit ──
   const handleSubmit = async () => {
     setError(null);
     setIsSubmitting(true);
@@ -220,6 +137,7 @@ export default function KiloScreen() {
           q1: answers.q1,
           q2: answers.q2 || null,
           q3: answers.q3 || null,
+          q4: answers.q4 || null,
           photo_base64: photo?.base64 ?? null,
           photo_mime_type: photo?.mimeType ?? null,
         }),
@@ -242,215 +160,377 @@ export default function KiloScreen() {
     else setStep((s) => s + 1);
   };
 
+  const guideColors = {
+    bg: theme.guideBg,
+    border: theme.guideBorder,
+    text: theme.guideText,
+    dot: theme.guideDot,
+    accent: theme.accent,
+    icon: theme.icon,
+  };
+
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-white"
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      {/* ── Header ── */}
-      <View className="px-6 pt-14 pb-3 flex-row items-center justify-between">
-        <Text className="text-xl font-bold text-gray-900">KILO</Text>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="close" size={24} color="#78716C" />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Progress bar ── */}
-      <View className="flex-row items-center px-6 mb-4" style={{ gap: 6 }}>
-        {QUESTIONS.map((_, i) => (
-          <View
-            key={i}
-            className="rounded-full"
-            style={{
-              height: 5,
-              flex: i === step ? 2 : 1,
-              backgroundColor: i === step ? "#15803D" : i < step ? "#6EBE80" : "#E7E5E4",
-            }}
-          />
-        ))}
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}
-        keyboardShouldPersistTaps="handled"
+    <ThemedBackground questionId={current.id}>
+      <Animated.View entering={FadeIn.duration(600)} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        <FadeIn key={step}>
-          {/* ── Question ── */}
-          <Text className="text-2xl font-bold text-gray-900 leading-snug mb-1">
-            {current.question}
+        {/* ── Header ── */}
+        <View style={{
+          paddingHorizontal: 28,
+          paddingTop: 58,
+          paddingBottom: 12,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}>
+          
+        </View>
+
+        {/* ── Step indicator ── */}
+        <View style={{ marginBottom: 20 }}>
+          <StepIndicator
+            totalSteps={QUESTIONS.length}
+            currentStep={step}
+            questionId={current.id}
+          />
+          <Text style={{
+            textAlign: "center",
+            fontSize: 12,
+            fontWeight: "500",
+            color: theme.stepLabel,
+            marginTop: 8,
+            letterSpacing: 0.5,
+          }}>
+            {step + 1} of {QUESTIONS.length}
           </Text>
-          {current.required && (
-            <Text className="text-sm font-semibold mb-6" style={{ color: "#B91C1C" }}>Required</Text>
-          )}
+        </View>
 
-          {error && (
-            <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5">
-              <Text className="text-red-700 text-base">{error}</Text>
-            </View>
-          )}
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: 24,
+            paddingTop: 4,
+            paddingBottom: 24,
+          }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Content card ── */}
+          <Animated.View
+            key={step}
+            entering={FadeInDown.duration(300)}
+            style={{
+              backgroundColor: theme.contentBg,
+              borderRadius: 24,
+              padding: 24,
+              shadowColor: "#000",
+              shadowOpacity: 0.06,
+              shadowRadius: 16,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 4,
+            }}
+          >
+            {/* Question title */}
+            <Text style={{
+              fontSize: 22,
+              fontWeight: "700",
+              color: theme.accentDark,
+              lineHeight: 30,
+              marginBottom: 4,
+              fontFamily: "Newsreader_400Regular",
+            }}>
+              {current.question}
+            </Text>
 
-          <GuidingPrompts prompts={current.guides} />
+            {/* {current.required ? (
+              <Text style={{ fontSize: 12, fontWeight: "600", color: "#B91C1C", marginBottom: 4 }}>
+                Required
+              </Text>
+            ) : (
+              <Text style={{ fontSize: 12, fontWeight: "500", color: theme.stepLabel, marginBottom: 4 }}>
+                Optional
+              </Text>
+            )} */}
 
-          {/* ── Voice recording (primary input) ── */}
-          {!showTyping && (
-            <View className="items-center" style={{ paddingVertical: 32, gap: 16 }}>
-              {isTranscribing ? (
-                <View className="items-center" style={{ gap: 12 }}>
-                  <ActivityIndicator size="large" color="#D97706" />
-                  <Text className="text-gray-500 text-base">Transcribing your response...</Text>
-                </View>
-              ) : (
-                <>
-                  <TouchableOpacity
-                    onPress={isRecording ? handleStopRecording : handleStartRecording}
-                    style={{
-                      width: 112, height: 112, borderRadius: 56,
-                      alignItems: "center", justifyContent: "center",
-                      backgroundColor: isRecording ? "#B91C1C" : "#15803D",
-                      shadowColor: isRecording ? "#B91C1C" : "#15803D",
-                      shadowOpacity: 0.3,
-                      shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
-                      elevation: 6,
-                    }}
-                  >
-                    <Ionicons
-                      name={isRecording ? "stop" : "mic"}
-                      size={44}
-                      color="white"
+            {/* Guiding prompts */}
+            <GuidingPrompts prompts={current.guides} colors={guideColors} />
+
+            {/* Error */}
+            {error && (
+              <Animated.View
+                entering={FadeInDown.duration(300)}
+                style={{
+                  backgroundColor: "#FEF2F2",
+                  borderWidth: 1,
+                  borderColor: "#FECACA",
+                  borderRadius: 14,
+                  padding: 14,
+                  marginTop: 12,
+                }}
+              >
+                <Text style={{ color: "#B91C1C", fontSize: 14, lineHeight: 20 }}>{error}</Text>
+              </Animated.View>
+            )}
+
+            {/* ── Voice recording ── */}
+            {!showTyping && (
+              <View style={{ alignItems: "center", paddingTop: 28, paddingBottom: 12, gap: 16 }}>
+                {isTranscribing ? (
+                  <View style={{ alignItems: "center", gap: 14 }}>
+                    <ActivityIndicator size="large" color={theme.accent} />
+                    <Text style={{ color: theme.stepLabel, fontSize: 15 }}>
+                      Transcribing your response...
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Mic button with themed ring */}
+                    <View style={{ alignItems: "center", justifyContent: "center" }}>
+                      {isRecording && (
+                        <View style={{
+                          position: "absolute",
+                          width: 126,
+                          height: 126,
+                          borderRadius: 63,
+                          borderWidth: 2,
+                          borderColor: "#B91C1C",
+                          opacity: 0.3,
+                        }} />
+                      )}
+                      <TouchableOpacity
+                        onPress={isRecording ? handleStopRecording : handleStartRecording}
+                        activeOpacity={0.8}
+                        style={{
+                          width: 100,
+                          height: 100,
+                          borderRadius: 50,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: isRecording ? "#B91C1C" : theme.recordBg,
+                          shadowColor: isRecording ? "#B91C1C" : theme.accent,
+                          shadowOpacity: 0.35,
+                          shadowRadius: 16,
+                          shadowOffset: { width: 0, height: 6 },
+                          elevation: 8,
+                        }}
+                      >
+                        <Ionicons
+                          name={isRecording ? "stop" : "mic"}
+                          size={40}
+                          color="white"
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text style={{
+                      fontSize: 14,
+                      fontWeight: "600",
+                      color: isRecording ? "#B91C1C" : theme.stepLabel,
+                      letterSpacing: 0.2,
+                    }}>
+                      {isRecording ? "Tap to stop" : "Tap to record"}
+                    </Text>
+
+                    {/* Live transcript */}
+                    {isRecording && liveTranscript !== "" && (
+                      <View style={{
+                        backgroundColor: "#FFFBEB",
+                        borderRadius: 14,
+                        width: "100%",
+                        paddingHorizontal: 16,
+                        paddingVertical: 14,
+                        borderWidth: 1,
+                        borderColor: "#FDE68A",
+                      }}>
+                        <Text style={{ color: "#92400E", fontSize: 15, lineHeight: 22 }}>
+                          {liveTranscript}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Previous answer */}
+                    {!isRecording && answer.trim() !== "" && (
+                      <View style={{
+                        backgroundColor: "rgba(255, 255, 255, 0.8)",
+                        borderRadius: 14,
+                        width: "100%",
+                        paddingHorizontal: 16,
+                        paddingVertical: 14,
+                        borderWidth: 1,
+                        borderColor: theme.inputBorder,
+                      }}>
+                        <Text style={{
+                          color: theme.accentDark,
+                          fontSize: 15,
+                          lineHeight: 22,
+                          fontStyle: "italic",
+                          fontFamily: "Newsreader_400Regular_Italic",
+                        }}>
+                          &ldquo;{answer}&rdquo;
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            )}
+
+            {/* ── Text input ── */}
+            {showTyping ? (
+              <TextInput
+                style={{
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  borderWidth: 1.5,
+                  borderColor: theme.inputBorder,
+                  borderRadius: 18,
+                  paddingHorizontal: 18,
+                  paddingVertical: 16,
+                  fontSize: 16,
+                  color: "#1C1917",
+                  minHeight: 120,
+                  textAlignVertical: "top",
+                  marginTop: 16,
+                  lineHeight: 24,
+                }}
+                placeholder="Type your observation here..."
+                placeholderTextColor="#9CA3AF"
+                value={answer}
+                onChangeText={setAnswer}
+                multiline
+                autoFocus
+                editable={!isSubmitting}
+              />
+            ) : (
+              <TouchableOpacity
+                onPress={() => setShowTyping(true)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  marginTop: 8,
+                  paddingVertical: 8,
+                }}
+              >
+                <Keyboard size={16} color={theme.stepLabel} />
+                <Text style={{ color: theme.stepLabel, fontSize: 14, fontWeight: "500" }}>
+                  Prefer to type instead?
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Photo (picture-enabled questions) ── */}
+            {current.picture && (
+              <View style={{ marginTop: 20, gap: 10 }}>
+                {photo ? (
+                  <View>
+                    <Image
+                      source={{ uri: photo.uri }}
+                      style={{ width: "100%", height: 200, borderRadius: 18 }}
+                      resizeMode="cover"
                     />
-                  </TouchableOpacity>
-                  <Text className="text-base font-medium" style={{ color: isRecording ? "#B91C1C" : "#78716C" }}>
-                    {isRecording ? "Tap to stop recording" : "Tap to start recording"}
-                  </Text>
-                  {isRecording && liveTranscript !== "" && (
-                    <View
-                      className="bg-amber-50 rounded-xl w-full"
-                      style={{ paddingHorizontal: 16, paddingVertical: 12, marginTop: 4, borderWidth: 1, borderColor: "#FDE68A" }}
+                    <TouchableOpacity
+                      onPress={() => setPhoto(null)}
+                      style={{ marginTop: 10, alignItems: "center" }}
                     >
-                      <Text className="text-amber-800 text-base">{liveTranscript}</Text>
-                    </View>
-                  )}
-                  {!isRecording && answer.trim() !== "" && (
-                    <View
-                      className="bg-gray-50 rounded-xl w-full"
-                      style={{ paddingHorizontal: 16, paddingVertical: 12, marginTop: 4, borderWidth: 1, borderColor: "#E7E5E4" }}
-                    >
-                      <Text className="text-gray-700 text-base italic">"{answer}"</Text>
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-          )}
-
-          {/* ── Typing fallback ── */}
-          {showTyping ? (
-            <TextInput
-              style={{
-                backgroundColor: "#FAFAF9", borderWidth: 1, borderColor: "#E7E5E4",
-                borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14,
-                fontSize: 17, color: "#1C1917", minHeight: 128, textAlignVertical: "top",
-              }}
-              placeholder="Type your answer here..."
-              placeholderTextColor="#9CA3AF"
-              value={answer}
-              onChangeText={setAnswer}
-              multiline
-              autoFocus
-              editable={!isSubmitting}
-            />
-          ) : (
-            <TouchableOpacity
-              onPress={() => setShowTyping(true)}
-              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}
-            >
-              <Keyboard size={18} color="#9CA3AF" />
-              <Text className="text-gray-500 text-base">Prefer to type instead?</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* ── Photo (Q2 only) ── */}
-          {current.picture && (
-            <View style={{ marginTop: 24, gap: 8 }}>
-              {photo ? (
-                <View>
-                  <Image
-                    source={{ uri: photo.uri }}
-                    style={{ width: "100%", height: 192, borderRadius: 16 }}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setPhoto(null)}
-                    style={{ marginTop: 8, alignItems: "center" }}
-                  >
-                    <Text className="text-base font-semibold" style={{ color: "#B91C1C" }}>Remove photo</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View>
-                  <Text className="text-gray-500 text-sm mb-2">
-                    Optional: take a photo of your Kilo
-                  </Text>
+                      <Text style={{ fontSize: 14, fontWeight: "600", color: "#B91C1C" }}>
+                        Remove photo
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
                   <TouchableOpacity
                     onPress={handleTakePhoto}
+                    activeOpacity={0.6}
                     style={{
-                      flexDirection: "row", alignItems: "center", gap: 8,
-                      borderWidth: 1, borderColor: "#E7E5E4", borderRadius: 16, borderStyle: "dashed",
-                      paddingHorizontal: 16, paddingVertical: 12, alignSelf: "flex-start",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      paddingVertical: 6,
                     }}
                   >
-                    <Ionicons name="camera-outline" size={20} color="#15803D" />
-                    <Text className="text-gray-700 text-base font-semibold">Open Camera</Text>
+                    <Ionicons name="camera-outline" size={16} color={theme.stepLabel} />
+                    <Text style={{ color: theme.stepLabel, fontSize: 13, fontWeight: "500" }}>
+                      Add a photo
+                    </Text>
                   </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          )}
-        </FadeIn>
-      </ScrollView>
+                )}
+              </View>
+            )}
+          </Animated.View>
+        </ScrollView>
 
-      {/* ── Bottom navigation ── */}
-      <View
-        className="border-t border-gray-100 bg-white"
-        style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 24, paddingVertical: 16 }}
-      >
-        <TouchableOpacity
-          onPress={goBack}
-          style={{
-            flexDirection: "row", alignItems: "center", gap: 4,
-            borderWidth: 1, borderColor: "#E7E5E4", borderRadius: 16,
-            paddingHorizontal: 20, paddingVertical: 14,
-          }}
-        >
-          <Ionicons name="chevron-back" size={16} color="#78716C" />
-          <Text className="text-gray-600 text-base font-semibold">Back</Text>
-        </TouchableOpacity>
+        {/* ── Bottom navigation ── */}
+        <View style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          paddingHorizontal: 24,
+          paddingVertical: 16,
+          paddingBottom: Platform.OS === "ios" ? 32 : 16,
+          backgroundColor: "rgba(255, 255, 255, 0.7)",
+          borderTopWidth: 1,
+          borderTopColor: "rgba(0, 0, 0, 0.04)",
+        }}>
+          <TouchableOpacity
+            onPress={goBack}
+            activeOpacity={0.7}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              borderWidth: 1.5,
+              borderColor: "rgba(0, 0, 0, 0.1)",
+              borderRadius: 20,
+              paddingHorizontal: 22,
+              paddingVertical: 14,
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+            }}
+          >
+            <Ionicons name="chevron-back" size={16} color={theme.stepLabel} />
+            <Text style={{ color: theme.stepLabel, fontSize: 15, fontWeight: "600" }}>
+              Back
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={handleNext}
-          disabled={isSubmitting}
-          style={{
-            flexDirection: "row", alignItems: "center", gap: 4,
-            borderRadius: 16, paddingHorizontal: 24, paddingVertical: 14,
-            backgroundColor: isSubmitting ? "#6EBE80" : "#15803D",
-            shadowColor: "#15803D",
-            shadowOpacity: 0.2,
-            shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
-            elevation: 3,
-          }}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <>
-              <Text className="text-white text-base font-bold">
-                {isLast ? "Save Entry" : "Next"}
-              </Text>
-              {!isLast && <Ionicons name="chevron-forward" size={16} color="white" />}
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <TouchableOpacity
+            onPress={handleNext}
+            disabled={isSubmitting}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              borderRadius: 20,
+              paddingHorizontal: 28,
+              paddingVertical: 14,
+              backgroundColor: isSubmitting ? theme.progressDone : theme.accent,
+              shadowColor: theme.accent,
+              shadowOpacity: 0.3,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 6,
+            }}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Text style={{ color: "white", fontSize: 15, fontWeight: "700" }}>
+                  {isLast ? "Save Entry" : "Next"}
+                </Text>
+                {!isLast && <Ionicons name="chevron-forward" size={16} color="white" />}
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+      </Animated.View>
+    </ThemedBackground>
   );
 }

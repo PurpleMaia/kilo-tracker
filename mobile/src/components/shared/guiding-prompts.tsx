@@ -35,14 +35,17 @@ export function GuidingPrompts({ prompts, colors }: GuidingPromptsProps) {
   const c = colors ?? DEFAULT_COLORS;
 
   const toggle = useCallback(() => {
-    LayoutAnimation.configureNext(
-      LayoutAnimation.create(280, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity),
-    );
+    LayoutAnimation.configureNext({
+      duration: 300,
+      update: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.scaleY },
+      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity, duration: 250 },
+      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity, duration: 200 },
+    });
     setExpanded((prev) => {
       Animated.spring(rotateAnim, {
         toValue: prev ? 0 : 1,
-        tension: 120,
-        friction: 14,
+        tension: 100,
+        friction: 12,
         useNativeDriver: true,
       }).start();
       return !prev;
