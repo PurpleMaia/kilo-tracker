@@ -1,16 +1,17 @@
 import { useState, useEffect } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
+  ActivityIndicator, KeyboardAvoidingView, Platform,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "@/lib/api";
+import { FadeIn } from "@/components/shared/fade-in";
 
 const QUESTIONS = [
-  { id: "q1", label: "What is your internal weather today?", required: true },
-  { id: "q2", label: "What do you see outside today?",       required: false },
-  { id: "q3", label: "What are you excited to do today?",   required: false },
+  { id: "q1", label: "Lani (Air) — What do you observe in the sky and air around you today?", required: true },
+  { id: "q2", label: "Honua (Earth & Ocean) — What do you notice about the land and water today?", required: false },
+  { id: "q3", label: "Hānaumoku (All Life Forces) — What living things do you observe today?", required: false },
 ];
 
 export default function EditKiloScreen() {
@@ -58,7 +59,7 @@ export default function EditKiloScreen() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#111827" />
+        <ActivityIndicator size="large" color="#15803D" />
       </View>
     );
   }
@@ -69,12 +70,14 @@ export default function EditKiloScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Header */}
-      <View className="px-6 pt-14 pb-4 border-b border-gray-100 flex-row items-center justify-between">
-        <Text className="text-lg font-bold text-gray-900">Edit Entry</Text>
+      <View className="px-6 pt-14 pb-3 flex-row items-center justify-between">
+        <Text className="text-xl font-bold text-gray-900">Edit Entry</Text>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text className="text-sm text-gray-500 font-medium">Cancel</Text>
+          <Ionicons name="close" size={24} color="#78716C" />
         </TouchableOpacity>
       </View>
+
+      <View className="h-px bg-gray-100 mx-6" />
 
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 16 }}
@@ -82,30 +85,32 @@ export default function EditKiloScreen() {
       >
         {error && (
           <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5">
-            <Text className="text-red-700 text-sm">{error}</Text>
+            <Text className="text-red-700 text-base">{error}</Text>
           </View>
         )}
 
-        {QUESTIONS.map((q) => (
-          <View key={q.id} style={{ marginBottom: 20 }}>
-            <Text className="text-sm font-semibold text-gray-700 mb-1">
-              {q.label}
-              {q.required && <Text className="text-red-500"> *</Text>}
-            </Text>
-            <TextInput
-              style={{
-                backgroundColor: "#f9fafb", borderWidth: 1, borderColor: "#e5e7eb",
-                borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12,
-                fontSize: 15, color: "#111827", minHeight: 96, textAlignVertical: "top",
-              }}
-              placeholder="Your answer..."
-              placeholderTextColor="#9ca3af"
-              value={answers[q.id as keyof typeof answers]}
-              onChangeText={(val) => setAnswers((a) => ({ ...a, [q.id]: val }))}
-              multiline
-              editable={!isSubmitting}
-            />
-          </View>
+        {QUESTIONS.map((q, i) => (
+          <FadeIn key={q.id} delay={i * 80}>
+            <View style={{ marginBottom: 20 }}>
+              <Text className="text-sm font-bold uppercase tracking-wide mb-1.5" style={{ color: "#15803D", opacity: 0.7 }}>
+                {q.label}
+                {q.required && <Text style={{ color: "#B91C1C" }}> *</Text>}
+              </Text>
+              <TextInput
+                style={{
+                  backgroundColor: "#FAFAF9", borderWidth: 1, borderColor: "#E7E5E4",
+                  borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12,
+                  fontSize: 16, color: "#1C1917", minHeight: 96, textAlignVertical: "top",
+                }}
+                placeholder="Your answer..."
+                placeholderTextColor="#9CA3AF"
+                value={answers[q.id as keyof typeof answers]}
+                onChangeText={(val) => setAnswers((a) => ({ ...a, [q.id]: val }))}
+                multiline
+                editable={!isSubmitting}
+              />
+            </View>
+          </FadeIn>
         ))}
       </ScrollView>
 
@@ -118,12 +123,12 @@ export default function EditKiloScreen() {
           onPress={() => router.back()}
           style={{
             flexDirection: "row", alignItems: "center", gap: 4,
-            borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 12,
-            paddingHorizontal: 20, paddingVertical: 12,
+            borderWidth: 1, borderColor: "#E7E5E4", borderRadius: 16,
+            paddingHorizontal: 20, paddingVertical: 14,
           }}
         >
-          <Ionicons name="chevron-back" size={16} color="#4b5563" />
-          <Text className="text-gray-600 text-sm font-medium">Back</Text>
+          <Ionicons name="chevron-back" size={16} color="#78716C" />
+          <Text className="text-gray-600 text-base font-semibold">Back</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -131,14 +136,18 @@ export default function EditKiloScreen() {
           disabled={isSubmitting}
           style={{
             flexDirection: "row", alignItems: "center", gap: 4,
-            borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12,
-            backgroundColor: isSubmitting ? "#9ca3af" : "#111827",
+            borderRadius: 16, paddingHorizontal: 24, paddingVertical: 14,
+            backgroundColor: isSubmitting ? "#6EBE80" : "#15803D",
+            shadowColor: "#15803D",
+            shadowOpacity: 0.2,
+            shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
+            elevation: 3,
           }}
         >
           {isSubmitting ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text className="text-white text-sm font-semibold">Save Changes</Text>
+            <Text className="text-white text-base font-bold">Save Changes</Text>
           )}
         </TouchableOpacity>
       </View>

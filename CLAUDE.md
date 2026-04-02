@@ -230,6 +230,192 @@ pnpm migrate:up d && pnpm codegen
 
 ### Adding New Shared Types
 
+The KILO API (`/api/kilo`) supports full CRUD operations with pagination:
+
+```typescript
+// POST - Create new entry
+const response = await fetch("/api/kilo", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    q1: "My internal weather is calm",
+    q2: "I see sunshine outside",
+    q3: "Excited to work on my project",
+    photo_path: "/api/uploads/kilo/user-id/timestamp.jpg", // optional
+  }),
+});
+
+// GET - Paginated list
+const entries = await fetch("/api/kilo?page=1&limit=5");
+// Returns: { entries: [...], total, page, totalPages }
+
+// GET - Single entry (for editing)
+const entry = await fetch("/api/kilo?id=123");
+// Returns: { entry: {...} }
+
+// PUT - Update entry
+await fetch("/api/kilo", {
+  method: "PUT",
+  body: JSON.stringify({ id: 123, q1: "Updated answer", ... }),
+});
+
+// DELETE - Remove entry
+await fetch("/api/kilo", {
+  method: "DELETE",
+  body: JSON.stringify({ id: 123 }),
+});
+```
+
+### Audio Transcription API
+
+Voice-to-text transcription using the Speaches API:
+
+```typescript
+// POST /api/audio/transcribe
+const formData = new FormData();
+formData.append("file", audioBlob);
+
+const response = await fetch("/api/audio/transcribe", {
+  method: "POST",
+  body: formData,
+});
+
+const { text } = await response.json();
+```
+
+Required environment variables:
+- `MODEL_BASE_URL` - Speaches API base URL
+- `MODEL_API_KEY` - Speaches API key
+- `SPEACHES_STT_MODEL` - Model name (default: `Systran/faster-whisper-large-v3`)
+
+### Photo Upload API
+
+Photo uploads are stored in `uploads/kilo/{userId}/` and served via API:
+
+```typescript
+// POST /api/photo
+const formData = new FormData();
+formData.append("photo", file);
+
+const response = await fetch("/api/photo", {
+  method: "POST",
+  body: formData,
+});
+
+const { path } = await response.json();
+// path: "/api/uploads/kilo/{userId}/{timestamp}.jpg"
+```
+
+Constraints:
+- Max file size: 5MB
+- Only image files allowed
+- Photo path validation regex: `/^\/api\/uploads\/kilo\/[a-zA-Z0-9-]+\/\d+-[a-f0-9]{8}\.(jpg|jpeg|png|gif|webp)$/i`
+
+### Profile API
+
+User profile management with upsert support:
+
+```typescript
+// GET /api/profile - Get current user's profile
+const { profile } = await fetch("/api/profile").then(r => r.json());
+
+// PUT /api/profile - Create or update profile
+await fetch("/api/profile", {
+  method: "PUT",
+  body: JSON.stringify({
+    first_name: "John",
+    last_name: "Doe",
+    dob: "1990-01-15",      // ISO date string
+    mauna: "Mauna Kea",      // Hawaiian cultural fields
+    aina: "Kailua",
+    wai: "Nuʻuanu",
+    kula: "Punahou",
+    role: "student",
+  }),
+});
+```
+
+### Creating a Client Component
+
+Client components that call APIs follow this pattern:
+
+```typescript
+// src/components/example/example-form.tsx
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+export function ExampleForm() {
+  const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/example", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save");
+      }
+
+      // Handle success
+      setName("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Enter name"
+        disabled={isSubmitting}
+      />
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <Button onClick={handleSubmit} disabled={isSubmitting}>
+        {isSubmitting ? "Saving..." : "Save"}
+      </Button>
+    </div>
+  );
+}
+```
+
+### Creating a Page
+
+Pages use the App Router convention:
+
+```typescript
+// src/app/example/page.tsx
+import { ExampleForm } from "@/components/example/example-form";
+
+export default function ExamplePage() {
+  return (
+    <main className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Example</h1>
+      <ExampleForm />
+    </main>
+  );
+}
+```
 Add to `packages/shared/src/types/` and export from the barrel index.
 
 ## Writing Tests
@@ -279,13 +465,24 @@ cd web && npx shadcn@latest add [component-name]
 
 ## Environment Variables
 
+Access in server code:
+```typescript
+const apiKey = process.env.MODEL_API_KEY;
+```
+
+For client-side access, prefix with `NEXT_PUBLIC_`:
+```typescript
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+```
+
+### Required Environment Variables
 Shared `.env` lives at the repo root. Required:
 
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `SPEACHES_BASE_URL` | Speech-to-text API base URL |
-| `SPEACHES_API_KEY` | Speech-to-text API key |
+| `MODEL_BASE_URL` | Speech-to-text API base URL |
+| `MODEL_API_KEY` | Speech-to-text API key |
 | `SPEACHES_STT_MODEL` | STT model name (optional) |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |

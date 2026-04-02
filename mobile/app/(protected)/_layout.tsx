@@ -1,6 +1,7 @@
-import { Stack, Redirect } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { View, ActivityIndicator } from "react-native";
+import { TabBar } from "@/components/navigation/tab-bar";
 
 export default function ProtectedLayout() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -8,7 +9,7 @@ export default function ProtectedLayout() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#2563EB" />
+        <ActivityIndicator size="large" color="#15803D" />
       </View>
     );
   }
@@ -17,5 +18,19 @@ export default function ProtectedLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Tabs
+      tabBar={(props) => <TabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tabs.Screen name="index" options={{ title: "Home" }} />
+      <Tabs.Screen name="history" options={{ title: "History" }} />
+      <Tabs.Screen name="learn" options={{ title: "Learn" }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+      <Tabs.Screen
+        name="kilo"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
+      />
+    </Tabs>
+  );
 }

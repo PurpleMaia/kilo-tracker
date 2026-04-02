@@ -70,15 +70,24 @@ export default function RegisterScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        contentContainerClassName="flex-grow justify-center px-6 py-12"
+        contentContainerClassName="flex-grow justify-center px-7 py-12"
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="text-3xl font-bold text-gray-900 mb-2">Create account</Text>
-        <Text className="text-gray-500 mb-8">Join KILO to start tracking</Text>
+        {/* Brand mark */}
+        <View className="items-center mb-8">
+          <View
+            className="w-16 h-16 rounded-2xl items-center justify-center mb-3"
+            style={{ backgroundColor: "#15803D" }}
+          >
+            <Text className="text-white text-3xl font-bold">K</Text>
+          </View>
+          <Text className="text-3xl font-bold text-gray-900 tracking-tight">Create account</Text>
+          <Text className="text-base text-gray-500 mt-1">Join KILO to start observing</Text>
+        </View>
 
         {serverError && (
-          <View className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
-            <Text className="text-red-700 text-sm">{serverError}</Text>
+          <View className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-red-700 text-base">{serverError}</Text>
           </View>
         )}
 
@@ -91,12 +100,15 @@ export default function RegisterScreen() {
           ] as const
         ).map(({ label, value, setter, key, placeholder, keyboard, autocap, secure }) => (
           <View key={key} className="mb-4">
-            <Text className="text-sm font-medium text-gray-700 mb-1">{label}</Text>
+            <Text className="text-base font-semibold text-gray-700 mb-1.5">{label}</Text>
             <TextInput
-              className={`border rounded-lg px-4 py-3 text-gray-900 text-base ${
-                fieldErrors[key as keyof FieldErrors] ? "border-red-400" : "border-gray-300"
+              className={`rounded-xl px-4 py-3.5 text-gray-900 text-lg ${
+                fieldErrors[key as keyof FieldErrors]
+                  ? "border border-red-400 bg-red-50/50"
+                  : "border border-gray-200 bg-gray-50"
               }`}
               placeholder={placeholder}
+              placeholderTextColor="#9CA3AF"
               value={value}
               onChangeText={setter}
               autoCapitalize={autocap ?? "none"}
@@ -106,7 +118,7 @@ export default function RegisterScreen() {
               editable={!isSubmitting}
             />
             {fieldErrors[key as keyof FieldErrors] && (
-              <Text className="text-red-500 text-xs mt-1">
+              <Text className="text-red-500 text-sm mt-1">
                 {fieldErrors[key as keyof FieldErrors]}
               </Text>
             )}
@@ -114,22 +126,24 @@ export default function RegisterScreen() {
         ))}
 
         <TouchableOpacity
-          className={`rounded-lg py-4 items-center mt-2 ${isSubmitting ? "bg-blue-400" : "bg-blue-600"}`}
+          className="rounded-xl py-4 items-center mt-2"
+          style={{ backgroundColor: isSubmitting ? "#6EBE80" : "#15803D" }}
           onPress={handleRegister}
           disabled={isSubmitting}
+          activeOpacity={0.8}
         >
           {isSubmitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text className="text-white font-semibold text-base">Create Account</Text>
+            <Text className="text-white font-bold text-lg">Create Account</Text>
           )}
         </TouchableOpacity>
 
         <View className="flex-row justify-center mt-6">
-          <Text className="text-gray-500 text-sm">Already have an account? </Text>
+          <Text className="text-gray-500 text-base">Already have an account? </Text>
           <Link href="/(auth)/login" asChild>
             <TouchableOpacity>
-              <Text className="text-blue-600 text-sm font-medium">Sign in</Text>
+              <Text className="text-base font-bold" style={{ color: "#15803D" }}>Sign in</Text>
             </TouchableOpacity>
           </Link>
         </View>

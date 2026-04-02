@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
+import { ListChecks } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { MemberDashboardData } from "@/lib/data/member";
 import { AuthUser } from "@/types/auth";
 import { KiloHistoryCard } from "@/components/kilo/kilo-history-card";
 import { DailyOleloCard } from "@/components/shared/DailyON";
-import { MoonPhaseCard } from "@/components/shared/MoonPhaseCard";
+import { DailySummaryCard } from "@/components/dashboard/daily-summary-card";
+// import { MoonPhaseCard } from "@/components/";
 
 const formatCount = (value: number) => value.toLocaleString();
 
@@ -44,9 +47,11 @@ export default function MemberDashboardClient({ user, data }: MemberDashboardCli
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <MoonPhaseCard />
+        {/* <MoonPhaseCard /> */}
         <DailyOleloCard />
       </div>
+
+      <DailySummaryCard />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
@@ -74,6 +79,21 @@ export default function MemberDashboardClient({ user, data }: MemberDashboardCli
             </p>
           </CardContent>
         </Card>
+
+        <Link href="/dashboard/tasks" className="block">
+          <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">My Tasks</CardTitle>
+              <ListChecks className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">View</div>
+              <p className="text-xs text-muted-foreground">
+                Tasks from your KILO entries
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

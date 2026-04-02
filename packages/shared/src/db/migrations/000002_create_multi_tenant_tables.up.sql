@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS tenants (
 -- Roles within an organization, can be expanded to include more roles as needed
 CREATE TYPE role AS ENUM (
     'admin', -- can manage org settings and members
-    'member'     -- regular member with standard permissions
+    'worker'     -- regular member with standard permissions
 );
 CREATE TABLE IF NOT EXISTS members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

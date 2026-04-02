@@ -8,10 +8,10 @@ export async function POST(request: NextRequest) {
     // Validate user session
     await validateSession(request);
 
-    const baseUrl = process.env.SPEACHES_BASE_URL?.trim();
-    const apiKey = process.env.SPEACHES_API_KEY?.trim();
+    const baseUrl = process.env.MODEL_BASE_URL?.trim();
+    const apiKey = process.env.MODEL_API_KEY?.trim();
     if (!baseUrl || !apiKey) {
-      console.error("[speaches] Missing SPEACHES_BASE_URL or SPEACHES_API_KEY environment variables");
+      console.error("[speaches] Missing MODEL_BASE_URL or MODEL_API_KEY environment variables");
       return NextResponse.json(
         { error: "Speaches configuration is missing. Please contact the administrator." },
         { status: 500 }

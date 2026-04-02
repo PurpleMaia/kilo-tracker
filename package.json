@@ -2,8 +2,8 @@
   "name": "kilo-tracker",
   "private": true,
   "scripts": {
-    "dev:web": "pnpm --filter @kilo/web dev",
-    "dev:mobile": "pnpm --filter @kilo/mobile start",
+    "api": "pnpm --filter @kilo/web dev",
+    "mobile": "cd mobile && pnpm --filter @kilo/mobile start",
     "build:web": "pnpm --filter @kilo/web build",
     "test:web:unit": "pnpm --filter @kilo/web test:unit",
     "test:web:e2e": "pnpm --filter @kilo/web test:e2e",

@@ -4,12 +4,14 @@
 // - edit, delete, view kilo
 // - view picture
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { KiloEntry, QUESTIONS } from '@/types/kilo'
-import { Clock, Pencil, Trash2 } from 'lucide-react'
+import { Clock, Pencil, Trash2, Sparkles, Loader2 } from 'lucide-react'
 import { Button } from '../ui/button'
-import { Card, CardHeader, CardContent } from '../ui/card'
+import { Card, CardHeader, CardContent, CardFooter } from '../ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTrigger, DialogTitle } from '../ui/dialog'
+import { toast } from 'sonner'
 
 interface KiloCardProps {
     entry: KiloEntry
@@ -17,6 +19,24 @@ interface KiloCardProps {
     deleteEntry: (id: number) => void
 }
 export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardProps) {
+  const [generating, setGenerating] = useState(false);
+
+  // Check if task generation was triggered from the entry form
+  useEffect(() => {
+    const pendingId = sessionStorage.getItem("generatingTasksFor");
+    if (pendingId && Number(pendingId) === entry.id) {
+      setGenerating(true);
+      // Poll sessionStorage until the fetch completes
+      const interval = setInterval(() => {
+        if (!sessionStorage.getItem("generatingTasksFor")) {
+          setGenerating(false);
+          clearInterval(interval);
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    }
+  }, [entry.id]);
+
   const hasPhoto = entry.has_photo;
   const date = entry.created_at ? new Date(entry.created_at).toLocaleDateString("en-US", {
         year: "numeric",
@@ -26,8 +46,42 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
         minute: "2-digit",
     }) : "Unknown date";
 
+  const handleGenerateTasks = async () => {
+    setGenerating(true);
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kiloId: entry.id,
+          q1: entry.q1 ?? null,
+          q2: entry.q2 ?? null,
+          q3: entry.q3 ?? null,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to generate tasks");
+      }
+
+      const data = await response.json();
+      if (data.tasks.length === 0) {
+        toast.success("No tasks generated", {
+          description: "Entry was too brief to extract tasks. Try adding more detail.",
+        });
+      } else {
+        toast.success(`Generated ${data.tasks.length} task${data.tasks.length === 1 ? "" : "s"}`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to generate tasks");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
-    <Card 
+    <Card
         key={entry.id}
         className="group border rounded-lg space-y-4 hover:bg-muted/50 transition-colors"
         >
@@ -96,6 +150,23 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
                 </>
             )}
         </CardContent>
+        <CardFooter className="justify-end pt-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="touch-action-manipulation text-muted-foreground hover:text-primary"
+              aria-label="Generate tasks from KILO entry"
+              onClick={handleGenerateTasks}
+              disabled={generating}
+            >
+              {generating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              <span className="ml-1 text-xs">Generate Tasks</span>
+            </Button>
+        </CardFooter>
     </Card>
   )
 }

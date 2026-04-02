@@ -10,8 +10,8 @@ import * as path from 'path';
  * Ensure the Speaches server is running before executing these tests.
  *
  * Prerequisites:
- * - Speaches server running at SPEACHES_BASE_URL (default: http://localhost:8000)
- * - Valid SPEACHES_API_KEY in .env
+ * - Speaches server running at MODEL_BASE_URL (default: http://localhost:8000)
+ * - Valid MODEL_API_KEY in .env
  * - Test audio file at src/tests/lib/speaches/fixtures/test-audio.wav
  */
 
@@ -21,9 +21,9 @@ const TEST_AUDIO_PATH = path.join(FIXTURES_DIR, 'test-audio.wav');
 describe('Speaches Audio Ingestion Integration Tests', () => {
   // Check if Speaches server is available before running tests
   beforeAll(async () => {
-    const baseUrl = process.env.SPEACHES_BASE_URL;
+    const baseUrl = process.env.MODEL_BASE_URL;
     if (!baseUrl) {
-      console.warn('SPEACHES_BASE_URL not set, skipping integration tests');
+      console.warn('MODEL_BASE_URL not set, skipping integration tests');
       return;
     }
 

@@ -60,25 +60,37 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        contentContainerClassName="flex-1 justify-center px-6 py-12"
+        contentContainerClassName="flex-1 justify-center px-7 py-12"
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="text-3xl font-bold text-gray-900 mb-2">Welcome back</Text>
-        <Text className="text-gray-500 mb-8">Sign in to your KILO account</Text>
+        {/* Brand mark */}
+        <View className="items-center mb-10">
+          <View
+            className="w-16 h-16 rounded-2xl items-center justify-center mb-3"
+            style={{ backgroundColor: "#15803D" }}
+          >
+            <Text className="text-white text-3xl font-bold">K</Text>
+          </View>
+          <Text className="text-3xl font-bold text-gray-900 tracking-tight">KILO</Text>
+          <Text className="text-base text-gray-500 mt-1">Observe. Record. Reflect.</Text>
+        </View>
 
         {serverError && (
-          <View className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
-            <Text className="text-red-700 text-sm">{serverError}</Text>
+          <View className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-red-700 text-base">{serverError}</Text>
           </View>
         )}
 
         <View className="mb-4">
-          <Text className="text-sm font-medium text-gray-700 mb-1">Email or Username</Text>
+          <Text className="text-base font-semibold text-gray-700 mb-1.5">Email or Username</Text>
           <TextInput
-            className={`border rounded-lg px-4 py-3 text-gray-900 text-base ${
-              fieldErrors.identifier ? "border-red-400" : "border-gray-300"
+            className={`rounded-xl px-4 py-3.5 text-gray-900 text-lg ${
+              fieldErrors.identifier
+                ? "border border-red-400 bg-red-50/50"
+                : "border border-gray-200 bg-gray-50"
             }`}
             placeholder="Enter email or username"
+            placeholderTextColor="#9CA3AF"
             value={identifier}
             onChangeText={setIdentifier}
             autoCapitalize="none"
@@ -87,44 +99,49 @@ export default function LoginScreen() {
             editable={!isSubmitting}
           />
           {fieldErrors.identifier && (
-            <Text className="text-red-500 text-xs mt-1">{fieldErrors.identifier}</Text>
+            <Text className="text-red-500 text-sm mt-1">{fieldErrors.identifier}</Text>
           )}
         </View>
 
         <View className="mb-6">
-          <Text className="text-sm font-medium text-gray-700 mb-1">Password</Text>
+          <Text className="text-base font-semibold text-gray-700 mb-1.5">Password</Text>
           <TextInput
-            className={`border rounded-lg px-4 py-3 text-gray-900 text-base ${
-              fieldErrors.password ? "border-red-400" : "border-gray-300"
+            className={`rounded-xl px-4 py-3.5 text-gray-900 text-lg ${
+              fieldErrors.password
+                ? "border border-red-400 bg-red-50/50"
+                : "border border-gray-200 bg-gray-50"
             }`}
             placeholder="Enter password"
+            placeholderTextColor="#9CA3AF"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             editable={!isSubmitting}
           />
           {fieldErrors.password && (
-            <Text className="text-red-500 text-xs mt-1">{fieldErrors.password}</Text>
+            <Text className="text-red-500 text-sm mt-1">{fieldErrors.password}</Text>
           )}
         </View>
 
         <TouchableOpacity
-          className={`rounded-lg py-4 items-center ${isSubmitting ? "bg-blue-400" : "bg-blue-600"}`}
+          className="rounded-xl py-4 items-center"
+          style={{ backgroundColor: isSubmitting ? "#6EBE80" : "#15803D" }}
           onPress={handleLogin}
           disabled={isSubmitting}
+          activeOpacity={0.8}
         >
           {isSubmitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text className="text-white font-semibold text-base">Sign In</Text>
+            <Text className="text-white font-bold text-lg">Sign In</Text>
           )}
         </TouchableOpacity>
 
         <View className="flex-row justify-center mt-6">
-          <Text className="text-gray-500 text-sm">Don't have an account? </Text>
+          <Text className="text-gray-500 text-base">Don't have an account? </Text>
           <Link href="/(auth)/register" asChild>
             <TouchableOpacity>
-              <Text className="text-blue-600 text-sm font-medium">Sign up</Text>
+              <Text className="text-base font-bold" style={{ color: "#15803D" }}>Sign up</Text>
             </TouchableOpacity>
           </Link>
         </View>
