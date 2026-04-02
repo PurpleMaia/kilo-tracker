@@ -1,3 +1,5 @@
+
+
 CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
     kilo_id INTEGER NOT NULL REFERENCES kilo(id) ON DELETE CASCADE,
@@ -9,3 +11,4 @@ CREATE TABLE tasks (
 );
 CREATE INDEX idx_tasks_kilo_id ON tasks(kilo_id);
 CREATE INDEX idx_tasks_user_id ON tasks(user_id);
+
