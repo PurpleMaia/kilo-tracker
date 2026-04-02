@@ -64,6 +64,7 @@ const PAGE_SIZE = 5;
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
+  const dateParam = searchParams.get("date");
 
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? String(PAGE_SIZE))));
@@ -125,20 +126,43 @@ export async function GET(request: NextRequest) {
   // Otherwise return paginated list of entries
   try {
     const user = await validateSession(request);
+    // Build date range filter if date param provided
+    let dateStart: Date | null = null;
+    let dateEnd: Date | null = null;
+    if (dateParam) {
+      const parsed = new Date(dateParam + "T00:00:00Z");
+      if (isNaN(parsed.getTime())) {
+        return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
+      }
+      dateStart = parsed;
+      dateEnd = new Date(parsed.getTime() + 86400000); // +1 day
+    }
+
+    let entriesQuery = db
+      .selectFrom("kilo")
+      .select(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
+      .where("user_id", "=", user.id)
+      .orderBy("created_at", "desc")
+      .limit(limit)
+      .offset(offset);
+
+    let countQuery = db
+      .selectFrom("kilo")
+      .select(({ fn }) => fn.count<number>("id").as("total"))
+      .where("user_id", "=", user.id);
+
+    if (dateStart && dateEnd) {
+      entriesQuery = entriesQuery
+        .where("created_at", ">=", dateStart)
+        .where("created_at", "<", dateEnd);
+      countQuery = countQuery
+        .where("created_at", ">=", dateStart)
+        .where("created_at", "<", dateEnd);
+    }
+
     const [entries, countResult] = await Promise.all([
-      db
-        .selectFrom("kilo")
-        .select(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
-        .where("user_id", "=", user.id)
-        .orderBy("created_at", "desc")
-        .limit(limit)
-        .offset(offset)
-        .execute(),
-      db
-        .selectFrom("kilo")
-        .select(({ fn }) => fn.count<number>("id").as("total"))
-        .where("user_id", "=", user.id)
-        .executeTakeFirst(),
+      entriesQuery.execute(),
+      countQuery.executeTakeFirst(),
     ]);
 
     // Map entries to include has_photo flag instead of path
