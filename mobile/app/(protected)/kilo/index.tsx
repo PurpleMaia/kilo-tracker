@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   ActivityIndicator, KeyboardAvoidingView, Platform, Image, Alert,
+  Keyboard as RNKeyboard,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -12,9 +13,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Keyboard } from "lucide-react-native";
 import Animated, {
-  FadeIn,
   FadeInDown,
+  FadeInUp,
 } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import { apiFetch } from "@/lib/api";
 import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { ThemedBackground } from "@/components/kilo/themed-background";
@@ -117,6 +119,16 @@ export default function KiloScreen() {
   const [isSubmitting, setIsSubmitting]     = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [liveTranscript, setLiveTranscript] = useState("");
+  const [focusKey, setFocusKey] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const subShow = RNKeyboard.addListener(showEvent, () => setKeyboardVisible(true));
+    const subHide = RNKeyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    return () => { subShow.remove(); subHide.remove(); };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -129,6 +141,7 @@ export default function KiloScreen() {
       setIsSubmitting(false);
       setError(null);
       setLiveTranscript("");
+      setFocusKey((k) => k + 1);
     }, [])
   );
 
@@ -254,26 +267,13 @@ export default function KiloScreen() {
 
   return (
     <ThemedBackground questionId={current.id}>
-      <Animated.View entering={FadeIn.duration(600)} style={{ flex: 1 }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        {/* ── Header ── */}
-        <View style={{
-          paddingHorizontal: 28,
-          paddingTop: 58,
-          paddingBottom: 12,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}>
-          
-        </View>
-
         {/* ── Step indicator ── */}
-        <View style={{ marginBottom: 20 }}>
+        <Animated.View key={`step-${focusKey}-${step}`} entering={FadeInDown.duration(400).delay(100)} style={{ paddingTop: 62, marginBottom: 8 }}>
           <StepIndicator
             totalSteps={QUESTIONS.length}
             currentStep={step}
@@ -289,14 +289,15 @@ export default function KiloScreen() {
           }}>
             {step + 1} of {QUESTIONS.length}
           </Text>
-        </View>
+        </Animated.View>
 
+        <View style={{ flex: 1, position: "relative" }}>
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
             paddingHorizontal: 24,
-            paddingTop: 4,
-            paddingBottom: 24,
+            paddingTop: 20,
+            paddingBottom: 32,
           }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
@@ -304,8 +305,8 @@ export default function KiloScreen() {
         >
           {/* ── Content card ── */}
           <Animated.View
-            key={step}
-            entering={FadeInDown.duration(300)}
+            key={`card-${focusKey}-${step}`}
+            entering={FadeInDown.duration(400).delay(200)}
             style={{
               backgroundColor: theme.contentBg,
               borderRadius: 24,
@@ -464,29 +465,62 @@ export default function KiloScreen() {
 
             {/* ── Text input ── */}
             {showTyping ? (
-              <TextInput
-                style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.9)",
-                  borderWidth: 1.5,
-                  borderColor: theme.inputBorder,
-                  borderRadius: 18,
-                  paddingHorizontal: 18,
-                  paddingVertical: 16,
-                  fontSize: 16,
-                  color: "#1C1917",
-                  minHeight: 120,
-                  textAlignVertical: "top",
-                  marginTop: 16,
-                  lineHeight: 24,
-                }}
-                placeholder="Type your observation here..."
-                placeholderTextColor="#9CA3AF"
-                value={answer}
-                onChangeText={setAnswer}
-                multiline
-                autoFocus
-                editable={!isSubmitting}
-              />
+              <>
+                <TextInput
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
+                    borderWidth: 1.5,
+                    borderColor: theme.inputBorder,
+                    borderRadius: 18,
+                    paddingHorizontal: 18,
+                    paddingVertical: 16,
+                    fontSize: 16,
+                    color: "#1C1917",
+                    minHeight: 120,
+                    textAlignVertical: "top",
+                    marginTop: 16,
+                    lineHeight: 24,
+                  }}
+                  placeholder="Type your observation here..."
+                  placeholderTextColor="#9CA3AF"
+                  value={answer}
+                  onChangeText={setAnswer}
+                  multiline
+                  autoFocus
+                  editable={!isSubmitting}
+                />
+
+                {/* Inline toolbar — visible when keyboard is dismissed */}
+                {!keyboardVisible && (
+                  <View style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: 14,
+                  }}>
+                    <TouchableOpacity
+                      onPress={() => setShowTyping(false)}
+                      activeOpacity={0.7}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        borderRadius: 16,
+                        backgroundColor: theme.guideBg,
+                        borderWidth: 1,
+                        borderColor: theme.guideBorder,
+                      }}
+                    >
+                      <Ionicons name="mic-outline" size={18} color={theme.accent} />
+                      <Text style={{ color: theme.accent, fontSize: 13, fontWeight: "600" }}>
+                        Voice
+                      </Text>
+                    </TouchableOpacity>                   
+                  </View>
+                )}
+              </>
             ) : (
               <TouchableOpacity
                 onPress={() => setShowTyping(true)}
@@ -548,17 +582,42 @@ export default function KiloScreen() {
           </Animated.View>
         </ScrollView>
 
+          {/* ── Top fade: theme color → transparent ── */}
+          <LinearGradient
+            colors={[theme.gradientStart, theme.gradientStart + "00"]}
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 32,
+            }}
+          />
+
+          {/* ── Bottom fade: transparent → theme color ── */}
+          <LinearGradient
+            colors={[theme.gradientStart + "00", theme.gradientStart]}
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 40,
+            }}
+          />
+        </View>
+
         {/* ── Bottom navigation ── */}
-        <View style={{
+        {!keyboardVisible && (
+        <Animated.View key={`nav-${focusKey}-${step}`} entering={FadeInUp.duration(400).delay(350)} style={{
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
           paddingHorizontal: 24,
           paddingVertical: 16,
           paddingBottom: Platform.OS === "ios" ? 32 : 16,
-          backgroundColor: "rgba(255, 255, 255, 0.7)",
-          borderTopWidth: 1,
-          borderTopColor: "rgba(0, 0, 0, 0.04)",
         }}>
           <TouchableOpacity
             onPress={goBack}
@@ -611,9 +670,9 @@ export default function KiloScreen() {
               </>
             )}
           </TouchableOpacity>
-        </View>
+        </Animated.View>
+        )}
       </KeyboardAvoidingView>
-      </Animated.View>
     </ThemedBackground>
   );
 }

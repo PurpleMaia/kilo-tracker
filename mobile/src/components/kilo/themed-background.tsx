@@ -54,24 +54,7 @@ export function ThemedBackground({ questionId, children }: ThemedBackgroundProps
           overlayStyle,
           { backgroundColor: theme.gradientStart },
         ]}
-      />
-      {/* Top decorative element — subtle gradient arc */}
-      <Animated.View
-        style={[
-          {
-            position: "absolute",
-            top: -80,
-            left: -40,
-            right: -40,
-            height: 260,
-            borderBottomLeftRadius: 200,
-            borderBottomRightRadius: 200,
-            backgroundColor: theme.gradientEnd,
-            opacity: 0.5,
-          },
-          overlayStyle,
-        ]}
-      />
+      />      
       {children}
     </View>
   );

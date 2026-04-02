@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { apiFetch } from "@/lib/api";
 import { FadeIn } from "@/components/shared/fade-in";
 import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
@@ -100,10 +101,9 @@ export default function EditKiloScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={{ height: 1, backgroundColor: "#F5F5F4", marginHorizontal: 24 }} />
-
+      <View style={{ flex: 1, position: "relative" }}>
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -195,6 +195,33 @@ export default function EditKiloScreen() {
         })}
       </ScrollView>
 
+        {/* ── Top fade ── */}
+        <LinearGradient
+          colors={["#FFFFFF", "#FFFFFF00"]}
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 24,
+          }}
+        />
+
+        {/* ── Bottom fade ── */}
+        <LinearGradient
+          colors={["#FFFFFF00", "#FFFFFF"]}
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 36,
+          }}
+        />
+      </View>
+
       {/* Bottom nav */}
       <View style={{
         flexDirection: "row",
@@ -203,8 +230,6 @@ export default function EditKiloScreen() {
         paddingHorizontal: 24,
         paddingVertical: 16,
         paddingBottom: Platform.OS === "ios" ? 32 : 16,
-        borderTopWidth: 1,
-        borderTopColor: "#F5F5F4",
         backgroundColor: "white",
       }}>
         <TouchableOpacity
