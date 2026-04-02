@@ -15,12 +15,8 @@ import { Keyboard } from "lucide-react-native";
 import { apiFetch } from "@/lib/api";
 // import { getToken } from "@/lib/api"; // Used by legacy API-based transcription
 import { FadeIn } from "@/components/shared/fade-in";
-
-const QUESTIONS = [
-  { id: "q1", question: "Lani (Air) — What do you observe in the sky and air around you today?", required: true },
-  { id: "q2", question: "Honua (Earth & Ocean) — What do you notice about the land and water today?", required: true, picture: true },
-  { id: "q3", question: "Hānaumoku (All Life Forces) — What living things do you observe today?", required: true },
-];
+import { GuidingPrompts } from "@/components/shared/guiding-prompts";
+import { QUESTIONS } from "@kilo/shared/types";
 
 type PhotoData = { uri: string; base64: string; mimeType: string };
 
@@ -292,6 +288,8 @@ export default function KiloScreen() {
               <Text className="text-red-700 text-base">{error}</Text>
             </View>
           )}
+
+          <GuidingPrompts prompts={current.guides} />
 
           {/* ── Voice recording (primary input) ── */}
           {!showTyping && (

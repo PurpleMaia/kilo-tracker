@@ -7,12 +7,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "@/lib/api";
 import { FadeIn } from "@/components/shared/fade-in";
-
-const QUESTIONS = [
-  { id: "q1", label: "Lani (Air) — What do you observe in the sky and air around you today?", required: true },
-  { id: "q2", label: "Honua (Earth & Ocean) — What do you notice about the land and water today?", required: false },
-  { id: "q3", label: "Hānaumoku (All Life Forces) — What living things do you observe today?", required: false },
-];
+import { GuidingPrompts } from "@/components/shared/guiding-prompts";
+import { QUESTIONS } from "@kilo/shared/types";
 
 export default function EditKiloScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -93,9 +89,12 @@ export default function EditKiloScreen() {
           <FadeIn key={q.id} delay={i * 80}>
             <View style={{ marginBottom: 20 }}>
               <Text className="text-sm font-bold uppercase tracking-wide mb-1.5" style={{ color: "#15803D", opacity: 0.7 }}>
-                {q.label}
+                {q.question}
                 {q.required && <Text style={{ color: "#B91C1C" }}> *</Text>}
               </Text>
+              {q.guides && q.guides.length > 0 && (
+                <GuidingPrompts prompts={q.guides} />
+              )}
               <TextInput
                 style={{
                   backgroundColor: "#FAFAF9", borderWidth: 1, borderColor: "#E7E5E4",
