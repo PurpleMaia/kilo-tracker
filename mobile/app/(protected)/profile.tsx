@@ -130,7 +130,7 @@ export default function ProfileScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        contentContainerClassName="px-7 pt-16 pb-32"
+        contentContainerClassName="px-7 pt-24 pb-32"
         keyboardShouldPersistTaps="handled"
       >
         <FadeIn>

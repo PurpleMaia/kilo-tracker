@@ -138,7 +138,7 @@ export default function HistoryScreen() {
   return (
     <ScrollView
       className="flex-1 bg-white"
-      contentContainerClassName="pb-28"
+      contentContainerClassName="pb-28 pt-8"
       refreshControl={
         <RefreshControl
           refreshing={isRefreshing}

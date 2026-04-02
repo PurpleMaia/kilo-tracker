@@ -136,7 +136,7 @@ export default function LearnScreen() {
   return (
     <ScrollView
       className="flex-1 bg-white"
-      contentContainerClassName="pb-28"
+      contentContainerClassName="pb-28 pt-8"
     >
       <FadeIn>
         <View className="px-7 pt-16 pb-2">
