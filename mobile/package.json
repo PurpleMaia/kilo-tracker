@@ -1,5 +1,5 @@
 {
-  "name": "mobile",
+  "name": "@kilo/mobile",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
@@ -12,6 +12,7 @@
     "@expo-google-fonts/newsreader": "^0.4.1",
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.1.1",
+    "@kilo/shared": "workspace:*",
     "expo": "~54.0.33",
     "expo-av": "~16.0.8",
     "expo-constants": "~18.0.13",

@@ -4,64 +4,129 @@ This document helps AI assistants understand how to implement features, write te
 
 ## Project Overview
 
-KILO Tracker is a Next.js 16 application using the **App Router**. It's a Progressive Web App (PWA) designed for mobile-first usage, with plans to eventually become a React Native + Expo mobile app. All data operations use **API routes** rather than server actions.
+KILO Tracker is a **pnpm monorepo** with three packages:
+- **`@kilo/shared`** (`packages/shared/`) — Shared types, Zod schemas, utilities, and database layer
+- **`@kilo/web`** (`web/`) — Next.js 16 API server + web client (App Router)
+- **`@kilo/mobile`** (`mobile/`) — React Native + Expo mobile app (primary client)
+
+All data operations use **API routes** rather than server actions. The Expo app is the primary mobile-first client; Next.js serves as the backend API and optional web client.
 
 ### Key Architectural Decisions
 
 1. **API-first approach** - All CRUD operations go through `/api` routes (not server actions) for React Native compatibility
-2. **Multi-tenant** - Organizations (tenants) with user roles (admin/member)
-3. **Type-safe database** - Kysely ORM with auto-generated TypeScript types
-4. **Session-based auth** - Secure sessions with hashed tokens stored in DB
-5. **PWA support** - Service worker, manifest, and install prompts for mobile home screen installation
-6. **Voice-first input** - Audio transcription via Speaches API for hands-free KILO entry
+2. **Shared package (`@kilo/shared`)** - Types, Zod schemas, errors, and DB layer live in one place, consumed as raw TypeScript (no build step)
+3. **Multi-tenant** - Organizations (tenants) with user roles (admin/worker)
+4. **Type-safe database** - Kysely ORM with auto-generated TypeScript types
+5. **Session-based auth** - Secure sessions with hashed tokens stored in DB
+6. **PWA support** - Service worker, manifest, and install prompts for mobile home screen installation
+7. **Voice-first input** - Audio transcription via Speaches API for hands-free KILO entry
 
 ## Directory Structure
 
 ```
-src/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes (all data operations)
-│   │   ├── audio/         # Speech-to-text transcription
-│   │   ├── kilo/          # KILO entry CRUD
-│   │   ├── photo/         # Photo upload
-│   │   ├── profile/       # User profile management
-│   │   └── olelo-noeau/   # Daily Hawaiian proverbs
-│   ├── (auth)/            # Auth pages (login, register)
-│   ├── dashboard/         # Dashboard pages
-│   │   └── survey/        # Onboarding survey
-│   └── kilo/              # KILO entry pages
-├── components/
-│   ├── ui/                # Shadcn primitives (don't modify)
-│   ├── kilo/              # KILO feature components
-│   │   ├── audio-recorder.tsx  # Voice recording component
-│   │   ├── photo-taker.tsx     # Camera/photo capture
-│   │   └── kilo-entry-form.tsx # Multi-step entry wizard
-│   ├── dashboard/         # Dashboard components
-│   ├── pwa/               # PWA install prompts
-│   ├── shared/            # Shared components (DailyON, etc.)
-│   └── auth/              # Auth components
-├── db/
-│   ├── kysely/            # Database client
-│   ├── migrations/        # SQL migration files
-│   └── types.ts           # Auto-generated types (don't edit manually)
-├── lib/
-│   ├── auth/              # Auth utilities
-│   ├── data/              # Data access helpers (admin, member, sysadmin, profile)
-│   └── errors.ts          # Error classes
-├── hooks/
-│   ├── contexts/          # React context providers
-│   └── use-kilo.tsx       # KILO entries hook
-├── types/
-│   └── kilo.ts            # KILO types and question definitions
-├── tests/
-│   ├── e2e/               # Playwright tests
-│   ├── lib/               # Unit tests
-│   └── helpers.ts         # Shared test utilities
-├── public/
-│   ├── manifest.json      # PWA manifest
-│   ├── sw.js              # Service worker
-│   └── icons/             # PWA icons
-└── uploads/               # User file uploads (photos, not in git)
+kilo-tracker/
+├── packages/
+│   └── shared/                     # @kilo/shared
+│       ├── package.json
+│       ├── tsconfig.json
+│       ├── .kysely-codegenrc.json
+│       └── src/
+│           ├── db/
+│           │   ├── kysely/
+│           │   │   ├── client.ts   # Kysely singleton + pool
+│           │   │   └── driver.ts   # Retry driver
+│           │   ├── migrations/     # SQL up/down files
+│           │   └── types.ts        # Auto-generated types (don't edit manually)
+│           ├── types/
+│           │   ├── auth.ts         # AuthUser, SessionType, SessionCookie
+│           │   ├── db.ts           # Kysely-derived types (User, Member, Org, etc.)
+│           │   ├── kilo.ts         # KiloEntry, Question, QUESTIONS
+│           │   ├── profile.ts      # UserProfile
+│           │   └── index.ts
+│           ├── schemas/
+│           │   ├── auth.ts         # loginSchema, registerSchema
+│           │   ├── kilo.ts         # kiloEntrySchema, updateKiloSchema, deleteKiloSchema
+│           │   ├── profile.ts      # profileUpdateSchema
+│           │   └── index.ts
+│           ├── lib/
+│           │   ├── errors.ts       # AppError, Errors
+│           │   ├── profile-utils.ts
+│           │   └── index.ts
+│           └── index.ts
+│
+├── web/                            # @kilo/web — Next.js (API server + web client)
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── next.config.ts
+│   ├── jest.config.ts
+│   ├── playwright.config.ts
+│   ├── components.json
+│   ├── postcss.config.mjs
+│   ├── eslint.config.mjs
+│   ├── public/
+│   ├── server/
+│   ├── scripts/
+│   └── src/
+│       ├── app/                    # Pages + API routes
+│       ├── components/             # Web-only (Shadcn/React DOM)
+│       ├── db/                     # Re-exports from @kilo/shared
+│       ├── types/                  # Re-exports from @kilo/shared
+│       ├── lib/
+│       │   ├── auth/              # Server-only auth (session, login, password, etc.)
+│       │   ├── data/              # Data access helpers (admin, member, sysadmin, profile)
+│       │   ├── errors.ts          # Re-export from @kilo/shared
+│       │   ├── profile-utils.ts   # Re-export from @kilo/shared
+│       │   └── utils.ts           # cn() Tailwind utility
+│       ├── hooks/                  # Web hooks (AuthContext, use-kilo, use-query)
+│       └── tests/
+│
+├── mobile/                         # @kilo/mobile — Expo app
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── app.json
+│   ├── babel.config.js
+│   ├── metro.config.js
+│   ├── tailwind.config.js
+│   ├── app/                        # Expo Router pages
+│   ├── assets/
+│   └── src/
+│       ├── components/             # React Native components
+│       ├── contexts/               # Mobile AuthContext (SecureStore-based)
+│       ├── lib/                    # Mobile API client
+│       └── types/                  # Re-exports from @kilo/shared
+│
+├── .env                            # Shared env vars (not in git)
+├── package.json                    # Root workspace scripts
+├── pnpm-workspace.yaml
+├── tsconfig.base.json
+└── CLAUDE.md
+```
+
+## Import Conventions
+
+### In web (`@kilo/web`)
+```typescript
+// Shared types, schemas, lib — import from @kilo/shared
+import { AuthUser, KiloEntry } from '@kilo/shared/types';
+import { kiloEntrySchema, registerSchema } from '@kilo/shared/schemas';
+import { AppError, Errors } from '@kilo/shared/lib';
+import { db } from '@kilo/shared/db';
+
+// OR use the local re-exports (both work, @/ aliases still resolve)
+import { db } from '@/db/kysely/client';       // re-exports from @kilo/shared/db
+import { AppError } from '@/lib/errors';        // re-exports from @kilo/shared/lib
+import { AuthUser } from '@/types/auth';        // re-exports from @kilo/shared/types
+
+// Web-only code — always use @/ alias
+import { validateSession } from '@/lib/auth/session';
+import { Button } from '@/components/ui/button';
+```
+
+### In mobile (`@kilo/mobile`)
+```typescript
+import { AuthUser, KiloEntry } from '@kilo/shared/types';
+import { kiloEntrySchema } from '@kilo/shared/schemas';
+import { AppError } from '@kilo/shared/lib';
 ```
 
 ## Database Schema
@@ -84,7 +149,7 @@ src/
 ### User Roles
 
 - **System roles** (`sysrole`): `sysadmin` | `user`
-- **Org roles** (`role`): `admin` | `member`
+- **Org roles** (`role`): `admin` | `worker`
 
 ### Auto-Generated Types
 
@@ -93,43 +158,25 @@ After modifying migrations, regenerate types:
 pnpm migrate:up d && pnpm codegen
 ```
 
-Types are in `src/db/types.ts` - never edit manually.
-
-### Recent Migrations
-
-| Migration | Purpose |
-|-----------|---------|
-| `000004_add_role_to_profiles` | Added `role` column to profiles |
-| `000005_add_unique_constraint_profiles_user_id` | Added unique constraint on `profiles.user_id` |
-| `000006_add_photo_path_to_kilo` | Added `photo_path` column, removed `image` column |
+Types are in `packages/shared/src/db/types.ts` - never edit manually.
 
 ## Implementing Features
 
 ### Creating a New API Route
 
-API routes live in `src/app/api/`. Use this pattern:
+API routes live in `web/src/app/api/`. Use shared schemas for validation:
 
 ```typescript
-// src/app/api/example/route.ts
+// web/src/app/api/example/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { db } from "@/db/kysely/client";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
+import { exampleSchema } from "@kilo/shared/schemas";  // Define in shared
 
-// 1. Define input schema with Zod
-const exampleSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().nullable().optional(),
-});
-
-// 2. Implement the handler
 export async function POST(request: NextRequest) {
   try {
-    // 3. Validate session (throws if unauthorized)
     const user = await validateSession(request);
-
-    // 4. Parse and validate input
     const body = await request.json();
     const parsed = exampleSchema.safeParse(body);
 
@@ -140,55 +187,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Perform database operation
     const result = await db
       .insertInto("your_table")
-      .values({
-        user_id: user.id,
-        name: parsed.data.name,
-        description: parsed.data.description ?? null,
-      })
-      .returning(["id", "name", "created_at"])
+      .values({ user_id: user.id, ...parsed.data })
+      .returning(["id", "created_at"])
       .executeTakeFirst();
 
     return NextResponse.json({ data: result }, { status: 201 });
-
   } catch (error) {
-    // 6. Handle errors
     if (error instanceof AppError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.statusCode }
-      );
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
     }
-
     console.error("[POST /api/example]", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+```
 
-// GET example with query params
-export async function GET(request: NextRequest) {
-  try {
-    const user = await validateSession(request);
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") ?? "10");
+### Adding a New Zod Schema
 
-    const results = await db
-      .selectFrom("your_table")
-      .selectAll()
-      .where("user_id", "=", user.id)
-      .limit(limit)
-      .execute();
+Define schemas in `packages/shared/src/schemas/` and export from the barrel:
 
-    return NextResponse.json({ data: results });
-  } catch (error) {
-    // error handling...
-  }
-}
+```typescript
+// packages/shared/src/schemas/example.ts
+import { z } from "zod";
+export const exampleSchema = z.object({ name: z.string().min(1) });
+
+// packages/shared/src/schemas/index.ts — add export
+export { exampleSchema } from './example';
 ```
 
 ### Creating a New Database Migration
@@ -197,28 +223,12 @@ export async function GET(request: NextRequest) {
 pnpm migrate:create add_example_table
 ```
 
-This creates up/down migration files. Edit them:
-
-```sql
--- 000004_add_example_table.up.sql
-CREATE TABLE examples (
-    id SERIAL PRIMARY KEY,
-    user_id UUID REFERENCES users(id),
-    name TEXT NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 000004_add_example_table.down.sql
-DROP TABLE IF EXISTS examples;
-```
-
-Run migration and regenerate types:
+Migration files are created in `packages/shared/src/db/migrations/`. Run and regenerate types:
 ```bash
 pnpm migrate:up d && pnpm codegen
 ```
 
-### KILO Entry API
+### Adding New Shared Types
 
 The KILO API (`/api/kilo`) supports full CRUD operations with pagination:
 
@@ -406,341 +416,51 @@ export default function ExamplePage() {
   );
 }
 ```
+Add to `packages/shared/src/types/` and export from the barrel index.
 
 ## Writing Tests
 
 ### Unit Tests (Jest)
 
-Unit tests go in `src/tests/lib/`. Pattern:
-
-```typescript
-// src/tests/lib/example/Example.test.ts
-import { POST } from '@/app/api/example/route';
-import { NextRequest } from 'next/server';
-
-describe('Example API', () => {
-  test('should create example with valid input', async () => {
-    const request = new NextRequest('http://localhost:3000/api/example', {
-      method: 'POST',
-      body: JSON.stringify({ name: 'Test' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const response = await POST(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(201);
-    expect(data.data.name).toBe('Test');
-  });
-
-  test('should return 400 for invalid input', async () => {
-    const request = new NextRequest('http://localhost:3000/api/example', {
-      method: 'POST',
-      body: JSON.stringify({}), // missing required field
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const response = await POST(request);
-    expect(response.status).toBe(400);
-  });
-});
-```
-
-Run unit tests:
+Unit tests go in `web/src/tests/lib/`. Run from root:
 ```bash
-pnpm test:unit
+pnpm test:web:unit
 ```
 
 ### E2E Tests (Playwright)
 
-E2E tests go in `src/tests/e2e/`. Pattern:
-
-```typescript
-// src/tests/e2e/example.spec.ts
-import { db } from '@/db/kysely/client';
-import { hashPassword } from '@/lib/auth/password';
-import { test, expect } from '@playwright/test';
-import { testUser } from '../helpers';
-
-test.describe('Example Feature', () => {
-  // Setup: create test user
-  test.beforeAll(async () => {
-    const passwordHash = await hashPassword(testUser.password);
-    await db.insertInto('users').values({
-      id: testUser.id,
-      email: testUser.email,
-      username: testUser.username,
-      password_hash: passwordHash,
-      system_role: 'user',
-    }).execute();
-  });
-
-  // Cleanup: remove test data
-  test.afterAll(async () => {
-    await db.deleteFrom('users').where('id', '=', testUser.id).execute();
-  });
-
-  test('user can create example', async ({ page }) => {
-    // Login
-    await page.goto('/login');
-    await page.fill('input#identifier', testUser.email);
-    await page.fill('input#password', testUser.password);
-    await page.click('button[type="submit"]');
-
-    // Navigate and interact
-    await page.goto('/example');
-    await page.fill('input[placeholder="Enter name"]', 'My Example');
-    await page.click('text=Save');
-
-    // Verify
-    await expect(page.locator('text=Success')).toBeVisible();
-  });
-});
-```
-
-Run E2E tests:
+E2E tests go in `web/src/tests/e2e/`. Run from root:
 ```bash
-pnpm test:e2e
+pnpm test:web:e2e
 ```
 
-### Test Helpers
+## Commands Reference
 
-Use `src/tests/helpers.ts` for shared test utilities. The helpers provide factory functions for isolated test data:
+| Command | Description |
+|---------|-------------|
+| `pnpm dev:web` | Start Next.js dev server (HTTPS) |
+| `pnpm dev:mobile` | Start Expo dev server |
+| `pnpm build:web` | Build Next.js for production |
+| `pnpm test:web:unit` | Run Jest unit tests |
+| `pnpm test:web:e2e` | Run Playwright E2E tests |
+| `pnpm lint` | Run ESLint across all packages |
+| `pnpm migrate:create <name>` | Create new migration |
+| `pnpm migrate:up d` | Run migrations (dev) |
+| `pnpm migrate:up p` | Run migrations (prod) |
+| `pnpm codegen` | Regenerate DB types in shared |
 
-```typescript
-import {
-  createTestUser,
-  createTestAdmin,
-  createTestOrg,
-  createMockRequest,
-  createMockGetRequest,
-  clearFailedLoginAttempts,
-  loginAsUser,
-  logout,
-  dismissInstallDialog,
-} from '../helpers';
+### Running from within a package
 
-// Factory functions generate unique data per test file
-const user = createTestUser();
-const admin = createTestAdmin();
-const org = createTestOrg();
-
-// Mock request helpers for unit tests
-const request = createMockRequest(
-  { email: 'test@example.com' },         // body
-  { 'custom-header': 'value' },          // headers
-  { 'session-token': 'abc123' }          // cookies
-);
-
-// E2E helpers
-await loginAsUser(page);                  // Login with test user
-await logout(page);                       // Handle logout
-await dismissInstallDialog(page);         // Dismiss PWA install prompt
-await clearFailedLoginAttempts();         // Clear rate limiting
-```
-
-Static test data (for backwards compatibility):
-```typescript
-import { testUser, testAdmin, testOrg } from '../helpers';
-```
-
-## Authentication
-
-### Protecting API Routes
-
-Always validate sessions in API routes:
-
-```typescript
-import { validateSession } from "@/lib/auth/session";
-
-export async function GET(request: NextRequest) {
-  const user = await validateSession(request); // Throws if unauthorized
-  // user.id, user.email, user.system_role available
-}
-```
-
-### Protecting Pages
-
-For protected pages, check auth in the component:
-
-```typescript
-"use client";
-
-import { useAuth } from "@/hooks/contexts/AuthContext";
-import { redirect } from "next/navigation";
-
-export default function ProtectedPage() {
-  const { user, isLoading, isAuthenticated } = useAuth();
-
-  if (isLoading) return <div>Loading...</div>;
-  if (!isAuthenticated) redirect("/login");
-
-  return <div>Welcome {user?.email}</div>;
-}
-```
-
-## Common Patterns
-
-### Error Handling
-
-Use `AppError` for consistent error responses:
-
-```typescript
-import { AppError } from "@/lib/errors";
-
-// In API route
-if (!resource) {
-  throw new AppError("Resource not found", 404);
-}
-```
-
-### Form Validation
-
-Always use Zod schemas:
-
-```typescript
-import { z } from "zod";
-
-const schema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(100),
-  age: z.number().int().positive().optional(),
-});
-
-const parsed = schema.safeParse(data);
-if (!parsed.success) {
-  // Handle validation errors
-}
-```
-
-### Database Queries
-
-Use Kysely's fluent API:
-
-```typescript
-import { db } from "@/db/kysely/client";
-
-// Insert
-const result = await db
-  .insertInto("table_name")
-  .values({ ... })
-  .returning(["id", "created_at"])
-  .executeTakeFirst();
-
-// Select
-const rows = await db
-  .selectFrom("table_name")
-  .selectAll()
-  .where("user_id", "=", userId)
-  .orderBy("created_at", "desc")
-  .limit(10)
-  .execute();
-
-// Update
-await db
-  .updateTable("table_name")
-  .set({ name: newName })
-  .where("id", "=", id)
-  .execute();
-
-// Delete
-await db
-  .deleteFrom("table_name")
-  .where("id", "=", id)
-  .execute();
-
-// Join
-const results = await db
-  .selectFrom("members")
-  .innerJoin("users", "users.id", "members.user_id")
-  .select(["members.id", "users.email", "members.user_role"])
-  .where("members.tenant_id", "=", tenantId)
-  .execute();
-```
-
-## UI Components
-
-### Using Shadcn Components
-
-Import from `@/components/ui/`:
-
-```typescript
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-```
-
-### Adding New Shadcn Components
-
-Use the Shadcn CLI:
 ```bash
-npx shadcn@latest add [component-name]
+pnpm --filter @kilo/web dev        # Same as pnpm dev:web
+pnpm --filter @kilo/mobile start   # Same as pnpm dev:mobile
 ```
 
-## PWA Features
+### Adding Shadcn Components
 
-The app is configured as a Progressive Web App with install prompts for iOS, Android, and desktop.
-
-### PWA Components
-
-- `src/components/pwa/pwa-install-prompt.tsx` - Device-specific install instructions
-- `src/components/pwa/service-worker-registration.tsx` - SW registration
-- `public/manifest.json` - PWA manifest with icons
-- `public/sw.js` - Service worker for offline support
-
-### Install Prompt Behavior
-
-- Auto-shows after 2 seconds on first visit
-- Dismissible for 7 days with "Don't show again"
-- Device detection for iOS (Safari only), Android, Desktop
-- Checks if already installed as standalone PWA
-
-## Custom Hooks
-
-### useKiloEntries
-
-Hook for managing KILO entries with delete functionality:
-
-```typescript
-import useKiloEntries from "@/hooks/use-kilo";
-
-const {
-  entries, setEntries,
-  initialLoading, setInitialLoading,
-  error,
-  deletingId, deleteEntry
-} = useKiloEntries();
-
-// Delete an entry
-await deleteEntry(entryId);
-```
-
-## KILO Questions
-
-Questions are defined in `src/types/kilo.ts`:
-
-```typescript
-export const QUESTIONS: Question[] = [
-  {
-    id: "q1",
-    question: "What is your internal weather today?",
-    required: true,
-  },
-  {
-    id: "q2",
-    question: "What do you see outside today?",
-    required: true,
-    picture: true,  // Enables photo capture
-  },
-  {
-    id: "q3",
-    question: "What are you excited to do today?",
-    required: true,
-  },
-];
+Run from the `web/` directory:
+```bash
+cd web && npx shadcn@latest add [component-name]
 ```
 
 ## Environment Variables
@@ -756,6 +476,7 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 ```
 
 ### Required Environment Variables
+Shared `.env` lives at the repo root. Required:
 
 | Variable | Purpose |
 |----------|---------|
@@ -767,50 +488,19 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `NEXT_PUBLIC_BASE_URL` | App base URL for OAuth callbacks |
 
-## Commands Reference
-
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start dev server (HTTPS) |
-| `pnpm build` | Build for production |
-| `pnpm test:unit` | Run Jest unit tests |
-| `pnpm test:e2e` | Run Playwright E2E tests |
-| `pnpm test` | Run all tests |
-| `pnpm migrate:create <name>` | Create new migration |
-| `pnpm migrate:up d` | Run migrations (dev) |
-| `pnpm migrate:up p` | Run migrations (prod) |
-| `pnpm codegen` | Regenerate DB types |
-| `pnpm lint` | Run ESLint |
-
-### Server Scripts (Dokku deployment)
-
-- `server/start.sh` - Production server startup script
-- `server/test.sh` - Server health check script
-
-## File Naming Conventions
-
-- **Pages**: `page.tsx` (App Router convention)
-- **Layouts**: `layout.tsx`
-- **API Routes**: `route.ts`
-- **Components**: `kebab-case.tsx` (e.g., `kilo-entry-form.tsx`)
-- **Tests**: `*.test.ts` (unit) or `*.spec.ts` (E2E)
-- **Types**: `types.ts` or in `src/types/`
-- **Hooks**: `use-*.tsx` (e.g., `use-kilo.tsx`)
-- **Photo uploads**: `uploads/kilo/{userId}/{timestamp}-{userId.slice(0,8)}.{ext}`
-
 ## Tips for AI Assistants
 
 1. **Always use API routes** for data operations, not server actions
-2. **Validate sessions** in all protected API routes
-3. **Use Zod** for all input validation
-4. **Check `src/db/types.ts`** for available database types
-5. **Run `pnpm codegen`** after migration changes
-6. **Use existing Shadcn components** from `src/components/ui/`
-7. **Follow existing patterns** in similar files
-8. **Write tests** for new features (unit + E2E)
-9. **Handle errors** consistently with AppError
-10. **Use test factory functions** (`createTestUser()`, etc.) for isolated test data
-11. **Handle PWA install dialog** in E2E tests with `dismissInstallDialog(page)`
-12. **Photo paths** must match the validation regex pattern
+2. **Define Zod schemas in `@kilo/shared/schemas`** so both web and mobile can use them
+3. **Define types in `@kilo/shared/types`** for shared data structures
+4. **Validate sessions** in all protected API routes
+5. **Check `packages/shared/src/db/types.ts`** for available database types
+6. **Run `pnpm codegen`** after migration changes (from repo root)
+7. **Use existing Shadcn components** from `web/src/components/ui/`
+8. **Follow existing patterns** in similar files
+9. **Write tests** for new features (unit + E2E)
+10. **Handle errors** consistently with AppError from `@kilo/shared/lib`
+11. **Don't share components** between web (Shadcn/React DOM) and mobile (NativeWind/RN)
+12. **Don't share AuthContext** — web uses cookies, mobile uses SecureStore
 13. **Profile API uses upsert** - `ON CONFLICT (user_id) DO UPDATE`
-14. **KILO questions** are defined in `src/types/kilo.ts` - modify there to change the wizard
+14. **KILO questions** are defined in `packages/shared/src/types/kilo.ts`

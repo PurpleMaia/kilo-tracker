@@ -1,24 +1,10 @@
-export type SystemRole = "sysadmin" | "user";
-export type OrgRole = "admin" | "member";
+// Re-export shared types
+export type { SystemRole, UserRole, AuthUser, KiloEntry, UserProfile } from '@kilo/shared/types';
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  username: string;
-  system_role: SystemRole;
-}
+// Alias for backwards compatibility
+export type { UserRole as OrgRole } from '@kilo/shared/types';
 
-export interface KiloEntry {
-  id: number;
-  user_id: string;
-  location: string | null;
-  q1: string | null;
-  q2: string | null;
-  q3: string | null;
-  photo_mime_type: string | null;
-  created_at: string;
-}
-
+// Mobile-specific types
 export interface Profile {
   id: number;
   user_id: string;
@@ -30,7 +16,7 @@ export interface Profile {
   aina: string | null;
   wai: string | null;
   kula: string | null;
-  role: OrgRole | null;
+  role: "admin" | "worker" | null;
 }
 
 export interface ApiError {
