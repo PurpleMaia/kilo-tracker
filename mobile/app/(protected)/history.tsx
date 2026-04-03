@@ -35,23 +35,25 @@ export default function HistoryScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const tzOffset = new Date().getTimezoneOffset();
+
   const loadMarkedDates = useCallback(async (year: number, month: number) => {
     try {
       const res = await apiFetch<{ dates: string[] }>(
-        `/api/kilo/dates?year=${year}&month=${month}`
+        `/api/kilo/dates?year=${year}&month=${month}&tz=${tzOffset}`
       );
       setMarkedDates(new Set(res.dates));
     } catch {
       // silent
     }
-  }, []);
+  }, [tzOffset]);
 
   const loadEntries = useCallback(
     async (date: string | null) => {
       try {
         const dateParam = date ? `&date=${date}` : "";
         const res = await apiFetch<{ entries: KiloEntry[]; total: number }>(
-          `/api/kilo?page=1&limit=50${dateParam}`
+          `/api/kilo?page=1&limit=50&tz=${tzOffset}${dateParam}`
         );
         setEntries(res.entries);
         setTotal(res.total);
@@ -59,7 +61,7 @@ export default function HistoryScreen() {
         // silent
       }
     },
-    []
+    [tzOffset]
   );
 
   useFocusEffect(
@@ -202,6 +204,7 @@ export default function HistoryScreen() {
               entry={entry}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              showTime={!!selectedDate}
             />
           </FadeIn>
         ))

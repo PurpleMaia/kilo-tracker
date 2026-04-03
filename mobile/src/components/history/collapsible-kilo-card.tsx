@@ -22,6 +22,7 @@ type Props = {
   entry: KiloEntry;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
+  showTime?: boolean;
 };
 
 const TIMING_CONFIG = {
@@ -37,7 +38,15 @@ function formatDate(iso: string) {
   });
 }
 
-export function CollapsibleKiloCard({ entry, onEdit, onDelete }: Props) {
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+export function CollapsibleKiloCard({ entry, onEdit, onDelete, showTime }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
 
@@ -98,7 +107,7 @@ export function CollapsibleKiloCard({ entry, onEdit, onDelete }: Props) {
         activeOpacity={0.7}
       >
         <Text className="text-sm font-semibold text-gray-500" style={{ minWidth: 100 }}>
-          {formatDate(entry.created_at)}
+          {showTime ? formatTime(entry.created_at) : formatDate(entry.created_at)}
         </Text>
         <Text
           className="flex-1 text-sm text-gray-400 mx-3"

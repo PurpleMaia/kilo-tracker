@@ -10,6 +10,9 @@ export async function GET(request: NextRequest) {
 
     const year = parseInt(searchParams.get("year") ?? "");
     const month = parseInt(searchParams.get("month") ?? "");
+    // Client timezone offset in minutes from Date.getTimezoneOffset()
+    // getTimezoneOffset() returns positive for west of UTC (e.g. 600 for HST/UTC-10)
+    const tzOffset = parseInt(searchParams.get("tz") ?? "0");
 
     if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
       return NextResponse.json(
@@ -18,9 +21,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build start/end of month in UTC
-    const startDate = new Date(Date.UTC(year, month - 1, 1));
-    const endDate = new Date(Date.UTC(year, month, 1));
+    const offsetMs = isNaN(tzOffset) ? 0 : tzOffset * 60 * 1000;
+
+    // Convert local month boundaries to UTC
+    // Midnight local = midnight UTC + offsetMs (e.g. midnight HST = 10:00 UTC)
+    const startDate = new Date(Date.UTC(year, month - 1, 1) + offsetMs);
+    const endDate = new Date(Date.UTC(year, month, 1) + offsetMs);
 
     const results = await db
       .selectFrom("kilo")
@@ -31,12 +37,14 @@ export async function GET(request: NextRequest) {
       .orderBy("created_at", "asc")
       .execute();
 
-    // Extract unique date strings (YYYY-MM-DD) from timestamps
+    // Extract unique date strings (YYYY-MM-DD) in the client's local timezone
     const dateSet = new Set<string>();
     for (const row of results) {
       if (row.created_at) {
         const d = new Date(row.created_at as unknown as string);
-        const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+        // Shift UTC timestamp to client local time (subtract offset since offset is positive for west)
+        const local = new Date(d.getTime() - offsetMs);
+        const key = `${local.getUTCFullYear()}-${String(local.getUTCMonth() + 1).padStart(2, "0")}-${String(local.getUTCDate()).padStart(2, "0")}`;
         dateSet.add(key);
       }
     }

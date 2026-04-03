@@ -126,16 +126,22 @@ export async function GET(request: NextRequest) {
   // Otherwise return paginated list of entries
   try {
     const user = await validateSession(request);
+    // Client timezone offset in minutes from Date.getTimezoneOffset()
+    // Positive for west of UTC (e.g. 600 for HST/UTC-10)
+    const tzOffset = parseInt(searchParams.get("tz") ?? "0");
+    const offsetMs = isNaN(tzOffset) ? 0 : tzOffset * 60 * 1000;
+
     // Build date range filter if date param provided
     let dateStart: Date | null = null;
     let dateEnd: Date | null = null;
     if (dateParam) {
-      const parsed = new Date(dateParam + "T00:00:00Z");
-      if (isNaN(parsed.getTime())) {
+      // Convert client local midnight to UTC: midnight local + offset = UTC
+      const dayStartUtc = new Date(dateParam + "T00:00:00Z");
+      if (isNaN(dayStartUtc.getTime())) {
         return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
       }
-      dateStart = parsed;
-      dateEnd = new Date(parsed.getTime() + 86400000); // +1 day
+      dateStart = new Date(dayStartUtc.getTime() + offsetMs);
+      dateEnd = new Date(dayStartUtc.getTime() + offsetMs + 86400000); // +1 day
     }
 
     let entriesQuery = db
