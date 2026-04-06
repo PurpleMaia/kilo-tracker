@@ -13,7 +13,7 @@ import {
   getMoonAge,
   getMoonIllumination,
   getHawaiianMoonPhase,
-} from "../src/lib/moon";
+} from "../../../web/src/lib/moon";
 
 const modeArg = process.argv[2] || "past";
 const daysArg = parseInt(process.argv[3] || "30", 10);
