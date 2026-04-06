@@ -1,15 +1,17 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   ActivityIndicator, KeyboardAvoidingView, Platform, Image, Alert,
   Keyboard as RNKeyboard,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { Audio } from "expo-av";
+import * as Network from "expo-network";
 import * as ImagePicker from "expo-image-picker";
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from "expo-speech-recognition";
+// import {
+//   ExpoSpeechRecognitionModule,
+//   useSpeechRecognitionEvent,
+// } from "expo-speech-recognition";
 import { Ionicons } from "@expo/vector-icons";
 import { Keyboard } from "lucide-react-native";
 import Animated, {
@@ -26,89 +28,6 @@ import { QUESTIONS } from "@kilo/shared/types";
 
 type PhotoData = { uri: string; base64: string; mimeType: string };
 
-  // ── Legacy: API-based transcription (commented out) ──────────
-  // const handleStartRecordingViaAPI = async () => {
-  //   try {
-  //     const { status } = await Audio.requestPermissionsAsync();
-  //     if (status !== "granted") {
-  //       Alert.alert("Permission needed", "Microphone access is required to record.");
-  //       return;
-  //     }
-  //     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-  //     const { recording } = await Audio.Recording.createAsync({
-  //       android: {
-  //         extension: ".wav",
-  //         outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-  //         audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
-  //         sampleRate: 16000,
-  //         numberOfChannels: 1,
-  //         bitRate: 128000,
-  //       },
-  //       ios: {
-  //         extension: ".wav",
-  //         outputFormat: Audio.IOSOutputFormat.LINEARPCM,
-  //         audioQuality: Audio.IOSAudioQuality.HIGH,
-  //         sampleRate: 16000,
-  //         numberOfChannels: 1,
-  //         bitRate: 128000,
-  //         linearPCMBitDepth: 16,
-  //         linearPCMIsBigEndian: false,
-  //         linearPCMIsFloat: false,
-  //       },
-  //       web: {},
-  //     });
-  //     recordingRef.current = recording;
-  //     setIsRecording(true);
-  //   } catch {
-  //     setError("Failed to start recording.");
-  //   }
-  // };
-  //
-  // const handleStopRecordingViaAPI = async () => {
-  //   if (!recordingRef.current) return;
-  //   setIsRecording(false);
-  //   setIsTranscribing(true);
-  //   try {
-  //     await recordingRef.current.stopAndUnloadAsync();
-  //     const uri = recordingRef.current.getURI();
-  //     recordingRef.current = null;
-  //     if (!uri) throw new Error("No recording found");
-  //
-  //     const session = await getToken();
-  //     const formData = new FormData();
-  //     formData.append("file", { uri, name: "audio.wav", type: "audio/wav" } as never);
-  //
-  //     const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
-  //     const res = await fetch(`${BASE_URL}/api/audio/transcribe`, {
-  //       method: "POST",
-  //       headers: session
-  //         ? { "x-session-token": session.token, "x-session-type": session.tokenType }
-  //         : {},
-  //       body: formData,
-  //     });
-  //     if (res.ok) {
-  //       const { text } = await res.json();
-  //       if (text) {
-  //         setAnswer((answer ? answer + " " : "") + text);
-  //         setShowTyping(true);
-  //       } else {
-  //         setError("Transcription returned no text. Try again or type your answer.");
-  //         setShowTyping(true);
-  //       }
-  //     } else {
-  //       const body = await res.json().catch(() => ({}));
-  //       setError(`Transcription failed (${res.status}): ${body.error ?? "Unknown error"}`);
-  //       setShowTyping(true);
-  //     }
-  //   } catch (e) {
-  //     setError(`Transcription error: ${e instanceof Error ? e.message : String(e)}`);
-  //     setShowTyping(true);
-  //   } finally {
-  //     setIsTranscribing(false);
-  //   }
-  // };
-
-
 export default function KiloScreen() {
   const [step, setStep]             = useState(0);
   const [answers, setAnswers]       = useState({ q1: "", q2: "", q3: "", q4: "" });
@@ -121,6 +40,13 @@ export default function KiloScreen() {
   const [liveTranscript, setLiveTranscript] = useState("");
   const [focusKey, setFocusKey] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [transcribeMode, setTranscribeMode] = useState<"whisper" | "device" | null>(null);
+
+
+  // expo-av recording ref (for Whisper path)
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  // On-device fallback transcript accumulated during recording
+  const deviceTranscriptRef = useRef("");
 
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -142,6 +68,7 @@ export default function KiloScreen() {
       setError(null);
       setLiveTranscript("");
       setFocusKey((k) => k + 1);
+      deviceTranscriptRef.current = "";
     }, [])
   );
 
@@ -160,50 +87,201 @@ export default function KiloScreen() {
     else setStep((s) => s - 1);
   };
 
-  // ── Voice recognition (on-device via expo-speech-recognition) ──
-  useSpeechRecognitionEvent("result", (event) => {
-    const transcript = event.results[0]?.transcript ?? "";
-    if (event.isFinal) {
-      const currentAnswer = answers[current.id as keyof typeof answers];
-      setAnswer((currentAnswer ? currentAnswer + " " : "") + transcript);
-      setLiveTranscript("");
-      setShowTyping(true);
-    } else {
-      setLiveTranscript(transcript);
-    }
-  });
+  // ── On-device speech recognition (runs alongside expo-av for live preview + offline fallback) ──
+  // useSpeechRecognitionEvent("result", (event) => {
+  //   const transcript = event.results[0]?.transcript ?? "";
+  //   if (event.isFinal) {
+  //     deviceTranscriptRef.current += (deviceTranscriptRef.current ? " " : "") + transcript;
+  //     setLiveTranscript(deviceTranscriptRef.current);
+  //   } else {
+  //     // Show accumulated + current interim
+  //     setLiveTranscript(
+  //       deviceTranscriptRef.current + (deviceTranscriptRef.current ? " " : "") + transcript
+  //     );
+  //   }
+  // });
 
-  useSpeechRecognitionEvent("end", () => {
-    setIsRecording(false);
-    setIsTranscribing(false);
-  });
+  // useSpeechRecognitionEvent("end", () => {
+  //   // On-device recognition may auto-stop on silence with continuous mode;
+  //   // restart it if we're still recording audio
+  //   if (recordingRef.current) {
+  //     try {
+  //       ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
+  //     } catch {
+  //       // Ignore — recording may have just stopped
+  //     }
+  //   }
+  // });
 
-  useSpeechRecognitionEvent("error", (event) => {
-    setIsRecording(false);
-    setIsTranscribing(false);
-    setError(`Speech recognition error: ${event.error}`);
-    setShowTyping(true);
-  });
+  // useSpeechRecognitionEvent("error", () => {
+  //   // On-device error is non-fatal — we still have the audio file for Whisper
+  // });
 
+  // ── Start recording ──
   const handleStartRecording = async () => {
     try {
-      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      if (!result.granted) {
+      // Request mic permission
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
         Alert.alert("Permission needed", "Microphone access is required to record.");
         return;
       }
-      ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: false });
+
+      // Check network to show mode indicator
+      const networkState = await Network.getNetworkStateAsync();
+      const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      setTranscribeMode(isOnline ? "whisper" : "device");
+
+      // Configure audio session for recording
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      // Start expo-av recording (records until user stops — no auto-cutoff)
+      const { recording } = await Audio.Recording.createAsync({
+        android: {
+          extension: ".wav",
+          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: ".wav",
+          outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {},
+      });
+      recordingRef.current = recording;
+
+      // Start on-device speech recognition in parallel for live preview
+      // try {
+      //   const speechResult = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      //   if (speechResult.granted) {
+      //     ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
+      //   }
+      // } catch {
+      //   // On-device not available — that's fine, we still have the audio recording
+      // }
+
+      deviceTranscriptRef.current = "";
+      setLiveTranscript("");
       setIsRecording(true);
       setError(null);
     } catch {
-      setError("Failed to start speech recognition.");
+      setError("Failed to start recording.");
     }
   };
 
-  const handleStopRecording = () => {
+  // ── Stop recording ──
+  const handleStopRecording = async () => {
     setIsRecording(false);
     setIsTranscribing(true);
-    ExpoSpeechRecognitionModule.stop();
+
+    // Stop on-device speech recognition
+    // try {
+    //   ExpoSpeechRecognitionModule.stop();
+    // } catch {
+    //   // Ignore
+    // }
+
+    // Stop expo-av recording and get the audio file
+    if (!recordingRef.current) {
+      setIsTranscribing(false);
+      return;
+    }
+
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      // Reset audio mode
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+
+      if (!uri) {
+        // No audio file — use on-device transcript if available
+        if (deviceTranscriptRef.current.trim()) {
+          setAnswer((answer ? answer + " " : "") + deviceTranscriptRef.current.trim());
+          setShowTyping(true);
+        } else {
+          setError("No recording found. Try again or type your answer.");
+          setShowTyping(true);
+        }
+        setIsTranscribing(false);
+        return;
+      }
+
+      // Check network at time of stop
+      const networkState = await Network.getNetworkStateAsync();
+      const isOnline = networkState.isConnected && networkState.isInternetReachable;
+
+      if (isOnline) {
+        // ── Online: send to Whisper API ──
+        setTranscribeMode("whisper");
+        try {
+          const formData = new FormData();
+          formData.append("file", {
+            uri,
+            name: "audio.wav",
+            type: "audio/wav",
+          } as never);
+
+          const { text } = await apiFetch<{ text: string }>("/api/audio/transcribe", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (text) {
+            setAnswer((answer ? answer + " " : "") + text);
+            setShowTyping(true);
+          } else {
+            // Whisper returned empty — fall back to on-device
+            if (deviceTranscriptRef.current.trim()) {
+              setAnswer((answer ? answer + " " : "") + deviceTranscriptRef.current.trim());
+              setShowTyping(true);
+            } else {
+              setError("Transcription returned no text. Try again or type your answer.");
+              setShowTyping(true);
+            }
+          }
+        } catch (e) {
+          // Whisper API failed — fall back to on-device
+          if (deviceTranscriptRef.current.trim()) {
+            setAnswer((answer ? answer + " " : "") + deviceTranscriptRef.current.trim());
+            setShowTyping(true);
+          } else {
+            setError(`Transcription error: ${e instanceof Error ? e.message : String(e)}`);
+            setShowTyping(true);
+          }
+        }
+      } else {
+        // ── Offline: use on-device transcript ──
+        setTranscribeMode("device");
+        if (deviceTranscriptRef.current.trim()) {
+          setAnswer((answer ? answer + " " : "") + deviceTranscriptRef.current.trim());
+          setShowTyping(true);
+        } else {
+          setError("No network and on-device transcription captured nothing. Try typing instead.");
+          setShowTyping(true);
+        }
+      }
+    } catch (e) {
+      setError(`Recording error: ${e instanceof Error ? e.message : String(e)}`);
+      setShowTyping(true);
+      recordingRef.current = null;
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   // ── Photo ──
