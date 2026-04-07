@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
-import { View, Text } from "react-native";
-import { useFocusEffect } from "expo-router";
 import { apiFetch } from "@/lib/api";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { Text, View } from "react-native";
 
 interface OleloResponse {
   data: { id: number; text: string } | null;
@@ -38,7 +38,7 @@ export function OleloNoeau() {
   return (
     <View className="mx-7 my-4 rounded-2xl bg-gray-50 p-5" style={{ borderLeftWidth: 3, borderLeftColor: "#15803D" }}>
       <Text className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: "#15803D", opacity: 0.8 }}>
-        &#699;Olelo No&#699;eau
+        &#699;ōlelo no&#699;eau
       </Text>
       <Text
         className="text-lg text-gray-700 italic leading-7"
