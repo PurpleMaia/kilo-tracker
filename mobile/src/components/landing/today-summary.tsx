@@ -1,10 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Image, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { apiFetch, getToken } from "@/lib/api";
-
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+import { apiFetch } from "@/lib/api";
+import { KiloPhoto } from "@/components/shared/kilo-photo";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -63,48 +62,6 @@ function isToday(dateStr: string): boolean {
 }
 
 // ── Sub-components ───────────────────────────────────────────────────
-
-function KiloPhoto({ entryId }: { entryId: number }) {
-  const [uri, setUri] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const session = await getToken();
-        const res = await fetch(`${BASE_URL}/api/kilo/photo?id=${entryId}`, {
-          headers: session
-            ? {
-                "x-session-token": session.token,
-                "x-session-type": session.tokenType,
-              }
-            : {},
-        });
-        if (!res.ok || cancelled) return;
-        const blob = await res.blob();
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (!cancelled) setUri(reader.result as string);
-        };
-        reader.readAsDataURL(blob);
-      } catch {
-        // silently skip
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [entryId]);
-
-  if (!uri) return null;
-  return (
-    <Image
-      source={{ uri }}
-      style={{ width: "100%", height: 160, borderRadius: 12, marginTop: 10 }}
-      resizeMode="cover"
-    />
-  );
-}
 
 function SectionDivider({ label }: { label: string }) {
   return (

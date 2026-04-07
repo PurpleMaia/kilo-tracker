@@ -5,41 +5,28 @@ import { getToken } from "@/lib/api";
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
 export function KiloPhoto({ entryId }: { entryId: number }) {
-  const [uri, setUri] = useState<string | null>(null);
+  const [source, setSource] = useState<{ uri: string; headers: Record<string, string> } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const session = await getToken();
-        const res = await fetch(`${BASE_URL}/api/kilo/photo?id=${entryId}`, {
-          headers: session
-            ? {
-                "x-session-token": session.token,
-                "x-session-type": session.tokenType,
-              }
-            : {},
-        });
-        if (!res.ok || cancelled) return;
-        const blob = await res.blob();
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (!cancelled) setUri(reader.result as string);
-        };
-        reader.readAsDataURL(blob);
-      } catch {
-        // silently skip
-      }
+      const session = await getToken();
+      if (cancelled || !session) return;
+      setSource({
+        uri: `${BASE_URL}/api/kilo/photo?id=${entryId}`,
+        headers: {
+          "x-session-token": session.token,
+          "x-session-type": session.tokenType,
+        },
+      });
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [entryId]);
 
-  if (!uri) return null;
+  if (!source) return null;
   return (
     <Image
-      source={{ uri }}
+      source={source}
       style={{ width: "100%", height: 160, borderRadius: 12, marginTop: 8 }}
       resizeMode="cover"
     />
