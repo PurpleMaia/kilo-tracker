@@ -126,7 +126,7 @@ export default function HistoryScreen() {
   };
 
   const handleEdit = (id: number) => {
-    router.push(`/(protected)/kilo/edit?id=${id}`);
+    router.push(`/(protected)/kilo?id=${id}`);
   };
 
   if (isLoading) {

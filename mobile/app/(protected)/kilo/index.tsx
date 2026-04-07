@@ -4,9 +4,9 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Image, Alert,
   Keyboard as RNKeyboard,
 } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Audio } from "expo-av";
-import * as Network from "expo-network";
+// import * as Network from "expo-network";
 import * as ImagePicker from "expo-image-picker";
 // import {
 //   ExpoSpeechRecognitionModule,
@@ -19,28 +19,37 @@ import Animated, {
   FadeInUp,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getToken } from "@/lib/api";
 import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { ThemedBackground } from "@/components/kilo/themed-background";
 import { StepIndicator } from "@/components/kilo/step-indicator";
 import { getTheme } from "@/components/kilo/question-theme";
 import { QUESTIONS } from "@kilo/shared/types";
 
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+
 type PhotoData = { uri: string; mimeType: string };
 
 export default function KiloScreen() {
+  const { id: editIdParam } = useLocalSearchParams<{ id?: string }>();
+  const editId = editIdParam ? Number(editIdParam) : null;
+  const isEditMode = editId !== null && !isNaN(editId);
+
   const [step, setStep]             = useState(0);
   const [answers, setAnswers]       = useState({ q1: "", q2: "", q3: "", q4: "" });
   const [showTyping, setShowTyping] = useState(false);
   const [photo, setPhoto]           = useState<PhotoData | null>(null);
+  const [existingPhoto, setExistingPhoto] = useState(false); // true if entry has a server photo
   const [isRecording, setIsRecording]       = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSubmitting, setIsSubmitting]     = useState(false);
+  const [isLoadingEntry, setIsLoadingEntry] = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [focusKey, setFocusKey] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [transcribeMode, setTranscribeMode] = useState<"whisper" | "device" | null>(null);
+  const [serverPhotoSource, setServerPhotoSource] = useState<{ uri: string; headers: Record<string, string> } | null>(null);
 
   // expo-av recording ref (for Whisper path)
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -55,20 +64,69 @@ export default function KiloScreen() {
     return () => { subShow.remove(); subHide.remove(); };
   }, []);
 
+  // Load existing entry for edit mode
+  useEffect(() => {
+    if (!isEditMode) return;
+    let cancelled = false;
+    setIsLoadingEntry(true);
+    (async () => {
+      try {
+        const { entry } = await apiFetch<{
+          entry: { q1: string; q2: string | null; q3: string | null; has_photo: boolean };
+        }>(`/api/kilo?id=${editId}`);
+        if (cancelled) return;
+        setAnswers({
+          q1: entry.q1,
+          q2: entry.q2 ?? "",
+          q3: entry.q3 ?? "",
+          q4: "",
+        });
+        setExistingPhoto(entry.has_photo);
+        if (entry.has_photo) {
+          const session = await getToken();
+          if (session && !cancelled) {
+            setServerPhotoSource({
+              uri: `${BASE_URL}/api/kilo/photo?id=${editId}`,
+              headers: {
+                "x-session-token": session.token,
+                "x-session-type": session.tokenType,
+              },
+            });
+          }
+        }
+        // Start in typing mode so user can see/edit the prefilled text
+        setShowTyping(true);
+      } catch {
+        if (!cancelled) setError("Failed to load entry.");
+      } finally {
+        if (!cancelled) setIsLoadingEntry(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [editId, isEditMode]);
+
   useFocusEffect(
     useCallback(() => {
+      // Only reset state for new entries (not edit mode)
+      if (isEditMode) {
+        setFocusKey((k) => k + 1);
+        return;
+      }
       setStep(0);
       setAnswers({ q1: "", q2: "", q3: "", q4: "" });
       setShowTyping(false);
       setPhoto(null);
+      setExistingPhoto(false);
+      setServerPhotoSource(null);
       setIsRecording(false);
       setIsTranscribing(false);
       setIsSubmitting(false);
+      setIsLoadingEntry(false);
       setError(null);
       setLiveTranscript("");
       setFocusKey((k) => k + 1);
       deviceTranscriptRef.current = "";
-    }, [])
+    }, [isEditMode])
   );
 
   const current = QUESTIONS[step];
@@ -127,9 +185,9 @@ export default function KiloScreen() {
       }
 
       // Check network to show mode indicator
-      const networkState = await Network.getNetworkStateAsync();
-      const isOnline = networkState.isConnected && networkState.isInternetReachable;
-      setTranscribeMode(isOnline ? "whisper" : "device");
+      // const networkState = await Network.getNetworkStateAsync();
+      // const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      // setTranscribeMode(isOnline ? "whisper" : "device");
 
       // Configure audio session for recording
       await Audio.setAudioModeAsync({
@@ -221,10 +279,10 @@ export default function KiloScreen() {
       }
 
       // Check network at time of stop
-      const networkState = await Network.getNetworkStateAsync();
-      const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      // const networkState = await Network.getNetworkStateAsync();
+      // const isOnline = networkState.isConnected && networkState.isInternetReachable;
 
-      if (isOnline) {
+      if (true) {
         // ── Online: send to Whisper API ──
         setTranscribeMode("whisper");
         try {
@@ -296,10 +354,13 @@ export default function KiloScreen() {
     if (!result.canceled && result.assets[0]) {
       const a = result.assets[0];
       setPhoto({ uri: a.uri, mimeType: a.mimeType ?? "image/jpeg" });
+      // Clear existing server photo when new photo is taken
+      setExistingPhoto(false);
+      setServerPhotoSource(null);
     }
   };
 
-  // ── Submit ──
+  // ── Submit (create or update) ──
   const handleSubmit = async () => {
     setError(null);
     setIsSubmitting(true);
@@ -310,19 +371,41 @@ export default function KiloScreen() {
       if (answers.q3) formData.append("q3", answers.q3);
       if (answers.q4) formData.append("q4", answers.q4);
 
-      if (photo) {
-        formData.append("photo", {
-          uri: photo.uri,
-          name: "photo.jpg",
-          type: photo.mimeType,
-        } as never);
-      }
+      if (isEditMode) {
+        formData.append("id", String(editId));
+        if (photo) {
+          // New photo selected — upload it
+          formData.append("photo", {
+            uri: photo.uri,
+            name: "photo.jpg",
+            type: photo.mimeType,
+          } as never);
+        } else if (existingPhoto) {
+          // Keep existing server photo
+          formData.append("keep_photo", "true");
+        }
+        // If !photo && !existingPhoto, photo will be cleared
 
-      await apiFetch("/api/kilo", {
-        method: "POST",
-        body: formData,
-      });
-      router.replace("/(protected)");
+        await apiFetch("/api/kilo", {
+          method: "PUT",
+          body: formData,
+        });
+        router.replace("/(protected)/history");
+      } else {
+        if (photo) {
+          formData.append("photo", {
+            uri: photo.uri,
+            name: "photo.jpg",
+            type: photo.mimeType,
+          } as never);
+        }
+
+        await apiFetch("/api/kilo", {
+          method: "POST",
+          body: formData,
+        });
+        router.replace("/(protected)");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
       setIsSubmitting(false);
@@ -348,6 +431,14 @@ export default function KiloScreen() {
     accent: theme.accent,
     icon: theme.icon,
   };
+
+  if (isEditMode && isLoadingEntry) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.gradientStart }}>
+        <ActivityIndicator size="large" color={theme.accent} />
+      </View>
+    );
+  }
 
   return (
     <ThemedBackground questionId={current.id}>
@@ -628,6 +719,7 @@ export default function KiloScreen() {
             {current.picture && (
               <View style={{ marginTop: 20, gap: 10 }}>
                 {photo ? (
+                  /* New local photo selected */
                   <View>
                     <Image
                       source={{ uri: photo.uri }}
@@ -642,6 +734,41 @@ export default function KiloScreen() {
                         Remove photo
                       </Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleTakePhoto}
+                      style={{ marginTop: 6, alignItems: "center" }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: "500", color: theme.stepLabel }}>
+                        Retake photo
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : existingPhoto && serverPhotoSource ? (
+                  /* Existing server photo (edit mode) */
+                  <View>
+                    <Image
+                      source={serverPhotoSource}
+                      style={{ width: "100%", height: 200, borderRadius: 18 }}
+                      resizeMode="cover"
+                    />
+                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 20, marginTop: 10 }}>
+                      <TouchableOpacity
+                        onPress={() => { setExistingPhoto(false); setServerPhotoSource(null); }}
+                        style={{ alignItems: "center" }}
+                      >
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#B91C1C" }}>
+                          Remove photo
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={handleTakePhoto}
+                        style={{ alignItems: "center" }}
+                      >
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: theme.accent }}>
+                          Replace photo
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ) : (
                   <TouchableOpacity
@@ -748,7 +875,7 @@ export default function KiloScreen() {
             ) : (
               <>
                 <Text style={{ color: "white", fontSize: 15, fontWeight: "700" }}>
-                  {isLast ? "Save Entry" : "Next"}
+                  {isLast ? (isEditMode ? "Save Changes" : "Save Entry") : "Next"}
                 </Text>
                 {!isLast && <Ionicons name="chevron-forward" size={16} color="white" />}
               </>
