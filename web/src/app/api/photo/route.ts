@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateSession } from "@/lib/auth/session";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { getAzureBlobStorage } from "@/lib/azure/client";
 
 // Whitelist of allowed image extensions
 const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "gif", "webp"];
@@ -57,19 +56,34 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Generate unique filename using safe extension derived from MIME type
     const folderName = user.username.replace(/[^a-zA-Z0-9._-]/g, "_").toLowerCase();
-    const filename = `${Date.now()}-${user.id.slice(0, 8)}.${safeExt}`;
+    const timestamp = new Date();
+    // make timestamp filename like "2024-06-01-12-30-45-PM.jpg"
+    const options: Intl.DateTimeFormatOptions = {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    };
+    const readableTimestamp = timestamp.toLocaleString("en-US", options).replace(/[/,:\s]/g, "-");
+    const filename = `${readableTimestamp}.${safeExt}`;
 
-    // Save to uploads/kilo/{username}/ (outside public/ for auth-protected serving)
-    const uploadDir = path.join(process.cwd(), "uploads", "kilo", folderName);
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(path.join(uploadDir, filename), buffer);
+    // Upload to Azure Blob Storage
+    const { client, container } = getAzureBlobStorage();
+    const blobPath = `kilo/${folderName}/${filename}`;
+    const blockBlobClient = container.getBlockBlobClient(blobPath);
 
-    const relativePath = `uploads/kilo/${folderName}/${filename}`;
-    if (process.env.NODE_ENV !== "production") console.log("[POST /api/photo] Uploaded photo to", relativePath);
+    await blockBlobClient.uploadData(buffer, {
+      blobHTTPHeaders: { blobContentType: file.type },
+    });
 
-    return NextResponse.json({ path: relativePath });
+    const blobUrl = blockBlobClient.url;
+    if (process.env.NODE_ENV !== "production") console.log("[POST /api/photo] Uploaded photo to", blobUrl);
+
+    return NextResponse.json({ path: blobUrl });
   } catch (error) {
     console.error("[POST /api/photo]", error);
     return NextResponse.json(

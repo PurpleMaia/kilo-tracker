@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { KiloEntry, QUESTIONS } from "@/types/kilo";
 
-type FormData = Record<string, string>;
+type KiloFormData = Record<string, string>;
 
 interface KiloEntryFormProps {
   initialData?: KiloEntry | null;
@@ -29,7 +29,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   const isEditMode = !!initialData;
 
   // Initialize form data from initialData
-  const [formData, setFormData] = useState<FormData>({});
+  const [formData, setFormData] = useState<KiloFormData>({});
   const [currentStep, setCurrentStep] = useState(0);
   const [showTextInput, setShowTextInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,7 +41,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   // Populate form with initial data when provided
   useEffect(() => {
     if (initialData) {
-      const data: FormData = {};
+      const data: KiloFormData = {};
       if (initialData.q1) data.q1 = initialData.q1;
       if (initialData.q2) data.q2 = initialData.q2;
       if (initialData.q3) data.q3 = initialData.q3;
@@ -116,67 +116,32 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
     setIsSubmitting(true);
 
     try {
-      let photoPath = null;
-
-      // Upload photo if available (data URL from camera capture)
-      if (photoPreview && photoPreview.startsWith("data:")) {
-        const photoFormData = new FormData();
-        // Convert data URL to blob
-        const blobResponse = await fetch(photoPreview);
-        const blob = await blobResponse.blob();
-        const file = new File([blob], "photo.jpg", { type: "image/jpeg" });
-        photoFormData.append("photo", file);
-
-        const uploadRes = await fetch("/api/photo", {
-          method: "POST",
-          body: photoFormData,
-        });
-
-        if (!uploadRes.ok) {
-          const uploadError = await uploadRes.json().catch(() => ({}));
-          const errorMessage = uploadError.error || "Failed to upload photo";
-          toast.error("Photo upload failed", {
-            description: errorMessage + ". Your entry will be saved without the photo.",
-          });
-          // Don't throw - allow entry to be saved without photo, but warn user
-          console.error("[KiloEntryForm] Photo upload failed:", errorMessage);
-        } else {
-          const { path } = await uploadRes.json();
-          photoPath = path;
-        }
-      }
-
-      const payload: Record<string, unknown> = {
-        q1: formData.q1 || "",
-        q2: formData.q2 || null,
-        q3: formData.q3 || null,
-      };
+      const body = new FormData();
+      body.append("q1", formData.q1 || "");
+      if (formData.q2) body.append("q2", formData.q2);
+      if (formData.q3) body.append("q3", formData.q3);
 
       if (isEditMode) {
-        payload.id = initialData!.id;
-        if (photoPath) {
-          // New photo was uploaded
-          payload.photo_path = photoPath;
-        } else if (photoPreview && photoPreview.startsWith("/api/")) {
+        body.append("id", String(initialData!.id));
+        if (photoPreview && photoPreview.startsWith("/api/")) {
           // Existing photo URL from edit mode — keep it
-          payload.keep_photo = true;
+          body.append("keep_photo", "true");
         }
         // If photoPreview is null, photo was removed — don't set keep_photo
-      } else {
-        // New entry
-        if (photoPath) {
-          payload.photo_path = photoPath;
-        }
+      }
+
+      // Attach photo file if a new capture exists (data URL from camera)
+      if (photoPreview && photoPreview.startsWith("data:")) {
+        const res = await fetch(photoPreview);
+        const blob = await res.blob();
+        body.append("photo", blob, "photo.jpg");
       }
 
       const method = isEditMode ? "PUT" : "POST";
 
       const apiResponse = await fetch("/api/kilo", {
         method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        body,
       });
 
       if (!apiResponse.ok) {
