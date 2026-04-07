@@ -2,16 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/kysely/client";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
-import { readFile } from "fs/promises";
-import path from "path";
-
-const EXT_TO_MIME: Record<string, string> = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  gif: "image/gif",
-  webp: "image/webp",
-};
+import { getAzureBlobStorage } from "@/lib/azure/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,21 +30,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Photo not found" }, { status: 404 });
     }
 
-    // Path traversal protection
-    const fullPath = path.resolve(process.cwd(), entry.photo_path);
-    const uploadsDir = path.resolve(process.cwd(), "uploads");
-    if (!fullPath.startsWith(uploadsDir)) {
+    // photo_path is the full Azure blob URL — extract the blob path
+    const { container } = getAzureBlobStorage();
+    const blobUrl = new URL(entry.photo_path);
+    const containerPrefix = `/${process.env.AZURE_STORAGE_CONTAINER_NAME}/`;
+    if (!blobUrl.pathname.startsWith(containerPrefix)) {
       return NextResponse.json({ error: "Invalid photo path" }, { status: 400 });
     }
+    const blobPath = blobUrl.pathname.slice(containerPrefix.length);
+    const blockBlobClient = container.getBlockBlobClient(blobPath);
 
-    const fileBuffer = await readFile(fullPath);
-    const ext = path.extname(fullPath).slice(1).toLowerCase();
-    const mimeType = EXT_TO_MIME[ext] || "image/jpeg";
+    const downloadResponse = await blockBlobClient.download(0);
+    if (!downloadResponse.readableStreamBody) {
+      return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+    }
+
+    // Read the stream into a buffer
+    const chunks: Buffer[] = [];
+    for await (const chunk of downloadResponse.readableStreamBody) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    const fileBuffer = Buffer.concat(chunks);
 
     return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
-        "Content-Type": mimeType,
+        "Content-Type": downloadResponse.contentType || "image/jpeg",
         "Cache-Control": "private, max-age=31536000, immutable",
       },
     });
