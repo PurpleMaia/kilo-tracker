@@ -5,6 +5,7 @@ import { AuthProvider } from "@/hooks/contexts/AuthContext";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { PWAInstallPrompt } from "@/components/pwa/pwa-install-prompt";
+import { ComingSoon } from "@/components/coming-soon";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "KILO",
-  description: "Track your observations and insights",
+  title: "KILO — Coming Soon",
+  description: "KILO Tracker is coming to iOS. Track your observations and insights on the go.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#3b82f6",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -58,7 +59,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png" />
@@ -66,13 +67,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          {children}
-          <Toaster />
-          <ServiceWorkerRegistration />
-        </AuthProvider>
+        <ComingSoon />
+        {/* <AuthProvider> */}
+          {/* <Toaster /> */}
+          {/* <ServiceWorkerRegistration /> */}
+        {/* </AuthProvider> */}
 
-        <PWAInstallPrompt />
+        {/* <PWAInstallPrompt /> */}
       </body>
     </html>
   );
