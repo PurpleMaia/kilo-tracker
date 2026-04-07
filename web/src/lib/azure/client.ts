@@ -23,5 +23,7 @@ export function getAzureBlobStorage(): { client: BlobServiceClient, container: C
 
   container = client.getContainerClient(containerName);
 
-  return { client, container };
+  _azureBlobStorage = { client, container };
+
+  return _azureBlobStorage;
 }
