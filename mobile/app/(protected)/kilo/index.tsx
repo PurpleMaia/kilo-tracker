@@ -26,7 +26,7 @@ import { StepIndicator } from "@/components/kilo/step-indicator";
 import { getTheme } from "@/components/kilo/question-theme";
 import { QUESTIONS } from "@kilo/shared/types";
 
-type PhotoData = { uri: string; base64: string; mimeType: string };
+type PhotoData = { uri: string; mimeType: string };
 
 export default function KiloScreen() {
   const [step, setStep]             = useState(0);
@@ -41,7 +41,6 @@ export default function KiloScreen() {
   const [focusKey, setFocusKey] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [transcribeMode, setTranscribeMode] = useState<"whisper" | "device" | null>(null);
-
 
   // expo-av recording ref (for Whisper path)
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -292,11 +291,11 @@ export default function KiloScreen() {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: "images", base64: true, quality: 0.7,
+      mediaTypes: "images", quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
       const a = result.assets[0];
-      setPhoto({ uri: a.uri, base64: a.base64 ?? "", mimeType: a.mimeType ?? "image/jpeg" });
+      setPhoto({ uri: a.uri, mimeType: a.mimeType ?? "image/jpeg" });
     }
   };
 
@@ -305,16 +304,23 @@ export default function KiloScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
+      const formData = new FormData();
+      formData.append("q1", answers.q1);
+      if (answers.q2) formData.append("q2", answers.q2);
+      if (answers.q3) formData.append("q3", answers.q3);
+      if (answers.q4) formData.append("q4", answers.q4);
+
+      if (photo) {
+        formData.append("photo", {
+          uri: photo.uri,
+          name: "photo.jpg",
+          type: photo.mimeType,
+        } as never);
+      }
+
       await apiFetch("/api/kilo", {
         method: "POST",
-        body: JSON.stringify({
-          q1: answers.q1,
-          q2: answers.q2 || null,
-          q3: answers.q3 || null,
-          q4: answers.q4 || null,
-          photo_base64: photo?.base64 ?? null,
-          photo_mime_type: photo?.mimeType ?? null,
-        }),
+        body: formData,
       });
       router.replace("/(protected)");
     } catch (err) {

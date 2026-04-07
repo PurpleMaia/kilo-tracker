@@ -3,15 +3,84 @@ import { db } from "@/db/kysely/client";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 import { kiloEntrySchema, deleteKiloSchema, updateKiloSchema } from "@kilo/shared/schemas";
-import { unlink } from "fs/promises";
-import path from "path";
+import { getAzureBlobStorage } from "@/lib/azure/client";
+
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5MB
+
+async function uploadPhotoToBlob(
+  buffer: Buffer,
+  mimeType: string,
+  username: string,
+): Promise<string> {
+  if (buffer.length > MAX_PHOTO_BYTES) {
+    throw new AppError("PHOTO_TOO_LARGE", 400, "Photo too large (max 5MB)");
+  }
+
+  const ext = MIME_TO_EXT[mimeType];
+  if (!ext) {
+    throw new AppError("UNSUPPORTED_IMAGE_TYPE", 400, "Unsupported image type");
+  }
+
+  const folderName = username.replace(/[^a-zA-Z0-9._-]/g, "_").toLowerCase();
+  const timestamp = new Date();
+  const opts: Intl.DateTimeFormatOptions = {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
+  };
+  const readableTimestamp = timestamp.toLocaleString("en-US", opts).replace(/[/,:\s]/g, "-");
+  const filename = `${readableTimestamp}.${ext}`;
+
+  const { container } = getAzureBlobStorage();
+  const blobPath = `kilo/${folderName}/${filename}`;
+  const blockBlobClient = container.getBlockBlobClient(blobPath);
+
+  await blockBlobClient.uploadData(buffer, {
+    blobHTTPHeaders: { blobContentType: mimeType },
+  });
+
+  return blockBlobClient.url;
+}
+
+/** Parse request body — supports both JSON and multipart/form-data */
+async function parseKiloBody(request: NextRequest): Promise<{ fields: Record<string, unknown>; photoFile: File | null }> {
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const fields: Record<string, unknown> = {};
+
+    for (const [key, value] of formData.entries()) {
+      if (key === "photo") continue; // handle separately
+      // Parse stringified values back to proper types
+      if (value === "null") fields[key] = null;
+      else if (value === "true") fields[key] = true;
+      else if (value === "false") fields[key] = false;
+      else if (key === "id") fields[key] = Number(value);
+      else fields[key] = value;
+    }
+
+    const photoFile = formData.get("photo") as File | null;
+    return { fields, photoFile };
+  }
+
+  // JSON fallback
+  const body = await request.json();
+  return { fields: body, photoFile: null };
+}
 
 export async function POST(request: NextRequest) {
   try {
     const user = await validateSession(request);
 
-    const body = await request.json();
-    const parsed = kiloEntrySchema.safeParse(body);
+    const { fields, photoFile } = await parseKiloBody(request);
+    const parsed = kiloEntrySchema.safeParse(fields);
 
     if (!parsed.success) {
       console.error("[POST /api/kilo] Validation failed for user:", user.id, "Issues:", JSON.stringify(parsed.error.issues));
@@ -23,6 +92,13 @@ export async function POST(request: NextRequest) {
 
     const { q1, q2, q3, location, photo_path } = parsed.data;
 
+    // Upload photo file to blob storage if provided
+    let resolvedPhotoPath = photo_path ?? null;
+    if (photoFile && photoFile.size > 0) {
+      const buffer = Buffer.from(await photoFile.arrayBuffer());
+      resolvedPhotoPath = await uploadPhotoToBlob(buffer, photoFile.type, user.username);
+    }
+
     const newEntry = await db
       .insertInto("kilo")
       .values({
@@ -31,7 +107,7 @@ export async function POST(request: NextRequest) {
         q2: q2 ?? null,
         q3: q3 ?? null,
         location: location ?? null,
-        photo_path: photo_path ?? null,
+        photo_path: resolvedPhotoPath,
       })
       .returning(["id", "q1", "q2", "q3", "location", "created_at"])
       .executeTakeFirst();
@@ -39,7 +115,7 @@ export async function POST(request: NextRequest) {
     // Add has_photo flag to response
     const entryWithPhoto = {
       ...newEntry,
-      has_photo: !!photo_path,
+      has_photo: !!resolvedPhotoPath,
     };
 
     return NextResponse.json({ entry: entryWithPhoto }, { status: 201 });
@@ -237,7 +313,7 @@ export async function DELETE(request: NextRequest) {
 
     // Clean up photo file from disk
     if (existing?.photo_path) {
-      await deletePhotoFile(existing.photo_path);
+      await deletePhotoBlob(existing.photo_path);
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
@@ -257,15 +333,19 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-/** Best-effort delete of a photo file from disk */
-async function deletePhotoFile(photoPath: string) {
+/** Best-effort delete of a photo blob from Azure Storage */
+async function deletePhotoBlob(photoUrl: string) {
   try {
-    const fullPath = path.resolve(process.cwd(), photoPath);
-    const uploadsDir = path.resolve(process.cwd(), "uploads");
-    if (!fullPath.startsWith(uploadsDir)) return; // path traversal guard
-    await unlink(fullPath);
+    const { container } = getAzureBlobStorage();
+    // Extract blob path from full URL: https://<account>.blob.core.windows.net/<container>/<blob-path>
+    const url = new URL(photoUrl);
+    // pathname is /<container>/<blob-path>, strip the leading /<container>/
+    const containerPrefix = `/${process.env.AZURE_STORAGE_CONTAINER_NAME}/`;
+    if (!url.pathname.startsWith(containerPrefix)) return;
+    const blobPath = url.pathname.slice(containerPrefix.length);
+    await container.getBlockBlobClient(blobPath).deleteIfExists();
   } catch {
-    // File may already be gone — ignore
+    // Blob may already be gone — ignore
   }
 }
 
@@ -273,8 +353,8 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await validateSession(request);
 
-    const body = await request.json();
-    const parsed = updateKiloSchema.safeParse(body);
+    const { fields, photoFile } = await parseKiloBody(request);
+    const parsed = updateKiloSchema.safeParse(fields);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -284,6 +364,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const { id, q1, q2, q3, location, photo_path, keep_photo } = parsed.data;
+
+    // Upload photo file to blob storage if provided
+    let resolvedPhotoPath = photo_path ?? null;
+    if (photoFile && photoFile.size > 0) {
+      resolvedPhotoPath = await uploadPhotoToBlob(Buffer.from(await photoFile.arrayBuffer()), photoFile.type, user.username);
+    }
 
     // Build update object
     const updateData: Record<string, unknown> = {
@@ -307,7 +393,7 @@ export async function PUT(request: NextRequest) {
 
     // Only update photo if not keeping existing
     if (!keep_photo) {
-      updateData.photo_path = photo_path ?? null;
+      updateData.photo_path = resolvedPhotoPath;
     }
 
     // Update the entry only if it belongs to the user
@@ -328,7 +414,7 @@ export async function PUT(request: NextRequest) {
 
     // Clean up old file if photo was replaced or cleared
     if (oldPhotoPath && oldPhotoPath !== updatedEntry.photo_path) {
-      await deletePhotoFile(oldPhotoPath);
+      await deletePhotoBlob(oldPhotoPath);
     }
 
     // Return has_photo flag instead of path
