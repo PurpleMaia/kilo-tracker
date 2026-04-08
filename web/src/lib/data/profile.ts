@@ -1,5 +1,6 @@
 import { db } from "@/db/kysely/client";
 import type { UserProfile } from "@/lib/profile-utils";
+import { AppError } from "@/lib/errors";
 
 export type { UserProfile } from "@/lib/profile-utils";
 export { isProfileComplete } from "@/lib/profile-utils";
@@ -20,4 +21,18 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
     ...profile,
     dob: profile.dob ? new Date(profile.dob) : null,
   };
+}
+
+export async function requireCompleteUserProfile(userId: string): Promise<UserProfile> {
+  const profile = await fetchUserProfile(userId);
+
+  if (!profile || !isProfileComplete(profile)) {
+    throw new AppError(
+      "PROFILE_INCOMPLETE",
+      403,
+      "Complete your profile before creating a KILO entry."
+    );
+  }
+
+  return profile;
 }

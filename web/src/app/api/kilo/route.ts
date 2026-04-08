@@ -4,6 +4,7 @@ import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 import { kiloEntrySchema, deleteKiloSchema, updateKiloSchema } from "@kilo/shared/schemas";
 import { getAzureBlobStorage } from "@/lib/azure/client";
+import { requireCompleteUserProfile } from "@/lib/data/profile";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -95,6 +96,7 @@ async function parseKiloBody(request: NextRequest): Promise<{
 export async function POST(request: NextRequest) {
   try {
     const user = await validateSession(request);
+    await requireCompleteUserProfile(user.id);
 
     const { fields, photoFiles } = await parseKiloBody(request);
     const parsed = kiloEntrySchema.safeParse(fields);
@@ -366,6 +368,7 @@ async function deletePhotoBlob(photoUrl: string) {
 export async function PUT(request: NextRequest) {
   try {
     const user = await validateSession(request);
+    await requireCompleteUserProfile(user.id);
 
     const { fields, photoFiles } = await parseKiloBody(request);
     const parsed = updateKiloSchema.safeParse(fields);

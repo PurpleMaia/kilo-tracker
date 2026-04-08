@@ -31,6 +31,14 @@ test.describe('Registration Flow', () => {
 
   test.afterEach(async () => {
     // Cleanup any user created during tests
+    await db.deleteFrom('profiles')
+      .where('user_id', 'in',
+        db.selectFrom('users')
+          .select('id')
+          .where('email', '=', newUser.email)
+      )
+      .execute();
+
     await db.deleteFrom('sessions')
       .where('user_id', 'in',
         db.selectFrom('users')
@@ -45,6 +53,14 @@ test.describe('Registration Flow', () => {
   })
 
   test.afterAll(async () => {
+    await db.deleteFrom('profiles')
+      .where('user_id', 'in',
+        db.selectFrom('users')
+          .select('id')
+          .where('email', '=', newUser.email)
+      )
+      .execute();
+
     await db.deleteFrom('sessions')
       .where('user_id', 'in',
         db.selectFrom('users')
@@ -83,11 +99,9 @@ test.describe('Registration Flow', () => {
     // Click register button
     await page.click('button[type="submit"]');
 
-    // Wait for successful registration (redirect away from register page)
-    await page.waitForURL(/^(?!.*register).*$/, { timeout: 10000 });
-
-    // Verify we're redirected (to dashboard or home)
-    expect(page.url()).not.toContain('/register');
+    // Wait for successful registration onboarding redirect
+    await page.waitForURL(/.*dashboard\/onboarding/, { timeout: 10000 });
+    await expect(page.getByText(/Profile Onboarding/i)).toBeVisible();
 
     // Verify user was created in database
     const createdUser = await db

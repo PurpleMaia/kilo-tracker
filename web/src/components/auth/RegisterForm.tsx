@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -32,7 +31,7 @@ export function RegisterForm({ organizations }: RegisterFormProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isPartOfOrg, setIsPartOfOrg] = useState(false);
+  const isPartOfOrg = false;
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -78,7 +77,7 @@ export function RegisterForm({ organizations }: RegisterFormProps) {
       const data = await response.json();
 
       if (response.ok) {
-        router.push('/');
+        router.push('/dashboard/onboarding');
       } else {
         setError(data.error || 'Registration failed');
       }

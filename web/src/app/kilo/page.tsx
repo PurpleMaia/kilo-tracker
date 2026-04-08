@@ -1,5 +1,8 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { KiloEntryFormClient } from "./KiloPage";
+import { getAuthUser } from "@/lib/auth/session";
+import { fetchUserProfile, isProfileComplete } from "@/lib/data/profile";
 
 function KiloPageLoading() {
   return (
@@ -9,7 +12,14 @@ function KiloPageLoading() {
   );
 }
 
-export default function KiloPage() {
+export default async function KiloPage() {
+  const user = await getAuthUser();
+  const profile = await fetchUserProfile(user.id);
+
+  if (!isProfileComplete(profile)) {
+    redirect("/dashboard/onboarding");
+  }
+
   return (
     <div className="mt-4 space-y-6 px-4 sm:px-0 pb-safe">
       <Suspense fallback={<KiloPageLoading />}>

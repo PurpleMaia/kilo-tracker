@@ -9,10 +9,9 @@ import { NextRequest } from 'next/server';
 // Create unique test users for this test file
 const testUser = createTestUser();
 const otherUser = createTestUser();
+const incompleteUser = createTestUser();
 
 describe('KILO API Tests', () => {
-  let testEntryId: number;
-
   beforeAll(async () => {
     // Create test users
     const passwordHash = await hashPassword(testUser.password);
@@ -55,12 +54,60 @@ describe('KILO API Tests', () => {
       created_at: new Date(),
       expires_at: new Date(Date.now() + 1000 * 60 * 60),
     }).execute();
+
+    const incompletePasswordHash = await hashPassword(incompleteUser.password);
+    const incompleteTokenHash = hashToken(incompleteUser.session_token);
+
+    await db.insertInto('users').values({
+      id: incompleteUser.id,
+      email: incompleteUser.email,
+      username: incompleteUser.username,
+      password_hash: incompletePasswordHash,
+      system_role: incompleteUser.system_role,
+      created_at: new Date(),
+    }).execute();
+
+    await db.insertInto('sessions').values({
+      id: randomUUID(),
+      user_id: incompleteUser.id,
+      token_hash: incompleteTokenHash,
+      created_at: new Date(),
+      expires_at: new Date(Date.now() + 1000 * 60 * 60),
+    }).execute();
+
+    await db.insertInto('profiles').values([
+      {
+        id: randomUUID(),
+        user_id: testUser.id,
+        first_name: 'Test',
+        last_name: 'User',
+        dob: new Date('2000-01-01'),
+        mauna: 'Mauna Kea',
+        aina: 'Kailua',
+        wai: 'Nuʻuanu',
+        kula: 'Kamehameha',
+        role: 'Student',
+      },
+      {
+        id: randomUUID(),
+        user_id: otherUser.id,
+        first_name: 'Other',
+        last_name: 'User',
+        dob: new Date('2000-01-01'),
+        mauna: 'Haleakala',
+        aina: 'Hilo',
+        wai: 'Wailuku',
+        kula: 'UH',
+        role: 'Teacher',
+      },
+    ]).execute();
   });
 
   afterAll(async () => {
-    await db.deleteFrom('kilo').where('user_id', 'in', [testUser.id, otherUser.id]).execute();
-    await db.deleteFrom('sessions').where('user_id', 'in', [testUser.id, otherUser.id]).execute();
-    await db.deleteFrom('users').where('id', 'in', [testUser.id, otherUser.id]).execute();
+    await db.deleteFrom('kilo').where('user_id', 'in', [testUser.id, otherUser.id, incompleteUser.id]).execute();
+    await db.deleteFrom('profiles').where('user_id', 'in', [testUser.id, otherUser.id, incompleteUser.id]).execute();
+    await db.deleteFrom('sessions').where('user_id', 'in', [testUser.id, otherUser.id, incompleteUser.id]).execute();
+    await db.deleteFrom('users').where('id', 'in', [testUser.id, otherUser.id, incompleteUser.id]).execute();
     await db.destroy();
   });
 
@@ -86,8 +133,6 @@ describe('KILO API Tests', () => {
       expect(data.entry.q2).toBe('Test answer 2');
       expect(data.entry.q3).toBeNull();
       expect(data.entry.q4).toBe('Feeling grateful');
-
-      testEntryId = data.entry.id;
     });
 
     test('should reject entry without required q1', async () => {
@@ -129,6 +174,20 @@ describe('KILO API Tests', () => {
       const response = await POST(request);
 
       expect(response.status).toBe(401);
+    });
+
+    test('should reject entry when profile is incomplete', async () => {
+      const request = createMockRequest(
+        { q1: 'Blocked answer' },
+        {},
+        { session_token: incompleteUser.session_token }
+      );
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(403);
+      expect(data.error).toBe('Complete your profile before creating a KILO entry.');
     });
 
     test('should accept q1_photo_path', async () => {

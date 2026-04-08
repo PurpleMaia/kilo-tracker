@@ -122,10 +122,10 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
           </Button>
         ) : (
           <div className="flex flex-col gap-1 w-full sm:w-auto">
-            <Button disabled className="w-full sm:w-auto" variant="outline">
-              Start a new KILO
+            <Button asChild className="w-full sm:w-auto">
+              <Link href="/dashboard/onboarding">Complete onboarding</Link>
             </Button>
-            <p className="text-xs text-muted-foreground text-center">Complete your profile to unlock.</p>
+            <p className="text-xs text-muted-foreground text-center">Finish your profile to unlock KILO.</p>
           </div>
         )}
       </div>
@@ -139,7 +139,9 @@ export default function GuestDashboardClient({ user, profile: initialProfile }: 
           <CardHeader className="flex flex-row items-start justify-between space-y-0">
             <div>
               <CardTitle>Your Account</CardTitle>
-              <CardDescription>View or edit account</CardDescription>
+              <CardDescription>
+                {profileComplete ? "View or edit account" : "Finish setup to unlock KILO"}
+              </CardDescription>
             </div>
             {!editing ? (
               <Button variant="outline" size="sm" onClick={handleEdit}>
@@ -312,29 +314,6 @@ function ProfileRow({ label, value }: { label: string; value: string | null }) {
       ) : (
         <span className="text-muted-foreground italic">Not set</span>
       )}
-    </div>
-  );
-}
-
-function FeatureItem({ enabled, label, description }: { enabled: boolean; label: string; description: string }) {
-  return (
-    <div className="flex items-start space-x-3">
-      <div className={`rounded-full p-2 ${enabled ? "bg-green-100" : "bg-zinc-100"}`}>
-        {enabled ? (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="h-4 w-4 text-green-600">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="h-4 w-4 text-zinc-400">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        )}
-      </div>
-      <div>
-        <h4 className={`text-sm font-medium ${!enabled ? "text-muted-foreground" : ""}`}>{label}</h4>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
     </div>
   );
 }
