@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   View,
   ScrollView,
@@ -9,28 +9,53 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiFetch } from "@/lib/api";
 import { HeroSection } from "@/components/landing/hero-section";
 import { OleloNoeau } from "@/components/landing/olelo-noeau";
 import { TodaySummary } from "@/components/landing/today-summary";
 import { FadeIn } from "@/components/shared/fade-in";
 import { KiloCta } from "@/components/landing/kilo-cta";
 
+type TodayKiloResponse = {
+  entries: Array<{ id: number }>;
+};
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function LandingScreen() {
   const { user, profile, profileComplete, isLoading, refreshProfile } = useAuth();
-  const isRefreshing = false;
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasEntryToday, setHasEntryToday] = useState(false);
 
   const load = useCallback(async () => {
     await refreshProfile();
+
+    const today = formatLocalDate(new Date());
+    const tzOffset = new Date().getTimezoneOffset();
+    const data = await apiFetch<TodayKiloResponse>(
+      `/api/kilo?page=1&limit=1&date=${today}&tz=${tzOffset}`
+    );
+    setHasEntryToday(data.entries.length > 0);
   }, [refreshProfile]);
 
   useFocusEffect(
     useCallback(() => {
-      load();
+      load().catch(() => setHasEntryToday(false));
     }, [load])
   );
 
   const onRefresh = useCallback(async () => {
-    await load();
+    setIsRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [load]);
 
   if (isLoading) {
@@ -97,7 +122,7 @@ export default function LandingScreen() {
       </FadeIn>
 
       <FadeIn delay={300}>
-        <KiloCta profileComplete={profileComplete} hasEntryToday={false} />
+        <KiloCta profileComplete={profileComplete} hasEntryToday={hasEntryToday} />
       </FadeIn>
     </ScrollView>
   );

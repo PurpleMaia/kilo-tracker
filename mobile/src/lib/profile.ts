@@ -13,10 +13,9 @@ export function isMobileProfileComplete(profile: MobileUserProfile): boolean {
   if (!isProfileComplete(profile)) return false;
   if (!profile?.consent_privacy_ack) return false;
 
-  const privateEncrypted =
-    profile.encrypt_kilo_entries === true && profile.share_kilo_entries === false;
-  const sharedOpen =
-    profile.encrypt_kilo_entries === false && profile.share_kilo_entries === true;
+  const encryptSelected = profile.encrypt_kilo_entries === true;
+  const shareSelected = profile.share_kilo_entries === true;
+  const hasExactlyOneStorageChoice = encryptSelected !== shareSelected;
 
-  return privateEncrypted || sharedOpen;
+  return hasExactlyOneStorageChoice;
 }
