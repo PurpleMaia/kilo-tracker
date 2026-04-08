@@ -8,10 +8,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { Link, router } from "expo-router";
 import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
+
+const brandLogo = require("../../assets/icon.png");
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email or username is required"),
@@ -65,14 +68,9 @@ export default function LoginScreen() {
       >
         {/* Brand mark */}
         <View className="items-center mb-10">
-          <View
-            className="w-16 h-16 rounded-2xl items-center justify-center mb-3"
-            style={{ backgroundColor: "#15803D" }}
-          >
-            <Text className="text-white text-3xl font-bold">K</Text>
-          </View>
+          <Image source={brandLogo} className="w-16 h-16 mb-3" resizeMode="contain" />
           <Text className="text-3xl font-bold text-gray-900 tracking-tight">KILO</Text>
-          <Text className="text-base text-gray-500 mt-1">Observe. Record. Reflect.</Text>
+          <Text className="text-base text-gray-500 mt-1">Aloha. Pilina. Hulihia.</Text>
         </View>
 
         {serverError && (
@@ -84,7 +82,7 @@ export default function LoginScreen() {
         <View className="mb-4">
           <Text className="text-base font-semibold text-gray-700 mb-1.5">Email or Username</Text>
           <TextInput
-            className={`rounded-xl px-4 py-3.5 text-gray-900 text-lg ${
+            className={`rounded-xl px-4 py-3 text-gray-900 ${
               fieldErrors.identifier
                 ? "border border-red-400 bg-red-50/50"
                 : "border border-gray-200 bg-gray-50"
@@ -97,6 +95,7 @@ export default function LoginScreen() {
             autoCorrect={false}
             keyboardType="email-address"
             editable={!isSubmitting}
+            
           />
           {fieldErrors.identifier && (
             <Text className="text-red-500 text-sm mt-1">{fieldErrors.identifier}</Text>
@@ -106,7 +105,7 @@ export default function LoginScreen() {
         <View className="mb-6">
           <Text className="text-base font-semibold text-gray-700 mb-1.5">Password</Text>
           <TextInput
-            className={`rounded-xl px-4 py-3.5 text-gray-900 text-lg ${
+            className={`rounded-xl px-4 py-3 text-gray-900 ${
               fieldErrors.password
                 ? "border border-red-400 bg-red-50/50"
                 : "border border-gray-200 bg-gray-50"

@@ -8,10 +8,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { Link, router } from "expo-router";
 import { z } from "zod";
 import { useAuth } from "@/contexts/AuthContext";
+
+const brandLogo = require("../../assets/icon.png");
 
 const registerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -75,12 +78,7 @@ export default function RegisterScreen() {
       >
         {/* Brand mark */}
         <View className="items-center mb-8">
-          <View
-            className="w-16 h-16 rounded-2xl items-center justify-center mb-3"
-            style={{ backgroundColor: "#15803D" }}
-          >
-            <Text className="text-white text-3xl font-bold">K</Text>
-          </View>
+          <Image source={brandLogo} className="w-16 h-16 mb-3" resizeMode="contain" />
           <Text className="text-3xl font-bold text-gray-900 tracking-tight">Create account</Text>
           <Text className="text-base text-gray-500 mt-1">Join KILO to start observing</Text>
         </View>
@@ -102,7 +100,7 @@ export default function RegisterScreen() {
           <View key={key} className="mb-4">
             <Text className="text-base font-semibold text-gray-700 mb-1.5">{label}</Text>
             <TextInput
-              className={`rounded-xl px-4 py-3.5 text-gray-900 text-lg ${
+              className={`rounded-xl px-4 py-3.5 text-gray-900 ${
                 fieldErrors[key as keyof FieldErrors]
                   ? "border border-red-400 bg-red-50/50"
                   : "border border-gray-200 bg-gray-50"
