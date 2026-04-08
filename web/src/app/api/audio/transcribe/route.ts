@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
+import { checkLLMRateLimit } from "@/lib/rate-limit";
 
 const MAX_AUDIO_SIZE = 25 * 1024 * 1024; // 25MB limit for audio files
 
 export async function POST(request: NextRequest) {
   try {
     // Validate user session
-    await validateSession(request);
+    const user = await validateSession(request);
+
+    // Rate limit LLM API calls
+    const rateLimitResponse = checkLLMRateLimit(request, user.id);
+    if (rateLimitResponse) return rateLimitResponse;
 
     const formData = await request.formData();
     const audio = formData.get("file") as File;
