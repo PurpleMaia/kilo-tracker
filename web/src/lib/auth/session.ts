@@ -97,7 +97,7 @@ export async function createSessionWithToken(userID: string, sessionType: Sessio
  * Uses React.cache() internally to avoid redundant database queries during a single request.
  * @param request NextRequest object
  * @returns AuthUser (all user data needed for application)
- * @throws Errors.NO_SESSION if the session cookie is missing or invalid
+ * @throws NO_SESSION (401) if the session cookie is missing or invalid
  */
 export async function validateSession(request: NextRequest): Promise<AuthUser> {
     const sessionCookie = getSessionCookieFromBrowser(request);
