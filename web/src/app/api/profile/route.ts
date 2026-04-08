@@ -38,8 +38,26 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { first_name, last_name, dob, mauna, aina, wai, kula, role } = parsed.data;
-    const dobDate = dob ? new Date(dob) : null;
+    const existing = await db
+      .selectFrom("profiles")
+      .selectAll()
+      .where("user_id", "=", user.id)
+      .executeTakeFirst();
+
+    const {
+      first_name,
+      last_name,
+      dob,
+      mauna,
+      aina,
+      wai,
+      kula,
+      role,
+      consent_privacy_ack,
+      share_kilo_entries,
+      encrypt_kilo_entries,
+    } = parsed.data;
+    const dobDate = dob !== undefined ? (dob ? new Date(dob) : null) : existing?.dob ?? null;
 
     // Generate a stable UUID for this user's profile (only used on insert)
     const profileId = crypto.randomUUID();
@@ -49,26 +67,32 @@ export async function PUT(request: NextRequest) {
       .values({
         id: profileId,
         user_id: user.id,
-        first_name: first_name ?? null,
-        last_name: last_name ?? null,
+        first_name: first_name ?? existing?.first_name ?? null,
+        last_name: last_name ?? existing?.last_name ?? null,
         dob: dobDate,
-        mauna: mauna ?? null,
-        aina: aina ?? null,
-        wai: wai ?? null,
-        kula: kula ?? null,
-        role: role ?? null,
+        mauna: mauna ?? existing?.mauna ?? null,
+        aina: aina ?? existing?.aina ?? null,
+        wai: wai ?? existing?.wai ?? null,
+        kula: kula ?? existing?.kula ?? null,
+        role: role ?? existing?.role ?? null,
+        consent_privacy_ack: consent_privacy_ack ?? existing?.consent_privacy_ack ?? null,
+        share_kilo_entries: share_kilo_entries ?? existing?.share_kilo_entries ?? null,
+        encrypt_kilo_entries: encrypt_kilo_entries ?? existing?.encrypt_kilo_entries ?? null,
       })
       .onConflict((oc) =>
         oc.column("user_id").doUpdateSet({
           // Note: id is NOT updated on conflict - it stays the same
-          first_name: first_name ?? null,
-          last_name: last_name ?? null,
+          first_name: first_name ?? existing?.first_name ?? null,
+          last_name: last_name ?? existing?.last_name ?? null,
           dob: dobDate,
-          mauna: mauna ?? null,
-          aina: aina ?? null,
-          wai: wai ?? null,
-          kula: kula ?? null,
-          role: role ?? null,
+          mauna: mauna ?? existing?.mauna ?? null,
+          aina: aina ?? existing?.aina ?? null,
+          wai: wai ?? existing?.wai ?? null,
+          kula: kula ?? existing?.kula ?? null,
+          role: role ?? existing?.role ?? null,
+          consent_privacy_ack: consent_privacy_ack ?? existing?.consent_privacy_ack ?? null,
+          share_kilo_entries: share_kilo_entries ?? existing?.share_kilo_entries ?? null,
+          encrypt_kilo_entries: encrypt_kilo_entries ?? existing?.encrypt_kilo_entries ?? null,
         })
       )
       .returningAll()

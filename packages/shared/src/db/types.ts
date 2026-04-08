@@ -87,7 +87,9 @@ export interface OleloNoeau {
 
 export interface Profiles {
   aina: string | null;
+  consent_privacy_ack: boolean | null;
   dob: Timestamp | null;
+  encrypt_kilo_entries: boolean | null;
   first_name: string | null;
   id: string;
   kula: string | null;
@@ -95,6 +97,7 @@ export interface Profiles {
   mauna: string | null;
   mokupuni: string | null;
   role: string | null;
+  share_kilo_entries: boolean | null;
   user_id: string | null;
   wai: string | null;
 }

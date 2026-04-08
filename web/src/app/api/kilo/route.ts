@@ -5,6 +5,7 @@ import { AppError } from "@/lib/errors";
 import { kiloEntrySchema, deleteKiloSchema, updateKiloSchema } from "@kilo/shared/schemas";
 import { getAzureBlobStorage } from "@/lib/azure/client";
 import { requireCompleteUserProfile } from "@/lib/data/profile";
+import { encryptField, decryptField } from "@/lib/crypto";
 
 const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -130,10 +131,10 @@ export async function POST(request: NextRequest) {
       .insertInto("kilo")
       .values({
         user_id: user.id,
-        q1,
-        q2: q2 ?? null,
-        q3: q3 ?? null,
-        q4: q4 ?? null,
+        q1: encryptField(q1),
+        q2: encryptField(q2),
+        q3: encryptField(q3),
+        q4: encryptField(q4),
         location: location ?? null,
         q1_photo_path: resolvedPhotoPaths.q1,
         q2_photo_path: resolvedPhotoPaths.q2,
@@ -142,7 +143,12 @@ export async function POST(request: NextRequest) {
       .returning(["id", "q1", "q2", "q3", "q4", "location", "q1_photo_path", "q2_photo_path", "q3_photo_path", "created_at"])
       .executeTakeFirst();
 
-    return NextResponse.json({ entry: newEntry }, { status: 201 });
+    // Decrypt fields before returning to client
+    const decryptedEntry = newEntry
+      ? { ...newEntry, q1: decryptField(newEntry.q1), q2: decryptField(newEntry.q2), q3: decryptField(newEntry.q3), q4: decryptField(newEntry.q4) }
+      : newEntry;
+
+    return NextResponse.json({ entry: decryptedEntry }, { status: 201 });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(
@@ -201,7 +207,15 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      return NextResponse.json({ entry }, { status: 200 });
+      const decryptedEntry = {
+        ...entry,
+        q1: decryptField(entry.q1),
+        q2: decryptField(entry.q2),
+        q3: decryptField(entry.q3),
+        q4: decryptField(entry.q4),
+      };
+
+      return NextResponse.json({ entry: decryptedEntry }, { status: 200 });
     } catch (error) {
       if (error instanceof AppError) {
         return NextResponse.json(
@@ -269,7 +283,15 @@ export async function GET(request: NextRequest) {
     const total = Number(countResult?.total ?? 0);
     const totalPages = Math.ceil(total / limit);
 
-    return NextResponse.json({ entries, total, page, totalPages });
+    const decryptedEntries = entries.map((entry) => ({
+      ...entry,
+      q1: decryptField(entry.q1),
+      q2: decryptField(entry.q2),
+      q3: decryptField(entry.q3),
+      q4: decryptField(entry.q4),
+    }));
+
+    return NextResponse.json({ entries: decryptedEntries, total, page, totalPages });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(
@@ -382,12 +404,12 @@ export async function PUT(request: NextRequest) {
 
     const { id, q1, q2, q3, q4, location, q1_photo_path, q2_photo_path, q3_photo_path, keep_q1_photo, keep_q2_photo, keep_q3_photo } = parsed.data;
 
-    // Build update object
+    // Build update object — encrypt text fields at rest
     const updateData: Record<string, unknown> = {
-      q1,
-      q2: q2 ?? null,
-      q3: q3 ?? null,
-      q4: q4 ?? null,
+      q1: encryptField(q1),
+      q2: encryptField(q2),
+      q3: encryptField(q3),
+      q4: encryptField(q4),
       location: location ?? null,
     };
 
@@ -459,7 +481,16 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ entry: updatedEntry }, { status: 200 });
+    // Decrypt fields before returning to client
+    const decryptedEntry = {
+      ...updatedEntry,
+      q1: decryptField(updatedEntry.q1),
+      q2: decryptField(updatedEntry.q2),
+      q3: decryptField(updatedEntry.q3),
+      q4: decryptField(updatedEntry.q4),
+    };
+
+    return NextResponse.json({ entry: decryptedEntry }, { status: 200 });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(

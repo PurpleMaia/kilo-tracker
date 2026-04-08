@@ -10,4 +10,7 @@ export type UserProfile = {
   wai: string | null;
   kula: string | null;
   role: string | null;
+  consent_privacy_ack: boolean | null;
+  share_kilo_entries: boolean | null;
+  encrypt_kilo_entries: boolean | null;
 };

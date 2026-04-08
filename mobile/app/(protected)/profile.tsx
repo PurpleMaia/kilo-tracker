@@ -25,7 +25,12 @@ type ProfileForm = {
   wai: string;
   kula: string;
   role: string;
+  consent_privacy_ack: boolean;
+  share_kilo_entries: boolean;
+  encrypt_kilo_entries: boolean;
 };
+
+type ProfileTextFieldKey = "first_name" | "last_name" | "dob" | "mauna" | "aina" | "wai";
 
 const EMPTY: ProfileForm = {
   first_name: "",
@@ -36,10 +41,13 @@ const EMPTY: ProfileForm = {
   wai: "",
   kula: "",
   role: "",
+  consent_privacy_ack: false,
+  share_kilo_entries: false,
+  encrypt_kilo_entries: false,
 };
 
 const FIELDS: {
-  key: keyof ProfileForm;
+  key: ProfileTextFieldKey;
   label: string;
   placeholder: string;
 }[] = [
@@ -52,7 +60,14 @@ const FIELDS: {
 ];
 
 export default function ProfileScreen() {
-  const { user, profile, profileComplete, logout, refreshProfile } = useAuth();
+  const {
+    user,
+    profile,
+    profileComplete,
+    logout,
+    refreshProfile,
+    setProfileHasUnsavedChanges,
+  } = useAuth();
   const [form, setForm] = useState<ProfileForm>(EMPTY);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,11 +83,45 @@ export default function ProfileScreen() {
       wai: profile?.wai ?? "",
       kula: profile?.kula ?? "",
       role: profile?.role ?? "",
+      consent_privacy_ack: profile?.consent_privacy_ack === true,
+      share_kilo_entries: profile?.share_kilo_entries === true,
+      encrypt_kilo_entries: profile?.encrypt_kilo_entries === true,
     });
   }, [profile]);
 
+  const savedSnapshot = JSON.stringify({
+    first_name: profile?.first_name ?? "",
+    last_name: profile?.last_name ?? "",
+    dob: profile?.dob ? new Date(profile.dob).toISOString().split("T")[0] : "",
+    mauna: profile?.mauna ?? "",
+    aina: profile?.aina ?? "",
+    wai: profile?.wai ?? "",
+    kula: profile?.kula ?? "",
+    role: profile?.role ?? "",
+    consent_privacy_ack: profile?.consent_privacy_ack === true,
+    share_kilo_entries: profile?.share_kilo_entries === true,
+    encrypt_kilo_entries: profile?.encrypt_kilo_entries === true,
+  });
+  const currentSnapshot = JSON.stringify(form);
+  const isDirty = savedSnapshot !== currentSnapshot;
+
+  useEffect(() => {
+    setProfileHasUnsavedChanges(isDirty);
+    return () => setProfileHasUnsavedChanges(false);
+  }, [isDirty, setProfileHasUnsavedChanges]);
+
   const handleSave = async () => {
     setError(null);
+
+    const hasStorageChoice =
+      (form.encrypt_kilo_entries && !form.share_kilo_entries) ||
+      (!form.encrypt_kilo_entries && form.share_kilo_entries);
+
+    if (!form.consent_privacy_ack || !hasStorageChoice) {
+      setError("Choose a KILO privacy setting and confirm consent before saving.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       await apiFetch("/api/profile", {
@@ -80,6 +129,7 @@ export default function ProfileScreen() {
         body: JSON.stringify(form),
       });
       await refreshProfile();
+      setProfileHasUnsavedChanges(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -92,6 +142,14 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
+    if (isDirty) {
+      Alert.alert(
+        "Unsaved profile changes",
+        "Save your profile before leaving this screen."
+      );
+      return;
+    }
+
     Alert.alert("Log Out", "Are you sure you want to log out?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -157,7 +215,7 @@ export default function ProfileScreen() {
                 Incomplete Profile
               </Text>
               <Text className="text-sm mt-2 leading-6" style={{ color: "#78350F" }}>
-                Add your name, date of birth, and ʻāina before creating a KILO entry.
+                Add your name, date of birth, ʻāina, and privacy consent before creating a KILO entry.
               </Text>
             </View>
           )}
@@ -187,6 +245,81 @@ export default function ProfileScreen() {
                 />
               </View>
             ))}
+          </View>
+
+          <View
+            className="rounded-2xl p-5 mb-4 bg-gray-50"
+            style={{ borderWidth: 1, borderColor: "#E7E5E4" }}
+          >
+            <Text className="text-sm font-bold uppercase tracking-wide mb-4" style={{ color: "#15803D", opacity: 0.7 }}>
+              KILO Privacy
+            </Text>
+
+            <Text className="text-sm leading-6 text-gray-600 mb-4">
+              You can keep your KILO private and encrypted at rest, or opt in to sharing and turn off app-level encrypted handling for those entries.
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              disabled={isSaving}
+              onPress={() =>
+                setForm((current) => ({
+                  ...current,
+                  encrypt_kilo_entries: true,
+                  share_kilo_entries: false,
+                }))
+              }
+              className="rounded-2xl p-4 mb-3"
+              style={{
+                borderWidth: 1,
+                borderColor: form.encrypt_kilo_entries && !form.share_kilo_entries ? "#15803D" : "#BBF7D0",
+                backgroundColor: form.encrypt_kilo_entries && !form.share_kilo_entries ? "#15803D" : "#F0FDF4",
+              }}
+            >
+              <Text
+                className="text-base font-semibold"
+                style={{ color: form.encrypt_kilo_entries && !form.share_kilo_entries ? "#FFFFFF" : "#166534" }}
+              >
+                Keep my KILO private and encrypted at rest
+              </Text>
+              <Text
+                className="text-sm mt-2 leading-6"
+                style={{ color: form.encrypt_kilo_entries && !form.share_kilo_entries ? "rgba(255,255,255,0.88)" : "#166534" }}
+              >
+                Entries stay private by default and are stored using our encrypted-at-rest infrastructure.
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              disabled={isSaving}
+              onPress={() =>
+                setForm((current) => ({
+                  ...current,
+                  encrypt_kilo_entries: false,
+                  share_kilo_entries: true,
+                }))
+              }
+              className="rounded-2xl p-4 mb-4"
+              style={{
+                borderWidth: 1,
+                borderColor: !form.encrypt_kilo_entries && form.share_kilo_entries ? "#15803D" : "#D1D5DB",
+                backgroundColor: !form.encrypt_kilo_entries && form.share_kilo_entries ? "#15803D" : "#FFFFFF",
+              }}
+            >
+              <Text
+                className="text-base font-semibold"
+                style={{ color: !form.encrypt_kilo_entries && form.share_kilo_entries ? "#FFFFFF" : "#111827" }}
+              >
+                Share my KILO with others
+              </Text>
+              <Text
+                className="text-sm mt-2 leading-6"
+                style={{ color: !form.encrypt_kilo_entries && form.share_kilo_entries ? "rgba(255,255,255,0.88)" : "#6B7280" }}
+              >
+                This opts you out of app-level encrypted handling so entries can be shared more directly.
+              </Text>
+            </TouchableOpacity>            
           </View>
         </FadeIn>
 

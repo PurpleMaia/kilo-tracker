@@ -9,11 +9,18 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { profileUpdateSchema } from "@kilo/shared/schemas";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { FadeIn } from "@/components/shared/fade-in";
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 type ProfileForm = {
   first_name: string;
@@ -27,7 +34,7 @@ type ProfileForm = {
 };
 
 type Step = {
-  key: "identity" | "place" | "finish";
+  key: "identity" | "place" | "consent";
   label: string;
   title: string;
   description: string;
@@ -63,10 +70,10 @@ const STEPS: Step[] = [
     ],
   },
   {
-    key: "finish",
-    label: "Review",
-    title: "Ready to continue",
-    description: "You can update the rest of your profile later.",
+    key: "consent",
+    label: "Consent",
+    title: "Storage and sharing",
+    description: "Choose how your KILO entries should be handled, then confirm your consent.",
     fields: [],
   },
 ];
@@ -85,7 +92,7 @@ function toForm(profile: ReturnType<typeof useAuth>["profile"]): ProfileForm {
 }
 
 function stepComplete(form: ProfileForm, step: Step) {
-  if (step.key === "finish") return true;
+  if (step.key === "consent") return true;
   return step.fields.every((field) => {
     if (field.key === "mauna" || field.key === "wai") return true;
     return form[field.key].trim().length > 0;
@@ -98,6 +105,26 @@ export default function OnboardingScreen() {
   const [stepIndex, setStepIndex] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consentChecked, setConsentChecked] = useState(profile?.consent_privacy_ack === true);
+  const [sharingChoice, setSharingChoice] = useState<"private" | "shared" | null>(
+    profile?.encrypt_kilo_entries === true && profile?.share_kilo_entries === false
+      ? "private"
+      : profile?.encrypt_kilo_entries === false && profile?.share_kilo_entries === true
+        ? "shared"
+        : null
+  );
+  const privateSelected = useSharedValue(sharingChoice === "private" ? 1 : 0);
+  const sharedSelected = useSharedValue(sharingChoice === "shared" ? 1 : 0);
+  const consentSelected = useSharedValue(consentChecked ? 1 : 0);
+
+  useEffect(() => {
+    privateSelected.value = withTiming(sharingChoice === "private" ? 1 : 0, { duration: 220 });
+    sharedSelected.value = withTiming(sharingChoice === "shared" ? 1 : 0, { duration: 220 });
+  }, [privateSelected, sharedSelected, sharingChoice]);
+
+  useEffect(() => {
+    consentSelected.value = withTiming(consentChecked ? 1 : 0, { duration: 180 });
+  }, [consentChecked, consentSelected]);
 
   useEffect(() => {
     if (profileComplete) {
@@ -118,6 +145,25 @@ export default function OnboardingScreen() {
     setError(null);
   };
 
+  const privateCardStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(privateSelected.value, [0, 1], ["#F0FDF4", "#15803D"]),
+    borderColor: interpolateColor(privateSelected.value, [0, 1], ["#BBF7D0", "#15803D"]),
+  }));
+
+  const sharedCardStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(sharedSelected.value, [0, 1], ["#FFFFFF", "#15803D"]),
+    borderColor: interpolateColor(sharedSelected.value, [0, 1], ["#D1D5DB", "#15803D"]),
+  }));
+
+  const consentRowStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(consentSelected.value, [0, 1], ["#FFFFFF", "#F0FDF4"]),
+    borderColor: interpolateColor(consentSelected.value, [0, 1], ["#D1D5DB", "#15803D"]),
+  }));
+
+  const consentBoxStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(consentSelected.value, [0, 1], ["#9CA3AF", "#15803D"]),
+  }));
+
   const handleContinue = async () => {
     if (!stepComplete(form, step)) {
       setError("Fill in the required fields before continuing.");
@@ -135,11 +181,21 @@ export default function OnboardingScreen() {
       return;
     }
 
+    if (!consentChecked || !sharingChoice) {
+      setError("Choose a storage option and confirm consent before continuing.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       await apiFetch("/api/profile", {
         method: "PUT",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          consent_privacy_ack: true,
+          share_kilo_entries: sharingChoice === "shared",
+          encrypt_kilo_entries: sharingChoice === "private",
+        }),
       });
       await refreshProfile();
       router.replace("/(protected)");
@@ -183,8 +239,10 @@ export default function OnboardingScreen() {
             const complete = stepComplete(form, item);
             const active = index === stepIndex;
             return (
-              <View
+              <TouchableOpacity
                 key={item.key}
+                activeOpacity={0.8}
+                onPress={() => setStepIndex(index)}
                 style={{
                   flex: 1,
                   borderRadius: 22,
@@ -204,7 +262,7 @@ export default function OnboardingScreen() {
                 <Text style={{ marginTop: 4, color: "#6B7280", fontSize: 12, lineHeight: 18 }}>
                   {complete ? "Complete" : item.title}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>        
@@ -268,22 +326,105 @@ export default function OnboardingScreen() {
                 ))}
               </View>
             ) : (
-              <View
-                style={{
-                  marginTop: 28,
-                  borderRadius: 20,
-                  backgroundColor: "#F0FDF4",
-                  borderWidth: 1,
-                  borderColor: "#BBF7D0",
-                  padding: 16,
-                }}
-              >
-                <Text style={{ color: "#166534", fontSize: 14, lineHeight: 24 }}>
-                  Required now: first name, last name, date of birth, and ahupuaʻa.
-                </Text>
-                <Text style={{ marginTop: 8, color: "#15803D", fontSize: 14, lineHeight: 24 }}>
-                  Mauna and wai can stay blank if you do not know them yet.
-                </Text>
+              <View style={{ marginTop: 28, gap: 14 }}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setSharingChoice("private");
+                    setError(null);
+                  }}
+                >
+                  <Animated.View
+                    style={[
+                      {
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        padding: 16,
+                      },
+                      privateCardStyle,
+                    ]}
+                  >
+                  <Text style={{ color: sharingChoice === "private" ? "#FFFFFF" : "#166534", fontSize: 15, fontWeight: "700" }}>
+                    Keep my KILO private and encrypted at rest
+                  </Text>
+                  <Text style={{ marginTop: 8, color: sharingChoice === "private" ? "rgba(255,255,255,0.88)" : "#166534", fontSize: 14, lineHeight: 24 }}>
+                    Your entries stay private by default. They are stored using our encrypted-at-rest infrastructure and are not shared with others.
+                  </Text>
+                  </Animated.View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setSharingChoice("shared");
+                    setError(null);
+                  }}
+                >
+                  <Animated.View
+                    style={[
+                      {
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        padding: 16,
+                      },
+                      sharedCardStyle,
+                    ]}
+                  >
+                  <Text style={{ color: sharingChoice === "shared" ? "#FFFFFF" : "#111827", fontSize: 15, fontWeight: "700" }}>
+                    Share my KILO with others
+                  </Text>
+                  <Text style={{ marginTop: 8, color: sharingChoice === "shared" ? "rgba(255,255,255,0.88)" : "#6B7280", fontSize: 14, lineHeight: 24 }}>
+                    Choosing sharing opts you out of app-level encrypted handling for those entries so they can be shared more directly with others.
+                  </Text>
+                  </Animated.View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setConsentChecked((current) => !current);
+                    setError(null);
+                  }}
+                >
+                  <Animated.View
+                    style={[
+                      {
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        gap: 12,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        padding: 14,
+                      },
+                      consentRowStyle,
+                    ]}
+                  >
+                    <Animated.View
+                      style={[
+                        {
+                          marginTop: 2,
+                          height: 20,
+                          width: 20,
+                          borderRadius: 6,
+                          borderWidth: 1.5,
+                          backgroundColor: "#FFFFFF",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        },
+                        consentBoxStyle,
+                      ]}
+                    >
+                      {consentChecked ? (
+                        <Ionicons name="checkmark" size={14} color="#15803D" />
+                      ) : null}
+                    </Animated.View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: "#111827", fontSize: 14, lineHeight: 22 }}>
+                        I understand how my KILO entries are stored and I consent to this storage approach.
+                      </Text>
+                    </View>
+                  </Animated.View>
+                </TouchableOpacity>
               </View>
             )}
 

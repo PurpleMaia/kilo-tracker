@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { View, Text, TouchableOpacity, Platform, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,7 +28,7 @@ const TABS = [
 
 export function TabBar({ state }: { state: { index: number; routes: Array<{ name: string }> } }) {
   const activeRoute = state.routes[state.index]?.name;
-  const { profileComplete } = useAuth();
+  const { profileComplete, profileHasUnsavedChanges } = useAuth();
 
   if (activeRoute === "kilo" || activeRoute === "onboarding") {
     return null;
@@ -45,16 +45,23 @@ export function TabBar({ state }: { state: { index: number; routes: Array<{ name
         {TABS.map((tab) => {
           if (tab.name === "__kilo__") {
             return (
-              <TouchableOpacity
-                key={tab.name}
-                onPress={() =>
-                  router.push(
-                    profileComplete ? "/(protected)/kilo" : "/(protected)/onboarding"
-                  )
+            <TouchableOpacity
+              key={tab.name}
+              onPress={() => {
+                if (activeRoute === "profile" && profileHasUnsavedChanges) {
+                  Alert.alert(
+                    "Unsaved profile changes",
+                    "Save your profile before leaving this screen."
+                  );
+                  return;
                 }
-                activeOpacity={0.8}
-                className="items-center -mt-5"
-              >
+                router.push(
+                  profileComplete ? "/(protected)/kilo" : "/(protected)/onboarding"
+                );
+              }}
+              activeOpacity={0.8}
+              className="items-center -mt-5"
+            >
                 <View
                   className="w-14 h-14 rounded-full items-center justify-center"
                   style={{
@@ -85,6 +92,13 @@ export function TabBar({ state }: { state: { index: number; routes: Array<{ name
             <TouchableOpacity
               key={tab.name}
               onPress={() => {
+                if (activeRoute === "profile" && !isActive && profileHasUnsavedChanges) {
+                  Alert.alert(
+                    "Unsaved profile changes",
+                    "Save your profile before leaving this screen."
+                  );
+                  return;
+                }
                 const route = tab.name === "index" ? "/" : `/${tab.name}`;
                 router.navigate(`/(protected)${route}` as never);
               }}

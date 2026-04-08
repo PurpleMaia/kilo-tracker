@@ -13,4 +13,7 @@ export const profileUpdateSchema = z.object({
   wai: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   kula: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   role: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  consent_privacy_ack: z.boolean().optional(),
+  share_kilo_entries: z.boolean().optional(),
+  encrypt_kilo_entries: z.boolean().optional(),
 });

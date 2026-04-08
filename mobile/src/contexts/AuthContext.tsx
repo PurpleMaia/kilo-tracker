@@ -7,6 +7,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   profile: MobileUserProfile;
   profileComplete: boolean;
+  profileHasUnsavedChanges: boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (identifier: string, password: string) => Promise<void>;
@@ -14,6 +15,7 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  setProfileHasUnsavedChanges: (value: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -21,6 +23,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<MobileUserProfile>(null);
+  const [profileHasUnsavedChanges, setProfileHasUnsavedChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshProfile = useCallback(async () => {
@@ -97,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         profile,
         profileComplete: isMobileProfileComplete(profile),
+        profileHasUnsavedChanges,
         isLoading,
         isAuthenticated: !!user,
         login,
@@ -104,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         refreshSession,
         refreshProfile,
+        setProfileHasUnsavedChanges,
       }}
     >
       {children}
