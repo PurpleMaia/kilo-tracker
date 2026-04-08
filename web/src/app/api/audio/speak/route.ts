@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
+import { checkLLMRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
     // Validate user session
-    await validateSession(request);
+    const user = await validateSession(request);
+
+    // Rate limit LLM API calls
+    const rateLimitResponse = checkLLMRateLimit(request, user.id);
+    if (rateLimitResponse) return rateLimitResponse;
 
     const baseUrl = process.env.MODEL_BASE_URL?.trim();
     const apiKey = process.env.MODEL_API_KEY?.trim();
