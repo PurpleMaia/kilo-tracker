@@ -7,7 +7,7 @@ function emptyToUndefined(val: unknown) {
 export const profileUpdateSchema = z.object({
   first_name: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   last_name: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
-  dob: z.preprocess(emptyToUndefined, z.string().date().optional()),
+  dob: z.preprocess(emptyToUndefined, z.string().optional()),
   mauna: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   aina: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   wai: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),

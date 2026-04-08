@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { useAuth } from "@/contexts/AuthContext";
 
 const TABS = [
   { name: "index", label: "Home", icon: "home-outline", iconActive: "home" },
@@ -26,8 +26,13 @@ const TABS = [
   },
 ] as const;
 
-export function TabBar({ state }: BottomTabBarProps) {
+export function TabBar({ state }: { state: { index: number; routes: Array<{ name: string }> } }) {
   const activeRoute = state.routes[state.index]?.name;
+  const { profileComplete } = useAuth();
+
+  if (activeRoute === "kilo" || activeRoute === "onboarding") {
+    return null;
+  }
 
   return (
     <View
@@ -42,7 +47,11 @@ export function TabBar({ state }: BottomTabBarProps) {
             return (
               <TouchableOpacity
                 key={tab.name}
-                onPress={() => router.push("/(protected)/kilo")}
+                onPress={() =>
+                  router.push(
+                    profileComplete ? "/(protected)/kilo" : "/(protected)/onboarding"
+                  )
+                }
                 activeOpacity={0.8}
                 className="items-center -mt-5"
               >

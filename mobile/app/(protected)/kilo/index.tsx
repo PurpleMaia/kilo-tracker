@@ -20,6 +20,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { apiFetch, getToken } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { ThemedBackground } from "@/components/kilo/themed-background";
 import { StepIndicator } from "@/components/kilo/step-indicator";
@@ -32,6 +33,7 @@ type PhotoData = { uri: string; mimeType: string };
 type PhotoQuestion = "q1" | "q2" | "q3";
 
 export default function KiloScreen() {
+  const { profileComplete, refreshProfile } = useAuth();
   const { id: editIdParam } = useLocalSearchParams<{ id?: string }>();
   const editId = editIdParam ? Number(editIdParam) : null;
   const isEditMode = editId !== null && !isNaN(editId);
@@ -51,6 +53,18 @@ export default function KiloScreen() {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [transcribeMode, setTranscribeMode] = useState<"whisper" | "device" | null>(null);
   const [serverPhotoSources, setServerPhotoSources] = useState<Record<PhotoQuestion, { uri: string; headers: Record<string, string> } | null>>({ q1: null, q2: null, q3: null });
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshProfile();
+    }, [refreshProfile])
+  );
+
+  useEffect(() => {
+    if (!profileComplete) {
+      router.replace("/(protected)/onboarding");
+    }
+  }, [profileComplete]);
 
   // expo-av recording ref (for Whisper path)
   const recordingRef = useRef<Audio.Recording | null>(null);

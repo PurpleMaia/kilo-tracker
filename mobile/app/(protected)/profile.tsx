@@ -49,39 +49,27 @@ const FIELDS: {
   { key: "mauna", label: "Mauna", placeholder: "e.g. Mauna Kea" },
   { key: "aina", label: "ʻĀina", placeholder: "e.g. Kailua" },
   { key: "wai", label: "Wai", placeholder: "e.g. Nuʻuanu" },
-  { key: "kula", label: "School", placeholder: "e.g. Punahou" },
-  { key: "role", label: "Role", placeholder: "e.g. student, teacher" },
 ];
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, profile, profileComplete, logout, refreshProfile } = useAuth();
   const [form, setForm] = useState<ProfileForm>(EMPTY);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    apiFetch<{ profile: ProfileForm | null }>("/api/profile")
-      .then(({ profile }) => {
-        if (profile) {
-          setForm({
-            first_name: profile.first_name ?? "",
-            last_name: profile.last_name ?? "",
-            dob: profile.dob
-              ? new Date(profile.dob).toISOString().split("T")[0]
-              : "",
-            mauna: profile.mauna ?? "",
-            aina: profile.aina ?? "",
-            wai: profile.wai ?? "",
-            kula: profile.kula ?? "",
-            role: profile.role ?? "",
-          });
-        }
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }, []);
+    setForm({
+      first_name: profile?.first_name ?? "",
+      last_name: profile?.last_name ?? "",
+      dob: profile?.dob ? new Date(profile.dob).toISOString().split("T")[0] : "",
+      mauna: profile?.mauna ?? "",
+      aina: profile?.aina ?? "",
+      wai: profile?.wai ?? "",
+      kula: profile?.kula ?? "",
+      role: profile?.role ?? "",
+    });
+  }, [profile]);
 
   const handleSave = async () => {
     setError(null);
@@ -91,6 +79,7 @@ export default function ProfileScreen() {
         method: "PUT",
         body: JSON.stringify(form),
       });
+      await refreshProfile();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -115,14 +104,6 @@ export default function ProfileScreen() {
       },
     ]);
   };
-
-  if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#15803D" />
-      </View>
-    );
-  }
 
   return (
     <KeyboardAvoidingView
@@ -170,6 +151,17 @@ export default function ProfileScreen() {
         </FadeIn>
 
         <FadeIn delay={200}>
+          {!profileComplete && (
+            <View className="rounded-2xl p-4 mb-4 bg-amber-50" style={{ borderWidth: 1, borderColor: "#FCD34D" }}>
+              <Text className="text-sm font-bold uppercase tracking-wide" style={{ color: "#92400E", opacity: 0.85 }}>
+                Incomplete Profile
+              </Text>
+              <Text className="text-sm mt-2 leading-6" style={{ color: "#78350F" }}>
+                Add your name, date of birth, and ʻāina before creating a KILO entry.
+              </Text>
+            </View>
+          )}
+
           <View
             className="rounded-2xl p-5 mb-4 bg-gray-50"
             style={{ borderWidth: 1, borderColor: "#E7E5E4" }}

@@ -1,37 +1,54 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { apiFetch, saveToken, clearToken, getToken } from "@/lib/api";
 import { AuthUser } from "@/types";
+import { fetchProfile, isMobileProfileComplete, MobileUserProfile } from "@/lib/profile";
 
 interface AuthContextValue {
   user: AuthUser | null;
+  profile: MobileUserProfile;
+  profileComplete: boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (identifier: string, password: string) => Promise<void>;
   register: (email: string, username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [profile, setProfile] = useState<MobileUserProfile>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const refreshProfile = useCallback(async () => {
+    try {
+      const nextProfile = await fetchProfile();
+      setProfile(nextProfile);
+    } catch {
+      setProfile(null);
+    }
+  }, []);
 
   const refreshSession = useCallback(async () => {
     try {
       const session = await getToken();
       if (!session) {
         setUser(null);
+        setProfile(null);
         return;
       }
       const data = await apiFetch<{ user: AuthUser }>("/api/auth/session");
       setUser(data.user);
+      await refreshProfile();
     } catch {
       setUser(null);
+      setProfile(null);
       await clearToken();
     }
-  }, []);
+  }, [refreshProfile]);
 
   useEffect(() => {
     refreshSession().finally(() => setIsLoading(false));
@@ -47,7 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     await saveToken(data.token, data.tokenType);
     setUser(data.user);
-  }, []);
+    await refreshProfile();
+  }, [refreshProfile]);
 
   const register = useCallback(async (email: string, username: string, password: string) => {
     const data = await apiFetch<{ user: AuthUser; token: string; tokenType: string }>(
@@ -59,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     await saveToken(data.token, data.tokenType);
     setUser(data.user);
+    setProfile(null);
   }, []);
 
   const logout = useCallback(async () => {
@@ -69,18 +88,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     await clearToken();
     setUser(null);
+    setProfile(null);
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        profile,
+        profileComplete: isMobileProfileComplete(profile),
         isLoading,
         isAuthenticated: !!user,
         login,
         register,
         logout,
         refreshSession,
+        refreshProfile,
       }}
     >
       {children}

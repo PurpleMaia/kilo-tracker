@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { View, ActivityIndicator } from "react-native";
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, profileComplete } = useAuth();
 
   if (isLoading) {
     return (
@@ -13,5 +13,15 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={isAuthenticated ? "/(protected)" : "/(auth)/login"} />;
+  return (
+    <Redirect
+      href={
+        isAuthenticated
+          ? profileComplete
+            ? "/(protected)"
+            : "/(protected)/onboarding"
+          : "/(auth)/login"
+      }
+    />
+  );
 }

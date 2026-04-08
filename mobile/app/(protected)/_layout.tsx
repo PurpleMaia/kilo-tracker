@@ -1,10 +1,13 @@
-import { Tabs, Redirect } from "expo-router";
+import { Tabs, Redirect, useSegments } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { View, ActivityIndicator } from "react-native";
 import { TabBar } from "@/components/navigation/tab-bar";
 
 export default function ProtectedLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, profileComplete } = useAuth();
+  const segments = useSegments();
+  const onOnboardingRoute = segments.includes("onboarding");
+  const onProfileRoute = segments.includes("profile");
 
   if (isLoading) {
     return (
@@ -18,6 +21,14 @@ export default function ProtectedLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
+  if (!profileComplete && !onOnboardingRoute && !onProfileRoute) {
+    return <Redirect href="/(protected)/onboarding" />;
+  }
+
+  if (profileComplete && onOnboardingRoute) {
+    return <Redirect href="/(protected)" />;
+  }
+
   return (
     <Tabs
       tabBar={(props) => <TabBar {...props} />}
@@ -27,6 +38,10 @@ export default function ProtectedLayout() {
       <Tabs.Screen name="history" options={{ title: "History" }} />
       <Tabs.Screen name="learn" options={{ title: "Learn" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+      <Tabs.Screen
+        name="onboarding"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
+      />
       <Tabs.Screen
         name="kilo"
         options={{ href: null, tabBarStyle: { display: "none" } }}

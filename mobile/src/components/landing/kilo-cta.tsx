@@ -14,36 +14,41 @@ export function KiloCta({ profileComplete, hasEntryToday }: KiloCtaProps) {
       <TouchableOpacity
         className={`rounded-2xl py-5 px-6 items-center ${
           profileComplete
-            ? "bg-gray-50"
+            ? "bg-green-700"
             : "bg-gray-50/50"
         }`}
         style={{
           borderWidth: 1,
-          borderColor: profileComplete ? "#15803D30" : "#E7E5E4",
+          borderColor: profileComplete ? "#15803D" : "#E7E5E4",
         }}
-        onPress={() => profileComplete && router.push("/(protected)/kilo")}
-        disabled={!profileComplete}
+        onPress={() =>
+          router.push(profileComplete ? "/(protected)/kilo" : "/(protected)/onboarding")
+        }
         activeOpacity={0.7}
       >
         <Text
           className="text-xl font-semibold"
           style={{
             fontFamily: "Newsreader_400Regular",
-            color: profileComplete ? "#15803D" : "#78716C",
+            color: profileComplete ? "#FFFFFF" : "#78716C",
           }}
         >
           {label}
         </Text>
         {!hasEntryToday && (
           <Text className="text-sm text-gray-500 mt-1">
-            observe · reflect
+            {profileComplete ? (
+              <Text style={{ color: "rgba(255,255,255,0.82)" }}>observe · reflect</Text>
+            ) : (
+              "observe · reflect"
+            )}
           </Text>
         )}
       </TouchableOpacity>
 
       {!profileComplete && (
         <Text className="text-sm text-gray-500 text-center mt-2">
-          Complete your profile to begin
+          Complete onboarding to begin
         </Text>
       )}
     </View>

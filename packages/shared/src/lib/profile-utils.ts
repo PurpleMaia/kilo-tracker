@@ -18,10 +18,6 @@ export function isProfileComplete(profile: UserProfile | null): boolean {
       (typeof profile.dob === 'string'
         ? profile.dob.trim().length > 0
         : !Number.isNaN((profile.dob as Date).getTime())) &&
-    profile.mauna?.trim() &&
-    profile.aina?.trim() &&
-    profile.wai?.trim() &&
-    profile.kula?.trim() &&
-    profile.role?.trim()
+    profile.aina?.trim()
   );
 }

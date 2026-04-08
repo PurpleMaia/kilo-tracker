@@ -31,6 +31,17 @@ const registerSchema = z.object({
 
 type FieldErrors = Partial<Record<keyof z.infer<typeof registerSchema>, string>>;
 
+type RegisterField = {
+  label: string;
+  value: string;
+  setter: (value: string) => void;
+  key: keyof z.infer<typeof registerSchema>;
+  placeholder: string;
+  keyboard?: "default" | "email-address";
+  autocap?: "none";
+  secure?: boolean;
+};
+
 export default function RegisterScreen() {
   const { register } = useAuth();
   const [email, setEmail] = useState("");
@@ -40,6 +51,13 @@ export default function RegisterScreen() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fields: RegisterField[] = [
+    { label: "Email", value: email, setter: setEmail, key: "email", placeholder: "you@example.com", keyboard: "email-address", autocap: "none" },
+    { label: "Username", value: username, setter: setUsername, key: "username", placeholder: "your_username", keyboard: "default", autocap: "none" },
+    { label: "Password", value: password, setter: setPassword, key: "password", placeholder: "8+ characters", secure: true },
+    { label: "Confirm Password", value: confirmPassword, setter: setConfirmPassword, key: "confirmPassword", placeholder: "Repeat password", secure: true },
+  ];
 
   const handleRegister = async () => {
     setServerError(null);
@@ -59,7 +77,7 @@ export default function RegisterScreen() {
     setIsSubmitting(true);
     try {
       await register(parsed.data.email, parsed.data.username, parsed.data.password);
-      router.replace("/(protected)");
+      router.replace("/(protected)/onboarding");
     } catch (err) {
       setServerError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -89,14 +107,7 @@ export default function RegisterScreen() {
           </View>
         )}
 
-        {(
-          [
-            { label: "Email", value: email, setter: setEmail, key: "email", placeholder: "you@example.com", keyboard: "email-address" as const, autocap: "none" as const },
-            { label: "Username", value: username, setter: setUsername, key: "username", placeholder: "your_username", keyboard: "default" as const, autocap: "none" as const },
-            { label: "Password", value: password, setter: setPassword, key: "password", placeholder: "8+ characters", secure: true },
-            { label: "Confirm Password", value: confirmPassword, setter: setConfirmPassword, key: "confirmPassword", placeholder: "Repeat password", secure: true },
-          ] as const
-        ).map(({ label, value, setter, key, placeholder, keyboard, autocap, secure }) => (
+        {fields.map(({ label, value, setter, key, placeholder, keyboard, autocap, secure }) => (
           <View key={key} className="mb-4">
             <Text className="text-base font-semibold text-gray-700 mb-1.5">{label}</Text>
             <TextInput
