@@ -1,5 +1,5 @@
 import { db } from "@/db/kysely/client";
-import type { UserProfile } from "@/lib/profile-utils";
+import { isProfileComplete, type UserProfile } from "@/lib/profile-utils";
 import { AppError } from "@/lib/errors";
 
 export type { UserProfile } from "@/lib/profile-utils";
