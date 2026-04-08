@@ -1,13 +1,17 @@
 import { Tabs, Redirect, useSegments } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNetwork } from "@/contexts/NetworkContext";
 import { View, ActivityIndicator } from "react-native";
 import { TabBar } from "@/components/navigation/tab-bar";
+import { NoNetwork } from "@/components/shared/no-network";
 
 export default function ProtectedLayout() {
   const { isAuthenticated, isLoading, profileComplete } = useAuth();
+  const { isConnected } = useNetwork();
   const segments = useSegments();
   const onOnboardingRoute = segments.includes("onboarding");
   const onProfileRoute = segments.includes("profile");
+  const onLearnRoute = segments.includes("learn");
 
   if (isLoading) {
     return (
@@ -27,6 +31,10 @@ export default function ProtectedLayout() {
 
   if (profileComplete && onOnboardingRoute) {
     return <Redirect href="/(protected)" />;
+  }
+
+  if (!isConnected && !onLearnRoute) {
+    return <NoNetwork />;
   }
 
   return (

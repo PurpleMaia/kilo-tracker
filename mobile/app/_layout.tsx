@@ -1,6 +1,7 @@
 import "../global.css";
 import { Stack } from "expo-router";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { NetworkProvider } from "@/contexts/NetworkContext";
 import {
   useFonts,
   Newsreader_400Regular,
@@ -26,8 +27,10 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-    </AuthProvider>
+    <NetworkProvider>
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </AuthProvider>
+    </NetworkProvider>
   );
 }

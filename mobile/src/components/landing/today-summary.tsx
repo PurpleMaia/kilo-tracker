@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "@/lib/api";
 import { KiloPhoto } from "@/components/shared/kilo-photo";
@@ -194,17 +194,31 @@ function SkeletonBlock() {
   );
 }
 
+function SummarySkeletonBlock() {
+  return (
+    <>
+      <SectionDivider label="Today's Summary" />
+      <View className="gap-y-2">
+        <View className="h-3.5 w-full rounded-full bg-gray-50" />
+        <View className="h-3.5 w-11/12 rounded-full bg-gray-50" />
+        <View className="h-3.5 w-4/5 rounded-full bg-gray-50" />
+      </View>
+    </>
+  );
+}
+
 // ── Main component ───────────────────────────────────────────────────
 
 export function TodaySummary() {
   const [entry, setEntry] = useState<KiloEntry | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoadingEntry, setIsLoadingEntry] = useState(true);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const hasFetched = useRef(false);
+  const latestEntryIdRef = useRef<number | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (): Promise<KiloEntry | null> => {
     try {
       const kiloRes = await apiFetch<{ entries: KiloEntry[]; total: number }>(
         "/api/kilo?page=1&limit=1"
@@ -213,37 +227,92 @@ export function TodaySummary() {
       const latest = kiloRes.entries[0];
       const todayEntry = latest && isToday(latest.created_at) ? latest : null;
       setEntry(todayEntry);
-
-      // Only fetch summary if there's a kilo entry today
-      if (todayEntry) {
-        const summaryRes = await apiFetch<SummaryData>("/api/tasks/summary");
-        setSummary(summaryRes.summary);
-        setTasks(summaryRes.tasks ?? []);
-      } else {
-        setSummary(null);
-        setTasks([]);
-      }
+      return todayEntry;
     } catch {
-      // silently handle
+      setEntry(null);
+      return null;
     }
   }, []);
 
-  // Fetch once on mount
-  useEffect(() => {
-    if (hasFetched.current) return;
-    hasFetched.current = true;
+  const fetchSummary = useCallback(async () => {
+    setIsLoadingSummary(true);
+    try {
+      const summaryRes = await apiFetch<SummaryData>("/api/tasks/summary");
+      setSummary(summaryRes.summary);
+      setTasks(summaryRes.tasks ?? []);
+    } catch {
+      setSummary(null);
+      setTasks([]);
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  }, []);
 
-    setLoading(true);
-    fetchData().finally(() => setLoading(false));
-  }, [fetchData]);
+  const refreshCard = useCallback(async () => {
+    setIsLoadingEntry(true);
+    const todayEntry = await fetchData();
+    setIsLoadingEntry(false);
+
+    const nextEntryId = todayEntry?.id ?? null;
+    const entryChanged = latestEntryIdRef.current !== nextEntryId;
+    latestEntryIdRef.current = nextEntryId;
+
+    if (!todayEntry) {
+      setSummary(null);
+      setTasks([]);
+      return;
+    }
+
+    if (entryChanged || !summary) {
+      await fetchSummary();
+    }
+  }, [fetchData, fetchSummary, summary]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      refreshCard();
+
+      const interval = setInterval(async () => {
+        if (!active) return;
+        const latestEntry = await fetchData();
+        const nextEntryId = latestEntry?.id ?? null;
+
+        if (latestEntryIdRef.current !== nextEntryId) {
+          latestEntryIdRef.current = nextEntryId;
+
+          if (!latestEntry) {
+            setSummary(null);
+            setTasks([]);
+            return;
+          }
+
+          await fetchSummary();
+        }
+      }, 15000);
+
+      return () => {
+        active = false;
+        clearInterval(interval);
+      };
+    }, [refreshCard, fetchData, fetchSummary])
+  );
 
   const handleRegenerate = async () => {
     setRegenerating(true);
-    await fetchData();
+    const todayEntry = await fetchData();
+    latestEntryIdRef.current = todayEntry?.id ?? null;
+    if (todayEntry) {
+      await fetchSummary();
+    } else {
+      setSummary(null);
+      setTasks([]);
+    }
     setRegenerating(false);
   };
 
-  if (loading) {
+  if (isLoadingEntry) {
     return <SkeletonBlock />;
   }
 
@@ -298,7 +367,7 @@ export function TodaySummary() {
         <Text className="text-sm font-semibold ml-1.5" style={{ color: "#15803D" }}>Edit entry</Text>
       </TouchableOpacity>
 
-      {summary && (
+      {/* {summary && (
         <>
           <SectionDivider label="Today's Summary" />
           <View className="flex-row items-start mb-1">
@@ -313,21 +382,25 @@ export function TodaySummary() {
             </Text>
           </View>
         </>
-      )}
+      )} */}
 
-      <TouchableOpacity
+      {/* {isLoadingSummary && (
+        <SummarySkeletonBlock />
+      )} */}
+
+      {/* <TouchableOpacity
         className="flex-row items-center justify-center mt-4 mb-2 py-2"
         onPress={handleRegenerate}
-        disabled={regenerating}
+        disabled={regenerating || isLoadingSummary}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        {regenerating ? (
+        {regenerating || isLoadingSummary ? (
           <ActivityIndicator size="small" color="#15803D" />
         ) : (
           <Ionicons name="refresh-outline" size={14} color="#78716C" />
         )}
         <Text className="text-sm ml-1.5" style={{ color: "#78716C" }}>
-          {regenerating ? "Regenerating…" : "Regenerate summary"}
+          {regenerating || isLoadingSummary ? "Regenerating…" : "Regenerate summary"}
         </Text>
       </TouchableOpacity>
 
@@ -340,7 +413,7 @@ export function TodaySummary() {
             ))}
           </View>
         </>
-      )}
+      )} */}
     </View>
   );
 }
