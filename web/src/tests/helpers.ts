@@ -174,6 +174,47 @@ export function createMockGetRequest(
 }
 
 /**
+ * Creates an authenticated NextRequest with a session cookie.
+ * Useful for route tests that require validateSession(request).
+ */
+export function createAuthedRequest(
+  url: string,
+  token: string,
+  options: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: Record<string, unknown> | string | FormData;
+    ip?: string;
+    cookieName?: 'session_token' | 'sysadmin_token';
+  } = {}
+): NextRequest {
+  const {
+    method = 'GET',
+    headers = {},
+    body,
+    ip = '127.0.0.1',
+    cookieName = 'session_token',
+  } = options;
+
+  const isStringBody = typeof body === 'string';
+  const hasJsonBody = body !== undefined && !isStringBody;
+
+  const request = new NextRequest(url, {
+    method,
+    headers: {
+      'user-agent': 'jest-test-runner',
+      'x-forwarded-for': ip,
+      cookie: `${cookieName}=${token}`,
+      ...(hasJsonBody ? { 'content-type': 'application/json' } : {}),
+      ...headers,
+    },
+    body: body === undefined ? undefined : isStringBody ? body : JSON.stringify(body),
+  });
+
+  return request;
+}
+
+/**
  * Helper function to clear all failed login attempts
  * Clears ALL failed attempts to prevent cross-test rate limiting in parallel test execution
  * This is necessary because all tests share the same IP (localhost) in the test environment

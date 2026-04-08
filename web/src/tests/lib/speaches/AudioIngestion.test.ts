@@ -2,6 +2,9 @@ import { POST } from '@/app/api/audio/transcribe/route';
 import { NextRequest } from 'next/server';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createAuthedRequest, createMockRequest, testUser } from '@/tests/helpers';
+import { hashPassword } from '@/lib/auth/password';
+import { db } from '@kilo/shared/db';
 
 /**
  * Integration tests for Speaches Audio Ingestion API
@@ -19,6 +22,8 @@ const FIXTURES_DIR = path.join(__dirname, 'fixtures');
 const TEST_AUDIO_PATH = path.join(FIXTURES_DIR, 'test-audio.wav');
 
 describe('Speaches Audio Ingestion Integration Tests', () => {
+  let sessionToken: string;
+
   // Check if Speaches server is available before running tests
   beforeAll(async () => {
     const baseUrl = process.env.MODEL_BASE_URL;
@@ -35,6 +40,33 @@ describe('Speaches Audio Ingestion Integration Tests', () => {
     } catch {
       console.warn('Could not connect to Speaches server');
     }
+
+    const userPasswordHash = await hashPassword(testUser.password);
+    
+    await db
+        .insertInto('users')
+        .values({
+        id: testUser.id,
+        email: testUser.email,
+        username: testUser.username,
+        password_hash: userPasswordHash,
+        system_role: testUser.system_role,
+        })
+        .onConflict((oc) => oc.column('id').doNothing())
+        .execute();
+    
+    const request = createMockRequest({
+        credentials: {
+          identifier: testUser.email,
+          password: testUser.password,
+        },
+      });
+
+    const loginResponse = await POST(request);
+    expect(loginResponse.status).toBe(200);
+    const loginBody = await loginResponse.json();
+    expect(loginBody.token).toBeDefined();
+    sessionToken = loginBody.token;
   });
 
   describe('POST /api/audio/transcribe', () => {
@@ -75,7 +107,7 @@ describe('Speaches Audio Ingestion Integration Tests', () => {
       const formData = new FormData();
       formData.append('file', audioFile);
 
-      const request = new NextRequest('http://localhost:3000/api/audio/transcribe', {
+      const request = createAuthedRequest('http://localhost:3000/api/audio/transcribe', sessionToken, {
         method: 'POST',
         body: formData,
       });
