@@ -49,29 +49,29 @@ case $ENV in
     # Test migration
     if [ -z "$MIGRATION_COUNT" ]; then
       echo "Running migration up (all)..."
-      migrate -database "${DEV_URL}" -path packages/shared/src/db/migrations up
+      migrate -database "${DEV_URL}" -path ../packages/shared/src/db/migrations up
     else
       echo "Running migration up ($MIGRATION_COUNT)..."
-      migrate -database "${DEV_URL}" -path packages/shared/src/db/migrations up $MIGRATION_COUNT
+      migrate -database "${DEV_URL}" -path ../packages/shared/src/db/migrations up $MIGRATION_COUNT
     fi
 
     # Test rollback
     echo ""
     echo "Testing rollback (down 1)..."
-    migrate -database "${DEV_URL}" -path packages/shared/src/db/migrations down 1
+    migrate -database "${DEV_URL}" -path ../packages/shared/src/db/migrations down 1
 
     # Run migration up again
     echo ""
     echo "Running migration back up..."
-    migrate -database "${DEV_URL}" -path packages/shared/src/db/migrations up 1
+    migrate -database "${DEV_URL}" -path ../packages/shared/src/db/migrations up 1
     ;;
   prod)
     if [ -z "$MIGRATION_COUNT" ]; then
       echo ""
-      migrate -database "${PROD_URL}" -path packages/shared/src/db/migrations up
+      migrate -database "${PROD_URL}" -path ../packages/shared/src/db/migrations up
     else 
       echo ""
-      migrate -database "${PROD_URL}" -path packages/shared/src/db/migrations up $MIGRATION_COUNT
+      migrate -database "${PROD_URL}" -path ../packages/shared/src/db/migrations up $MIGRATION_COUNT
     fi
     ;;
   local|*)
@@ -79,21 +79,21 @@ case $ENV in
     # Test migration
     if [ -z "$MIGRATION_COUNT" ]; then
       echo "Running migration up (all)..."
-      migrate -database "${DATABASE_URL}" -path packages/shared/src/db/migrations up
+      migrate -database "${DATABASE_URL}" -path ../packages/shared/src/db/migrations up
     else
       echo "Running migration up ($MIGRATION_COUNT)..."
-      migrate -database "${DATABASE_URL}" -path packages/shared/src/db/migrations up $MIGRATION_COUNT
+      migrate -database "${DATABASE_URL}" -path ../packages/shared/src/db/migrations up $MIGRATION_COUNT
     fi
 
     # Test rollback
     echo ""
     echo "Testing rollback (down 1)..."
-    migrate -database "${DATABASE_URL}" -path packages/shared/src/db/migrations down 1
+    migrate -database "${DATABASE_URL}" -path ../packages/shared/src/db/migrations down 1
 
     # Run migration up again
     echo ""
     echo "Running migration back up..."
-    migrate -database "${DATABASE_URL}" -path packages/shared/src/db/migrations up 1
+    migrate -database "${DATABASE_URL}" -path ../packages/shared/src/db/migrations up 1
     ;;
 esac
 

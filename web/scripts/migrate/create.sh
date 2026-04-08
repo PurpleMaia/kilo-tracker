@@ -8,6 +8,6 @@ if [ -z "$1" ]; then
 fi
 
 echo "Creating new migration: $1"
-migrate create -ext sql -dir packages/shared/src/db/migrations -seq "$1"
+migrate create -ext sql -dir ../packages/shared/src/db/migrations -seq "$1"
 
 echo "Migration created successfully!"

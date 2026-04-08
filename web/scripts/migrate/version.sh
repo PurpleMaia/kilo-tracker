@@ -24,19 +24,19 @@ case $ENV in
   dev)
     echo ""
     echo "Current migration version:"
-    migrate -database "${DEV_URL}" -path packages/shared/src/db/migrations version
+    migrate -database "${DEV_URL}" -path ../packages/shared/src/db/migrations version
     echo ""   
     ;;
   prod)
     echo ""
     echo "Current migration version:"
-    migrate -database "${PROD_URL}" -path packages/shared/src/db/migrations version
+    migrate -database "${PROD_URL}" -path ../packages/shared/src/db/migrations version
     echo ""
     ;;
   local|*)
     echo ""
     echo "Current migration version:"
-    migrate -database "${DATABASE_URL}" -path packages/shared/src/db/migrations version
+    migrate -database "${DATABASE_URL}" -path ../packages/shared/src/db/migrations version
     echo ""
     ;;
 esac

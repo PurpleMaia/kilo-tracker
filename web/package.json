@@ -16,7 +16,12 @@
     "init:sysadmin": "tsx ./scripts/init/helpers/sysadmin.ts",
     "test": "pnpm build && playwright test --project=chromium",
     "test:e2e": "playwright test --project=chromium",
-    "test:unit": "jest"
+    "test:unit": "jest",
+    "migrate:create": "pnpm --filter @kilo/shared migrate:create",
+    "migrate:up": "./scripts/migrate/up.sh",
+    "migrate:down": "./scripts/migrate/down.sh",
+    "migrate:version": "./scripts/migrate/version.sh",
+    "migrate:force": "./scripts/migrate/force.sh"
   },
   "dependencies": {
     "@azure/identity": "^4.13.1",
