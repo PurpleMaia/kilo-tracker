@@ -37,7 +37,6 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
     }
   }, [entry.id]);
 
-  const hasPhoto = entry.has_photo;
   const date = entry.created_at ? new Date(entry.created_at).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
@@ -109,22 +108,25 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
                     <Pencil className="w-5 h-5" />
                 </Link>
                 </Button>
-                <Button id='delete-kilo-button'                
+                <Button id='delete-kilo-button'
                 variant="ghost" size="sm" className="touch-action-manipulation text-red-500 hover:text-red-700" aria-label="Delete KILO Entry"
-                onClick={() => deleteEntry(entry.id)} 
+                onClick={() => deleteEntry(entry.id)}
                 disabled={deletingId === entry.id}>
                 <Trash2 className="w-5 h-5" />
                 </Button>
             </div>
             </div>
 
-        </CardHeader>  
+        </CardHeader>
         <CardContent className="pt-0 space-y-2 w-full">
-            <div className="space-y-2 grow">        
+            <div className="space-y-2 grow">
             {entry.q1 && (
             <div>
                 <p className="font-medium text-sm text-wrap">{QUESTIONS[0].question}:</p>
                 <p className="text-sm">{entry.q1}</p>
+                {entry.q1_photo_path && (
+                  <PicturePreviewDialog entryId={entry.id} question="q1" date={date} />
+                )}
             </div>
             )}
             <div className='border-t my-2' />
@@ -132,23 +134,31 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
                 <div>
                 <p className="font-medium text-sm text-wrap">{QUESTIONS[1].question}:</p>
                 <p className="text-sm">{entry.q2}</p>
+                {entry.q2_photo_path && (
+                  <PicturePreviewDialog entryId={entry.id} question="q2" date={date} />
+                )}
             </div>
-            )}              
+            )}
             <div className='border-t my-2' />
             {entry.q3 && (
             <div>
                 <p className="font-medium text-sm ">{QUESTIONS[2].question}:</p>
                 <p className="text-sm text-wrap">{entry.q3}</p>
+                {entry.q3_photo_path && (
+                  <PicturePreviewDialog entryId={entry.id} question="q3" date={date} />
+                )}
             </div>
             )}
-            </div>  
-
-            {hasPhoto && (
-                <>
-                  <div className='border-b'></div>
-                  <PicturePreviewDialog entryId={entry.id} date={date} />
-                </>
+            {entry.q4 && (
+              <>
+                <div className='border-t my-2' />
+                <div>
+                  <p className="font-medium text-sm text-wrap">{QUESTIONS[3].question}:</p>
+                  <p className="text-sm">{entry.q4}</p>
+                </div>
+              </>
             )}
+            </div>
         </CardContent>
         <CardFooter className="justify-end pt-0">
             <Button
@@ -171,13 +181,13 @@ export default function KiloCard({ entry, deletingId, deleteEntry }: KiloCardPro
   )
 }
 
-function PicturePreviewDialog({ entryId, date }: { entryId: number, date: string }) {
-    const photoUrl = `/api/kilo/photo?id=${entryId}`;
+function PicturePreviewDialog({ entryId, question, date }: { entryId: number; question: string; date: string }) {
+    const photoUrl = `/api/kilo/photo?id=${entryId}&question=${question}`;
 
     return (
       <Dialog>
         <DialogTrigger asChild>
-          <div className="relative w-full h-24 sm:h-28 md:h-32 lg:h-36 cursor-pointer">
+          <div className="relative w-full h-24 sm:h-28 md:h-32 lg:h-36 cursor-pointer mt-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
                 src={photoUrl}
@@ -203,4 +213,3 @@ function PicturePreviewDialog({ entryId, date }: { entryId: number, date: string
       </Dialog>
     );
   }
-

@@ -4,8 +4,11 @@ export type KiloEntry = {
   q1: string | null;
   q2: string | null;
   q3: string | null;
+  q4: string | null;
   location: string | null;
-  has_photo: boolean;
+  q1_photo_path: string | null;
+  q2_photo_path: string | null;
+  q3_photo_path: string | null;
   created_at: string | null;
 };
 
@@ -33,7 +36,8 @@ export const QUESTIONS: Question[] = [
   {
     id: "q2",
     question: "Papahulihonua - the earth and oceans",
-    required: true,    
+    required: true,
+    picture: true,
     guides: [
       "What does the ground look like? Dry, wet, muddy?",
       "Is the ocean calm, choppy, or rough?",
@@ -45,6 +49,7 @@ export const QUESTIONS: Question[] = [
     id: "q3",
     question: "Papahānaumoku — all things that give birth, regenerate and procreate",
     required: true,
+    picture: true,
     guides: [
       "What plants do you see? Are they flowering or fruiting?",
       "Do you see or hear any birds? What are they doing?",

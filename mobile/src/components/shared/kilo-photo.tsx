@@ -4,7 +4,7 @@ import { getToken } from "@/lib/api";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
-export function KiloPhoto({ entryId }: { entryId: number }) {
+export function KiloPhoto({ entryId, question = "q1" }: { entryId: number; question?: string }) {
   const [source, setSource] = useState<{ uri: string; headers: Record<string, string> } | null>(null);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export function KiloPhoto({ entryId }: { entryId: number }) {
       const session = await getToken();
       if (cancelled || !session) return;
       setSource({
-        uri: `${BASE_URL}/api/kilo/photo?id=${entryId}`,
+        uri: `${BASE_URL}/api/kilo/photo?id=${entryId}&question=${question}`,
         headers: {
           "x-session-token": session.token,
           "x-session-type": session.tokenType,
@@ -21,7 +21,7 @@ export function KiloPhoto({ entryId }: { entryId: number }) {
       });
     })();
     return () => { cancelled = true; };
-  }, [entryId]);
+  }, [entryId, question]);
 
   if (!source) return null;
   return (

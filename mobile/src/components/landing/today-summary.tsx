@@ -12,8 +12,11 @@ interface KiloEntry {
   q1: string;
   q2: string | null;
   q3: string | null;
+  q4: string | null;
   created_at: string;
-  has_photo: boolean;
+  q1_photo_path: string | null;
+  q2_photo_path: string | null;
+  q3_photo_path: string | null;
 }
 
 interface TaskItem {
@@ -270,13 +273,21 @@ export function TodaySummary() {
     <View className="px-7">
       <SectionDivider label="Today's Kilo" />
 
-      <ReflectionRow label="Papahulilani" text={entry.q1} />
-
-      <ReflectionRow label="Papahulihonua" text={entry.q2}>
-        {entry.has_photo && <KiloPhoto entryId={entry.id} />}
+      <ReflectionRow label="Papahulilani" text={entry.q1}>
+        {entry.q1_photo_path && <KiloPhoto entryId={entry.id} question="q1" />}
       </ReflectionRow>
 
-      <ReflectionRow label="Papahānaumoku" text={entry.q3} />
+      <ReflectionRow label="Papahulihonua" text={entry.q2}>
+        {entry.q2_photo_path && <KiloPhoto entryId={entry.id} question="q2" />}
+      </ReflectionRow>
+
+      <ReflectionRow label="Papahānaumoku" text={entry.q3}>
+        {entry.q3_photo_path && <KiloPhoto entryId={entry.id} question="q3" />}
+      </ReflectionRow>
+
+      {entry.q4 && (
+        <ReflectionRow label="Naʻau" text={entry.q4} />
+      )}
 
       <TouchableOpacity
         className="flex-row items-center self-end mt-1 mb-1"

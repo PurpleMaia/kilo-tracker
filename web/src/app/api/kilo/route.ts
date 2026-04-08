@@ -14,6 +14,9 @@ const MIME_TO_EXT: Record<string, string> = {
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5MB
 
+const PHOTO_QUESTIONS = ["q1", "q2", "q3"] as const;
+type PhotoQuestion = (typeof PHOTO_QUESTIONS)[number];
+
 async function uploadPhotoToBlob(
   buffer: Buffer,
   mimeType: string,
@@ -49,15 +52,30 @@ async function uploadPhotoToBlob(
 }
 
 /** Parse request body — supports both JSON and multipart/form-data */
-async function parseKiloBody(request: NextRequest): Promise<{ fields: Record<string, unknown>; photoFile: File | null }> {
+async function parseKiloBody(request: NextRequest): Promise<{
+  fields: Record<string, unknown>;
+  photoFiles: Record<PhotoQuestion, File | null>;
+}> {
   const contentType = request.headers.get("content-type") ?? "";
+  const emptyPhotos: Record<PhotoQuestion, File | null> = { q1: null, q2: null, q3: null };
 
   if (contentType.includes("multipart/form-data")) {
     const formData = await request.formData();
     const fields: Record<string, unknown> = {};
+    const photoFiles = { ...emptyPhotos };
 
     for (const [key, value] of formData.entries()) {
-      if (key === "photo") continue; // handle separately
+      // Handle per-question photo fields
+      if (key === "q1_photo" || key === "q2_photo" || key === "q3_photo") {
+        const q = key.replace("_photo", "") as PhotoQuestion;
+        photoFiles[q] = value as File;
+        continue;
+      }
+      // Legacy single "photo" field maps to q1
+      if (key === "photo") {
+        photoFiles.q1 = value as File;
+        continue;
+      }
       // Parse stringified values back to proper types
       if (value === "null") fields[key] = null;
       else if (value === "true") fields[key] = true;
@@ -66,20 +84,19 @@ async function parseKiloBody(request: NextRequest): Promise<{ fields: Record<str
       else fields[key] = value;
     }
 
-    const photoFile = formData.get("photo") as File | null;
-    return { fields, photoFile };
+    return { fields, photoFiles };
   }
 
   // JSON fallback
   const body = await request.json();
-  return { fields: body, photoFile: null };
+  return { fields: body, photoFiles: { ...emptyPhotos } };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await validateSession(request);
 
-    const { fields, photoFile } = await parseKiloBody(request);
+    const { fields, photoFiles } = await parseKiloBody(request);
     const parsed = kiloEntrySchema.safeParse(fields);
 
     if (!parsed.success) {
@@ -90,13 +107,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { q1, q2, q3, location, photo_path } = parsed.data;
+    const { q1, q2, q3, q4, location, q1_photo_path, q2_photo_path, q3_photo_path } = parsed.data;
 
-    // Upload photo file to blob storage if provided
-    let resolvedPhotoPath = photo_path ?? null;
-    if (photoFile && photoFile.size > 0) {
-      const buffer = Buffer.from(await photoFile.arrayBuffer());
-      resolvedPhotoPath = await uploadPhotoToBlob(buffer, photoFile.type, user.username);
+    // Upload photo files to blob storage
+    const resolvedPhotoPaths: Record<PhotoQuestion, string | null> = {
+      q1: q1_photo_path ?? null,
+      q2: q2_photo_path ?? null,
+      q3: q3_photo_path ?? null,
+    };
+
+    for (const q of PHOTO_QUESTIONS) {
+      const file = photoFiles[q];
+      if (file && file.size > 0) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        resolvedPhotoPaths[q] = await uploadPhotoToBlob(buffer, file.type, user.username);
+      }
     }
 
     const newEntry = await db
@@ -106,19 +131,16 @@ export async function POST(request: NextRequest) {
         q1,
         q2: q2 ?? null,
         q3: q3 ?? null,
+        q4: q4 ?? null,
         location: location ?? null,
-        photo_path: resolvedPhotoPath,
+        q1_photo_path: resolvedPhotoPaths.q1,
+        q2_photo_path: resolvedPhotoPaths.q2,
+        q3_photo_path: resolvedPhotoPaths.q3,
       })
-      .returning(["id", "q1", "q2", "q3", "location", "created_at"])
+      .returning(["id", "q1", "q2", "q3", "q4", "location", "q1_photo_path", "q2_photo_path", "q3_photo_path", "created_at"])
       .executeTakeFirst();
 
-    // Add has_photo flag to response
-    const entryWithPhoto = {
-      ...newEntry,
-      has_photo: !!resolvedPhotoPath,
-    };
-
-    return NextResponse.json({ entry: entryWithPhoto }, { status: 201 });
+    return NextResponse.json({ entry: newEntry }, { status: 201 });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(
@@ -134,7 +156,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
- 
+
 const PAGE_SIZE = 5;
 
 export async function GET(request: NextRequest) {
@@ -147,6 +169,8 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * limit;
 
   const isEditing = !!id;
+
+  const SELECT_COLS = ["id", "q1", "q2", "q3", "q4", "location", "q1_photo_path", "q2_photo_path", "q3_photo_path", "created_at"] as const;
 
   // If ID provided, return single entry (editing)
   if (isEditing) {
@@ -163,7 +187,7 @@ export async function GET(request: NextRequest) {
 
       const entry = await db
         .selectFrom("kilo")
-        .select(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
+        .select([...SELECT_COLS])
         .where("id", "=", entryId)
         .where("user_id", "=", user.id)
         .executeTakeFirst();
@@ -175,14 +199,7 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Return has_photo flag instead of the path
-      const { photo_path, ...rest } = entry;
-      const entryWithPhoto = {
-        ...rest,
-        has_photo: !!photo_path,
-      };
-
-      return NextResponse.json({ entry: entryWithPhoto }, { status: 200 });
+      return NextResponse.json({ entry }, { status: 200 });
     } catch (error) {
       if (error instanceof AppError) {
         return NextResponse.json(
@@ -222,7 +239,7 @@ export async function GET(request: NextRequest) {
 
     let entriesQuery = db
       .selectFrom("kilo")
-      .select(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
+      .select([...SELECT_COLS])
       .where("user_id", "=", user.id)
       .orderBy("created_at", "desc")
       .limit(limit)
@@ -247,16 +264,10 @@ export async function GET(request: NextRequest) {
       countQuery.executeTakeFirst(),
     ]);
 
-    // Map entries to include has_photo flag instead of path
-    const entriesWithPhotoFlag = entries.map(({ photo_path, ...rest }) => ({
-      ...rest,
-      has_photo: !!photo_path,
-    }));
-
     const total = Number(countResult?.total ?? 0);
     const totalPages = Math.ceil(total / limit);
 
-    return NextResponse.json({ entries: entriesWithPhotoFlag, total, page, totalPages });
+    return NextResponse.json({ entries, total, page, totalPages });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(
@@ -289,10 +300,10 @@ export async function DELETE(request: NextRequest) {
 
     const { id } = parsed.data;
 
-    // Fetch photo path before deleting for file cleanup
+    // Fetch photo paths before deleting for file cleanup
     const existing = await db
       .selectFrom("kilo")
-      .select(["photo_path"])
+      .select(["q1_photo_path", "q2_photo_path", "q3_photo_path"])
       .where("id", "=", id)
       .where("user_id", "=", user.id)
       .executeTakeFirst();
@@ -311,9 +322,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Clean up photo file from disk
-    if (existing?.photo_path) {
-      await deletePhotoBlob(existing.photo_path);
+    // Clean up photo blobs
+    if (existing) {
+      const photoPaths = [existing.q1_photo_path, existing.q2_photo_path, existing.q3_photo_path];
+      await Promise.all(
+        photoPaths.filter(Boolean).map((path) => deletePhotoBlob(path!))
+      );
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
@@ -353,7 +367,7 @@ export async function PUT(request: NextRequest) {
   try {
     const user = await validateSession(request);
 
-    const { fields, photoFile } = await parseKiloBody(request);
+    const { fields, photoFiles } = await parseKiloBody(request);
     const parsed = updateKiloSchema.safeParse(fields);
 
     if (!parsed.success) {
@@ -363,37 +377,58 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { id, q1, q2, q3, location, photo_path, keep_photo } = parsed.data;
-
-    // Upload photo file to blob storage if provided
-    let resolvedPhotoPath = photo_path ?? null;
-    if (photoFile && photoFile.size > 0) {
-      resolvedPhotoPath = await uploadPhotoToBlob(Buffer.from(await photoFile.arrayBuffer()), photoFile.type, user.username);
-    }
+    const { id, q1, q2, q3, q4, location, q1_photo_path, q2_photo_path, q3_photo_path, keep_q1_photo, keep_q2_photo, keep_q3_photo } = parsed.data;
 
     // Build update object
     const updateData: Record<string, unknown> = {
       q1,
       q2: q2 ?? null,
       q3: q3 ?? null,
+      q4: q4 ?? null,
       location: location ?? null,
     };
 
-    // Fetch old photo path for cleanup if replacing/clearing
-    let oldPhotoPath: string | null = null;
-    if (!keep_photo) {
-      const existing = await db
-        .selectFrom("kilo")
-        .select(["photo_path"])
-        .where("id", "=", id)
-        .where("user_id", "=", user.id)
-        .executeTakeFirst();
-      oldPhotoPath = existing?.photo_path ?? null;
-    }
+    // Fetch old photo paths for cleanup
+    const existing = await db
+      .selectFrom("kilo")
+      .select(["q1_photo_path", "q2_photo_path", "q3_photo_path"])
+      .where("id", "=", id)
+      .where("user_id", "=", user.id)
+      .executeTakeFirst();
 
-    // Only update photo if not keeping existing
-    if (!keep_photo) {
-      updateData.photo_path = resolvedPhotoPath;
+    const keepFlags: Record<PhotoQuestion, boolean | undefined> = {
+      q1: keep_q1_photo,
+      q2: keep_q2_photo,
+      q3: keep_q3_photo,
+    };
+
+    const schemaPhotoPaths: Record<PhotoQuestion, string | null | undefined> = {
+      q1: q1_photo_path,
+      q2: q2_photo_path,
+      q3: q3_photo_path,
+    };
+
+    const oldPhotoPaths: Record<PhotoQuestion, string | null> = {
+      q1: existing?.q1_photo_path ?? null,
+      q2: existing?.q2_photo_path ?? null,
+      q3: existing?.q3_photo_path ?? null,
+    };
+
+    // Handle each photo independently
+    for (const q of PHOTO_QUESTIONS) {
+      if (keepFlags[q]) {
+        // Keep existing photo — don't update
+        continue;
+      }
+
+      // Upload new file if provided
+      const file = photoFiles[q];
+      let resolvedPath = schemaPhotoPaths[q] ?? null;
+      if (file && file.size > 0) {
+        resolvedPath = await uploadPhotoToBlob(Buffer.from(await file.arrayBuffer()), file.type, user.username);
+      }
+
+      updateData[`${q}_photo_path`] = resolvedPath;
     }
 
     // Update the entry only if it belongs to the user
@@ -402,7 +437,7 @@ export async function PUT(request: NextRequest) {
       .set(updateData)
       .where("id", "=", id)
       .where("user_id", "=", user.id)
-      .returning(["id", "q1", "q2", "q3", "location", "photo_path", "created_at"])
+      .returning(["id", "q1", "q2", "q3", "q4", "location", "q1_photo_path", "q2_photo_path", "q3_photo_path", "created_at"])
       .executeTakeFirst();
 
     if (!updatedEntry) {
@@ -412,19 +447,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Clean up old file if photo was replaced or cleared
-    if (oldPhotoPath && oldPhotoPath !== updatedEntry.photo_path) {
-      await deletePhotoBlob(oldPhotoPath);
+    // Clean up old photos that were replaced or cleared
+    for (const q of PHOTO_QUESTIONS) {
+      const oldPath = oldPhotoPaths[q];
+      const newPath = updatedEntry[`${q}_photo_path`];
+      if (oldPath && oldPath !== newPath) {
+        await deletePhotoBlob(oldPath);
+      }
     }
 
-    // Return has_photo flag instead of path
-    const { photo_path: photoPath, ...rest } = updatedEntry;
-    const entryWithPhoto = {
-      ...rest,
-      has_photo: !!photoPath,
-    };
-
-    return NextResponse.json({ entry: entryWithPhoto }, { status: 200 });
+    return NextResponse.json({ entry: updatedEntry }, { status: 200 });
   } catch (error) {
     if (error instanceof AppError) {
       return NextResponse.json(

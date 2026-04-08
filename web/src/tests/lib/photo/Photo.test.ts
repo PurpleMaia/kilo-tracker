@@ -135,6 +135,24 @@ describe('Photo API Tests', () => {
       expect(data.error).toBe('Invalid entry ID');
     });
 
+    test('should return 400 for invalid question parameter', async () => {
+      const request = createMockGetRequest('http://localhost:3000/api/kilo/photo?id=1&question=q5');
+      Object.defineProperty(request, 'cookies', {
+        value: {
+          get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
+          getAll: () => [{ name: 'session_token', value: testUser.session_token }],
+          has: (name: string) => name === 'session_token',
+        },
+        writable: false,
+      });
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Invalid question parameter');
+    });
+
     test('should return 404 for non-existent entry', async () => {
       const request = createMockGetRequest('http://localhost:3000/api/kilo/photo?id=999999');
       Object.defineProperty(request, 'cookies', {
@@ -183,7 +201,7 @@ describe('Photo API Tests', () => {
     test('should return 404 when accessing another users photo', async () => {
       // Create entry with photo for other user
       const createRequest = createMockRequest(
-        { q1: 'Other user entry', photo_path: TEST_PHOTO_PATH },
+        { q1: 'Other user entry', q1_photo_path: TEST_PHOTO_PATH },
         {},
         { session_token: otherUser.session_token }
       );
@@ -210,9 +228,9 @@ describe('Photo API Tests', () => {
     });
 
     test('should return photo file with correct content type', async () => {
-      // Create entry with photo_path pointing to test file
+      // Create entry with q1_photo_path pointing to test file
       const createRequest = createMockRequest(
-        { q1: 'Test with photo', photo_path: TEST_PHOTO_PATH },
+        { q1: 'Test with photo', q1_photo_path: TEST_PHOTO_PATH },
         {},
         { session_token: testUser.session_token }
       );
@@ -220,7 +238,7 @@ describe('Photo API Tests', () => {
       const createData = await createResponse.json();
       const entryId = createData.entry.id;
 
-      const request = createMockGetRequest(`http://localhost:3000/api/kilo/photo?id=${entryId}`);
+      const request = createMockGetRequest(`http://localhost:3000/api/kilo/photo?id=${entryId}&question=q1`);
       Object.defineProperty(request, 'cookies', {
         value: {
           get: (name: string) => name === 'session_token' ? { name, value: testUser.session_token } : undefined,
@@ -242,9 +260,9 @@ describe('Photo API Tests', () => {
   });
 
   describe('PUT /api/kilo with photo updates', () => {
-    test('should keep existing photo when keep_photo is true', async () => {
+    test('should keep existing photo when keep_q1_photo is true', async () => {
       const createRequest = createMockRequest(
-        { q1: 'Original answer', photo_path: TEST_PHOTO_PATH },
+        { q1: 'Original answer', q1_photo_path: TEST_PHOTO_PATH },
         {},
         { session_token: testUser.session_token }
       );
@@ -252,11 +270,11 @@ describe('Photo API Tests', () => {
       const createData = await createResponse.json();
       const entryId = createData.entry.id;
 
-      expect(createData.entry.has_photo).toBe(true);
+      expect(createData.entry.q1_photo_path).toBe(TEST_PHOTO_PATH);
 
       const { PUT } = await import('@/app/api/kilo/route');
       const updateRequest = createMockRequest(
-        { id: entryId, q1: 'Updated answer', keep_photo: true },
+        { id: entryId, q1: 'Updated answer', keep_q1_photo: true },
         {},
         { session_token: testUser.session_token }
       );
@@ -266,12 +284,12 @@ describe('Photo API Tests', () => {
 
       expect(updateResponse.status).toBe(200);
       expect(updateData.entry.q1).toBe('Updated answer');
-      expect(updateData.entry.has_photo).toBe(true);
+      expect(updateData.entry.q1_photo_path).toBe(TEST_PHOTO_PATH);
     });
 
-    test('should clear photo when keep_photo is false and no new photo provided', async () => {
+    test('should clear photo when keep_q1_photo is not set and no new photo provided', async () => {
       const createRequest = createMockRequest(
-        { q1: 'Original answer', photo_path: TEST_PHOTO_PATH },
+        { q1: 'Original answer', q1_photo_path: TEST_PHOTO_PATH },
         {},
         { session_token: testUser.session_token }
       );
@@ -279,7 +297,7 @@ describe('Photo API Tests', () => {
       const createData = await createResponse.json();
       const entryId = createData.entry.id;
 
-      expect(createData.entry.has_photo).toBe(true);
+      expect(createData.entry.q1_photo_path).toBe(TEST_PHOTO_PATH);
 
       const { PUT } = await import('@/app/api/kilo/route');
       const updateRequest = createMockRequest(
@@ -293,12 +311,12 @@ describe('Photo API Tests', () => {
 
       expect(updateResponse.status).toBe(200);
       expect(updateData.entry.q1).toBe('Updated answer');
-      expect(updateData.entry.has_photo).toBe(false);
+      expect(updateData.entry.q1_photo_path).toBeNull();
     });
 
-    test('should replace photo when new photo_path is provided', async () => {
+    test('should replace photo when new q1_photo_path is provided', async () => {
       const createRequest = createMockRequest(
-        { q1: 'Original answer', photo_path: TEST_PHOTO_PATH },
+        { q1: 'Original answer', q1_photo_path: TEST_PHOTO_PATH },
         {},
         { session_token: testUser.session_token }
       );
@@ -313,7 +331,7 @@ describe('Photo API Tests', () => {
 
       const { PUT } = await import('@/app/api/kilo/route');
       const updateRequest = createMockRequest(
-        { id: entryId, q1: 'Updated answer', photo_path: pngPath },
+        { id: entryId, q1: 'Updated answer', q1_photo_path: pngPath },
         {},
         { session_token: testUser.session_token }
       );
@@ -322,7 +340,7 @@ describe('Photo API Tests', () => {
       const updateData = await updateResponse.json();
 
       expect(updateResponse.status).toBe(200);
-      expect(updateData.entry.has_photo).toBe(true);
+      expect(updateData.entry.q1_photo_path).toBe(pngPath);
     });
   });
 });

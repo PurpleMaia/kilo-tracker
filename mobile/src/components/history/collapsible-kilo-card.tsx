@@ -14,8 +14,11 @@ type KiloEntry = {
   q1: string;
   q2: string | null;
   q3: string | null;
+  q4: string | null;
   created_at: string;
-  has_photo: boolean;
+  q1_photo_path: string | null;
+  q2_photo_path: string | null;
+  q3_photo_path: string | null;
 };
 
 type Props = {
@@ -152,6 +155,7 @@ export function CollapsibleKiloCard({ entry, onEdit, onDelete, showTime }: Props
               <Text className="text-base text-gray-700 leading-6">
                 {entry.q1}
               </Text>
+              {entry.q1_photo_path && <KiloPhoto entryId={entry.id} question="q1" />}
             </View>
 
             {/* Q2 - Papahulihonua */}
@@ -166,13 +170,13 @@ export function CollapsibleKiloCard({ entry, onEdit, onDelete, showTime }: Props
                 <Text className="text-base text-gray-700 leading-6">
                   {entry.q2}
                 </Text>
-                {entry.has_photo && <KiloPhoto entryId={entry.id} />}
+                {entry.q2_photo_path && <KiloPhoto entryId={entry.id} question="q2" />}
               </View>
             )}
 
             {/* Q3 - Papahānaumoku */}
             {entry.q3 && (
-              <View className="pt-3 border-t border-gray-100">
+              <View className="mb-3 pt-3 border-t border-gray-100">
                 <Text
                   className="text-sm font-bold uppercase tracking-wide mb-1"
                   style={{ color: "#15803D", opacity: 0.7 }}
@@ -181,6 +185,22 @@ export function CollapsibleKiloCard({ entry, onEdit, onDelete, showTime }: Props
                 </Text>
                 <Text className="text-base text-gray-700 leading-6">
                   {entry.q3}
+                </Text>
+                {entry.q3_photo_path && <KiloPhoto entryId={entry.id} question="q3" />}
+              </View>
+            )}
+
+            {/* Q4 - Naʻau */}
+            {entry.q4 && (
+              <View className="pt-3 border-t border-gray-100">
+                <Text
+                  className="text-sm font-bold uppercase tracking-wide mb-1"
+                  style={{ color: "#15803D", opacity: 0.7 }}
+                >
+                  Naʻau
+                </Text>
+                <Text className="text-base text-gray-700 leading-6">
+                  {entry.q4}
                 </Text>
               </View>
             )}
@@ -203,6 +223,7 @@ export function CollapsibleKiloCard({ entry, onEdit, onDelete, showTime }: Props
               Papahulilani
             </Text>
             <Text className="text-base leading-6">{entry.q1}</Text>
+            {entry.q1_photo_path && <View style={{ height: 168 }} />}
           </View>
           {entry.q2 && (
             <View className="mb-3 pt-3">
@@ -210,15 +231,24 @@ export function CollapsibleKiloCard({ entry, onEdit, onDelete, showTime }: Props
                 Papahulihonua
               </Text>
               <Text className="text-base leading-6">{entry.q2}</Text>
-              {entry.has_photo && <View style={{ height: 168 }} />}
+              {entry.q2_photo_path && <View style={{ height: 168 }} />}
             </View>
           )}
           {entry.q3 && (
-            <View className="pt-3">
+            <View className="mb-3 pt-3">
               <Text className="text-sm font-bold uppercase tracking-wide mb-1">
                 Papahānaumoku
               </Text>
               <Text className="text-base leading-6">{entry.q3}</Text>
+              {entry.q3_photo_path && <View style={{ height: 168 }} />}
+            </View>
+          )}
+          {entry.q4 && (
+            <View className="pt-3">
+              <Text className="text-sm font-bold uppercase tracking-wide mb-1">
+                Naʻau
+              </Text>
+              <Text className="text-base leading-6">{entry.q4}</Text>
             </View>
           )}
         </View>

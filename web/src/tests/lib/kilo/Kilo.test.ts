@@ -72,7 +72,7 @@ describe('KILO API Tests', () => {
   describe('POST /api/kilo', () => {
     test('should create entry with valid data', async () => {
       const request = createMockRequest(
-        { q1: 'Test answer 1', q2: 'Test answer 2', q3: null },
+        { q1: 'Test answer 1', q2: 'Test answer 2', q3: null, q4: 'Feeling grateful' },
         {},
         { session_token: testUser.session_token }
       );
@@ -85,6 +85,7 @@ describe('KILO API Tests', () => {
       expect(data.entry.q1).toBe('Test answer 1');
       expect(data.entry.q2).toBe('Test answer 2');
       expect(data.entry.q3).toBeNull();
+      expect(data.entry.q4).toBe('Feeling grateful');
 
       testEntryId = data.entry.id;
     });
@@ -130,9 +131,9 @@ describe('KILO API Tests', () => {
       expect(response.status).toBe(401);
     });
 
-    test('should accept photo_path', async () => {
+    test('should accept q1_photo_path', async () => {
       const request = createMockRequest(
-        { q1: 'Test answer', photo_path: 'uploads/kilo/testuser/1234567890-abcdefgh.jpg' },
+        { q1: 'Test answer', q1_photo_path: 'https://blob.example.com/kilo/testuser/1234567890.jpg' },
         {},
         { session_token: testUser.session_token }
       );
@@ -141,10 +142,10 @@ describe('KILO API Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.entry.has_photo).toBe(true);
+      expect(data.entry.q1_photo_path).toBe('https://blob.example.com/kilo/testuser/1234567890.jpg');
     });
 
-    test('should create entry without photo when photo_path not provided', async () => {
+    test('should create entry without photo when photo paths not provided', async () => {
       const request = createMockRequest(
         { q1: 'Test answer without photo' },
         {},
@@ -155,7 +156,9 @@ describe('KILO API Tests', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data.entry.has_photo).toBe(false);
+      expect(data.entry.q1_photo_path).toBeNull();
+      expect(data.entry.q2_photo_path).toBeNull();
+      expect(data.entry.q3_photo_path).toBeNull();
     });
 
     test('should store location when provided', async () => {
@@ -182,6 +185,7 @@ describe('KILO API Tests', () => {
           q1: `Entry ${i}`,
           q2: null,
           q3: null,
+          q4: null,
         }).execute();
       }
 
@@ -191,6 +195,7 @@ describe('KILO API Tests', () => {
         q1: 'Other user entry',
         q2: null,
         q3: null,
+        q4: null,
       }).execute();
     });
 
@@ -412,13 +417,14 @@ describe('KILO API Tests', () => {
         q1: 'Original answer',
         q2: 'Original q2',
         q3: null,
+        q4: null,
       }).returning(['id']).executeTakeFirst();
       updateTestEntryId = entry!.id;
     });
 
     test('should update entry with valid data', async () => {
       const request = createMockRequest(
-        { id: updateTestEntryId, q1: 'Updated answer', q2: 'Updated q2', q3: 'New q3' },
+        { id: updateTestEntryId, q1: 'Updated answer', q2: 'Updated q2', q3: 'New q3', q4: 'New q4' },
         {},
         { session_token: testUser.session_token }
       );
@@ -432,6 +438,7 @@ describe('KILO API Tests', () => {
       expect(data.entry.q1).toBe('Updated answer');
       expect(data.entry.q2).toBe('Updated q2');
       expect(data.entry.q3).toBe('New q3');
+      expect(data.entry.q4).toBe('New q4');
     });
 
     test('should return 404 when updating non-existent entry', async () => {
@@ -455,6 +462,7 @@ describe('KILO API Tests', () => {
         q1: 'Other user entry',
         q2: null,
         q3: null,
+        q4: null,
       }).returning(['id']).executeTakeFirst();
 
       const request = createMockRequest(
@@ -520,6 +528,7 @@ describe('KILO API Tests', () => {
         q1: 'Entry to delete',
         q2: null,
         q3: null,
+        q4: null,
       }).returning(['id']).executeTakeFirst();
       deleteTestEntryId = entry!.id;
     });
@@ -584,6 +593,7 @@ describe('KILO API Tests', () => {
         q1: 'Other user entry',
         q2: null,
         q3: null,
+        q4: null,
       }).returning(['id']).executeTakeFirst();
 
       const url = 'http://localhost:3000/api/kilo';

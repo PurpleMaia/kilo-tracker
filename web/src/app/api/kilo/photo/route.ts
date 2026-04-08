@@ -4,11 +4,15 @@ import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
 import { getAzureBlobStorage } from "@/lib/azure/client";
 
+const VALID_QUESTIONS = ["q1", "q2", "q3"] as const;
+type PhotoQuestion = (typeof VALID_QUESTIONS)[number];
+
 export async function GET(request: NextRequest) {
   try {
     const user = await validateSession(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const question = (searchParams.get("question") ?? "q1") as PhotoQuestion;
 
     if (!id) {
       return NextResponse.json({ error: "Missing entry ID" }, { status: 400 });
@@ -19,20 +23,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid entry ID" }, { status: 400 });
     }
 
+    if (!VALID_QUESTIONS.includes(question)) {
+      return NextResponse.json({ error: "Invalid question parameter" }, { status: 400 });
+    }
+
+    const photoColumn = `${question}_photo_path` as const;
+
     const entry = await db
       .selectFrom("kilo")
-      .select(["photo_path"])
+      .select([photoColumn])
       .where("id", "=", entryId)
       .where("user_id", "=", user.id)
       .executeTakeFirst();
 
-    if (!entry || !entry.photo_path) {
+    const photoPath = entry?.[photoColumn];
+    if (!entry || !photoPath) {
       return NextResponse.json({ error: "Photo not found" }, { status: 404 });
     }
 
     // photo_path is the full Azure blob URL — extract the blob path
     const { container } = getAzureBlobStorage();
-    const blobUrl = new URL(entry.photo_path);
+    const blobUrl = new URL(photoPath);
     const containerPrefix = `/${process.env.AZURE_STORAGE_CONTAINER_NAME}/`;
     if (!blobUrl.pathname.startsWith(containerPrefix)) {
       return NextResponse.json({ error: "Invalid photo path" }, { status: 400 });

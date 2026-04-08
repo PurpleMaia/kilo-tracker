@@ -29,6 +29,7 @@ import { QUESTIONS } from "@kilo/shared/types";
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
 type PhotoData = { uri: string; mimeType: string };
+type PhotoQuestion = "q1" | "q2" | "q3";
 
 export default function KiloScreen() {
   const { id: editIdParam } = useLocalSearchParams<{ id?: string }>();
@@ -38,8 +39,8 @@ export default function KiloScreen() {
   const [step, setStep]             = useState(0);
   const [answers, setAnswers]       = useState({ q1: "", q2: "", q3: "", q4: "" });
   const [showTyping, setShowTyping] = useState(false);
-  const [photo, setPhoto]           = useState<PhotoData | null>(null);
-  const [existingPhoto, setExistingPhoto] = useState(false); // true if entry has a server photo
+  const [photos, setPhotos]         = useState<Record<PhotoQuestion, PhotoData | null>>({ q1: null, q2: null, q3: null });
+  const [existingPhotos, setExistingPhotos] = useState<Record<PhotoQuestion, boolean>>({ q1: false, q2: false, q3: false });
   const [isRecording, setIsRecording]       = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSubmitting, setIsSubmitting]     = useState(false);
@@ -49,7 +50,7 @@ export default function KiloScreen() {
   const [focusKey, setFocusKey] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [transcribeMode, setTranscribeMode] = useState<"whisper" | "device" | null>(null);
-  const [serverPhotoSource, setServerPhotoSource] = useState<{ uri: string; headers: Record<string, string> } | null>(null);
+  const [serverPhotoSources, setServerPhotoSources] = useState<Record<PhotoQuestion, { uri: string; headers: Record<string, string> } | null>>({ q1: null, q2: null, q3: null });
 
   // expo-av recording ref (for Whisper path)
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -72,28 +73,34 @@ export default function KiloScreen() {
     (async () => {
       try {
         const { entry } = await apiFetch<{
-          entry: { q1: string; q2: string | null; q3: string | null; has_photo: boolean };
+          entry: { q1: string; q2: string | null; q3: string | null; q4: string | null; q1_photo_path: string | null; q2_photo_path: string | null; q3_photo_path: string | null };
         }>(`/api/kilo?id=${editId}`);
         if (cancelled) return;
         setAnswers({
           q1: entry.q1,
           q2: entry.q2 ?? "",
           q3: entry.q3 ?? "",
-          q4: "",
+          q4: entry.q4 ?? "",
         });
-        setExistingPhoto(entry.has_photo);
-        if (entry.has_photo) {
-          const session = await getToken();
-          if (session && !cancelled) {
-            setServerPhotoSource({
-              uri: `${BASE_URL}/api/kilo/photo?id=${editId}`,
-              headers: {
-                "x-session-token": session.token,
-                "x-session-type": session.tokenType,
-              },
-            });
+        const newExisting: Record<PhotoQuestion, boolean> = { q1: false, q2: false, q3: false };
+        const newSources: Record<PhotoQuestion, { uri: string; headers: Record<string, string> } | null> = { q1: null, q2: null, q3: null };
+        const session = await getToken();
+        for (const q of ["q1", "q2", "q3"] as PhotoQuestion[]) {
+          if (entry[`${q}_photo_path`]) {
+            newExisting[q] = true;
+            if (session && !cancelled) {
+              newSources[q] = {
+                uri: `${BASE_URL}/api/kilo/photo?id=${editId}&question=${q}`,
+                headers: {
+                  "x-session-token": session.token,
+                  "x-session-type": session.tokenType,
+                },
+              };
+            }
           }
         }
+        setExistingPhotos(newExisting);
+        setServerPhotoSources(newSources);
         // Start in typing mode so user can see/edit the prefilled text
         setShowTyping(true);
       } catch {
@@ -115,9 +122,9 @@ export default function KiloScreen() {
       setStep(0);
       setAnswers({ q1: "", q2: "", q3: "", q4: "" });
       setShowTyping(false);
-      setPhoto(null);
-      setExistingPhoto(false);
-      setServerPhotoSource(null);
+      setPhotos({ q1: null, q2: null, q3: null });
+      setExistingPhotos({ q1: false, q2: false, q3: false });
+      setServerPhotoSources({ q1: null, q2: null, q3: null });
       setIsRecording(false);
       setIsTranscribing(false);
       setIsSubmitting(false);
@@ -341,6 +348,11 @@ export default function KiloScreen() {
     }
   };
 
+  const currentPhotoQ = current.id as PhotoQuestion;
+  const currentPhoto = (["q1", "q2", "q3"] as PhotoQuestion[]).includes(currentPhotoQ) ? photos[currentPhotoQ] : null;
+  const currentExistingPhoto = (["q1", "q2", "q3"] as PhotoQuestion[]).includes(currentPhotoQ) ? existingPhotos[currentPhotoQ] : false;
+  const currentServerPhotoSource = (["q1", "q2", "q3"] as PhotoQuestion[]).includes(currentPhotoQ) ? serverPhotoSources[currentPhotoQ] : null;
+
   // ── Photo ──
   const handleTakePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -353,10 +365,11 @@ export default function KiloScreen() {
     });
     if (!result.canceled && result.assets[0]) {
       const a = result.assets[0];
-      setPhoto({ uri: a.uri, mimeType: a.mimeType ?? "image/jpeg" });
+      const q = currentPhotoQ;
+      setPhotos((prev) => ({ ...prev, [q]: { uri: a.uri, mimeType: a.mimeType ?? "image/jpeg" } }));
       // Clear existing server photo when new photo is taken
-      setExistingPhoto(false);
-      setServerPhotoSource(null);
+      setExistingPhotos((prev) => ({ ...prev, [q]: false }));
+      setServerPhotoSources((prev) => ({ ...prev, [q]: null }));
     }
   };
 
@@ -373,33 +386,31 @@ export default function KiloScreen() {
 
       if (isEditMode) {
         formData.append("id", String(editId));
-        if (photo) {
-          // New photo selected — upload it
-          formData.append("photo", {
-            uri: photo.uri,
-            name: "photo.jpg",
-            type: photo.mimeType,
-          } as never);
-        } else if (existingPhoto) {
-          // Keep existing server photo
-          formData.append("keep_photo", "true");
-        }
-        // If !photo && !existingPhoto, photo will be cleared
+      }
 
+      // Handle per-question photos
+      for (const q of ["q1", "q2", "q3"] as PhotoQuestion[]) {
+        if (photos[q]) {
+          // New photo selected — upload it
+          formData.append(`${q}_photo`, {
+            uri: photos[q]!.uri,
+            name: `${q}_photo.jpg`,
+            type: photos[q]!.mimeType,
+          } as never);
+        } else if (isEditMode && existingPhotos[q]) {
+          // Keep existing server photo
+          formData.append(`keep_${q}_photo`, "true");
+        }
+        // If no photo and no existing, photo will be cleared
+      }
+
+      if (isEditMode) {
         await apiFetch("/api/kilo", {
           method: "PUT",
           body: formData,
         });
         router.replace("/(protected)/history");
       } else {
-        if (photo) {
-          formData.append("photo", {
-            uri: photo.uri,
-            name: "photo.jpg",
-            type: photo.mimeType,
-          } as never);
-        }
-
         await apiFetch("/api/kilo", {
           method: "POST",
           body: formData,
@@ -718,16 +729,16 @@ export default function KiloScreen() {
             {/* ── Photo (picture-enabled questions) ── */}
             {current.picture && (
               <View style={{ marginTop: 20, gap: 10 }}>
-                {photo ? (
+                {currentPhoto ? (
                   /* New local photo selected */
                   <View>
                     <Image
-                      source={{ uri: photo.uri }}
+                      source={{ uri: currentPhoto.uri }}
                       style={{ width: "100%", height: 200, borderRadius: 18 }}
                       resizeMode="cover"
                     />
                     <TouchableOpacity
-                      onPress={() => setPhoto(null)}
+                      onPress={() => setPhotos((prev) => ({ ...prev, [currentPhotoQ]: null }))}
                       style={{ marginTop: 10, alignItems: "center" }}
                     >
                       <Text style={{ fontSize: 14, fontWeight: "600", color: "#B91C1C" }}>
@@ -743,17 +754,20 @@ export default function KiloScreen() {
                       </Text>
                     </TouchableOpacity>
                   </View>
-                ) : existingPhoto && serverPhotoSource ? (
+                ) : currentExistingPhoto && currentServerPhotoSource ? (
                   /* Existing server photo (edit mode) */
                   <View>
                     <Image
-                      source={serverPhotoSource}
+                      source={currentServerPhotoSource}
                       style={{ width: "100%", height: 200, borderRadius: 18 }}
                       resizeMode="cover"
                     />
                     <View style={{ flexDirection: "row", justifyContent: "center", gap: 20, marginTop: 10 }}>
                       <TouchableOpacity
-                        onPress={() => { setExistingPhoto(false); setServerPhotoSource(null); }}
+                        onPress={() => {
+                          setExistingPhotos((prev) => ({ ...prev, [currentPhotoQ]: false }));
+                          setServerPhotoSources((prev) => ({ ...prev, [currentPhotoQ]: null }));
+                        }}
                         style={{ alignItems: "center" }}
                       >
                         <Text style={{ fontSize: 14, fontWeight: "600", color: "#B91C1C" }}>

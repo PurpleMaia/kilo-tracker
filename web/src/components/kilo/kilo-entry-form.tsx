@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { KiloEntry, QUESTIONS } from "@/types/kilo";
 
 type KiloFormData = Record<string, string>;
+type PhotoQuestion = "q1" | "q2" | "q3";
 
 interface KiloEntryFormProps {
   initialData?: KiloEntry | null;
@@ -36,7 +37,11 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const router = useRouter();
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPreviews, setPhotoPreviews] = useState<Record<PhotoQuestion, string | null>>({
+    q1: null,
+    q2: null,
+    q3: null,
+  });
 
   // Populate form with initial data when provided
   useEffect(() => {
@@ -45,11 +50,17 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
       if (initialData.q1) data.q1 = initialData.q1;
       if (initialData.q2) data.q2 = initialData.q2;
       if (initialData.q3) data.q3 = initialData.q3;
-      if (initialData.has_photo) {
-        // Set preview to API URL for existing photo
-        setPhotoPreview(`/api/kilo/photo?id=${initialData.id}`);
-      }
+      if (initialData.q4) data.q4 = initialData.q4;
       setFormData(data);
+
+      // Set previews for existing photos
+      const previews: Record<PhotoQuestion, string | null> = { q1: null, q2: null, q3: null };
+      for (const q of ["q1", "q2", "q3"] as PhotoQuestion[]) {
+        if (initialData[`${q}_photo_path`]) {
+          previews[q] = `/api/kilo/photo?id=${initialData.id}&question=${q}`;
+        }
+      }
+      setPhotoPreviews(previews);
 
       // Start with all fields visible in edit mode
       setShowTextInput(true);
@@ -57,6 +68,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
   }, [initialData]);
 
   const currentQuestion = QUESTIONS[currentStep];
+  const currentQuestionId = currentQuestion.id as PhotoQuestion;
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === QUESTIONS.length - 1;
   const currentAnswer = formData[currentQuestion.id] || "";
@@ -78,9 +90,16 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
     setShowTextInput(true);
   };
 
+  const handlePhotoCapture = (dataUrl: string) => {
+    setPhotoPreviews((prev) => ({ ...prev, [currentQuestionId]: dataUrl }));
+  };
+
   const handleRemovePhoto = () => {
-    if (photoPreview) URL.revokeObjectURL(photoPreview);
-    setPhotoPreview(null);
+    const preview = photoPreviews[currentQuestionId];
+    if (preview && !preview.startsWith("/api/")) {
+      URL.revokeObjectURL(preview);
+    }
+    setPhotoPreviews((prev) => ({ ...prev, [currentQuestionId]: null }));
   };
 
   const handleTextChange = (value: string) => {
@@ -120,21 +139,25 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
       body.append("q1", formData.q1 || "");
       if (formData.q2) body.append("q2", formData.q2);
       if (formData.q3) body.append("q3", formData.q3);
+      if (formData.q4) body.append("q4", formData.q4);
 
       if (isEditMode) {
         body.append("id", String(initialData!.id));
-        if (photoPreview && photoPreview.startsWith("/api/")) {
-          // Existing photo URL from edit mode — keep it
-          body.append("keep_photo", "true");
-        }
-        // If photoPreview is null, photo was removed — don't set keep_photo
       }
 
-      // Attach photo file if a new capture exists (data URL from camera)
-      if (photoPreview && photoPreview.startsWith("data:")) {
-        const res = await fetch(photoPreview);
-        const blob = await res.blob();
-        body.append("photo", blob, "photo.jpg");
+      // Handle per-question photos
+      for (const q of ["q1", "q2", "q3"] as PhotoQuestion[]) {
+        const preview = photoPreviews[q];
+        if (preview && preview.startsWith("/api/")) {
+          // Existing photo URL from edit mode — keep it
+          body.append(`keep_${q}_photo`, "true");
+        } else if (preview && preview.startsWith("data:")) {
+          // New capture — attach as file
+          const res = await fetch(preview);
+          const blob = await res.blob();
+          body.append(`${q}_photo`, blob, `${q}_photo.jpg`);
+        }
+        // If null, photo was removed — don't set keep flag
       }
 
       const method = isEditMode ? "PUT" : "POST";
@@ -186,7 +209,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
 
       setFormData({});
       setCurrentStep(0);
-      setPhotoPreview(null);
+      setPhotoPreviews({ q1: null, q2: null, q3: null });
       router.push("/dashboard");
 
     } catch (err) {
@@ -224,7 +247,7 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
               </span>
           </div>
         </div>
-        
+
       </CardHeader>
       {/* Create mode: wizard steps */}
       <CardContent className="space-y-4">
@@ -257,11 +280,11 @@ export function KiloEntryForm({ initialData }: KiloEntryFormProps) {
           {/* Show photo/camera section if applicable */}
           {currentQuestion.picture && (
             <PhotoTaker
-              photoPreview={photoPreview}
-              onPhotoCapture={setPhotoPreview}
+              photoPreview={photoPreviews[currentQuestionId]}
+              onPhotoCapture={handlePhotoCapture}
               onPhotoRemove={handleRemovePhoto}
             />
-          )}            
+          )}
 
           {error && (
             <Alert variant="destructive">

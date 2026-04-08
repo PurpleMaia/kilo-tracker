@@ -19,8 +19,11 @@ type KiloEntry = {
   q1: string;
   q2: string | null;
   q3: string | null;
+  q4: string | null;
   created_at: string;
-  has_photo: boolean;
+  q1_photo_path: string | null;
+  q2_photo_path: string | null;
+  q3_photo_path: string | null;
 };
 
 export default function HistoryScreen() {
