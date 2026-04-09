@@ -1,6 +1,0 @@
-
-
-DROP TABLE IF EXISTS kilo;
-DROP TABLE IF EXISTS olelo_noeau;
-DROP TABLE IF EXISTS profiles;
-
