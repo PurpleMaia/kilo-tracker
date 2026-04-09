@@ -8,7 +8,11 @@ export default{
   build: {
     development: {
       developmentClient: true,
-      distribution: "internal"
+      distribution: "internal",
+      env: {
+        NODE_ENV: "development",
+        API_URL: process.env.EXPO_PUBLIC_API_URL,
+      },
     },
     preview: {
       distribution: "internal"
@@ -16,7 +20,7 @@ export default{
     production: {
       env: {
         NODE_ENV: "production",
-        API_URL: `${process.env.EXPO_PUBLIC_API_URL}:5000`,
+        API_URL: process.env.EXPO_PUBLIC_API_URL,
       },
       autoIncrement: true
     }
