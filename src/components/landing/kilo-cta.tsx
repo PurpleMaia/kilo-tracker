@@ -27,7 +27,7 @@ export function KiloCta({ profileComplete, hasEntryToday }: KiloCtaProps) {
         activeOpacity={0.7}
       >
         <Text
-          className="text-xl font-semibold"
+          className="text-xl font-semibold text-green-700"
           style={{
             fontFamily: "Newsreader_400Regular",
             color: profileComplete ? "#FFFFFF" : "#78716C",
