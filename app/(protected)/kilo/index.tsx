@@ -4,14 +4,14 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Platform, Image, Alert,
   Keyboard as RNKeyboard,
 } from "react-native";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Audio } from "expo-av";
-// import * as Network from "expo-network";
+import * as Network from "expo-network";
 import * as ImagePicker from "expo-image-picker";
-// import {
-//   ExpoSpeechRecognitionModule,
-//   useSpeechRecognitionEvent,
-// } from "expo-speech-recognition";
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
 import { Ionicons } from "@expo/vector-icons";
 import { Keyboard } from "lucide-react-native";
 import Animated, {
@@ -19,7 +19,7 @@ import Animated, {
   FadeInUp,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { apiFetch, getToken } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { ThemedBackground } from "@/components/kilo/themed-background";
@@ -27,32 +27,24 @@ import { StepIndicator } from "@/components/kilo/step-indicator";
 import { getTheme } from "@/components/kilo/question-theme";
 import { QUESTIONS } from "@/shared/types";
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
-
 type PhotoData = { uri: string; mimeType: string };
 type PhotoQuestion = "q1" | "q2" | "q3";
 
 export default function KiloScreen() {
   const { profileComplete, refreshProfile } = useAuth();
-  const { id: editIdParam } = useLocalSearchParams<{ id?: string }>();
-  const editId = editIdParam ? Number(editIdParam) : null;
-  const isEditMode = editId !== null && !isNaN(editId);
 
   const [step, setStep]             = useState(0);
   const [answers, setAnswers]       = useState({ q1: "", q2: "", q3: "", q4: "" });
   const [showTyping, setShowTyping] = useState(false);
   const [photos, setPhotos]         = useState<Record<PhotoQuestion, PhotoData | null>>({ q1: null, q2: null, q3: null });
-  const [existingPhotos, setExistingPhotos] = useState<Record<PhotoQuestion, boolean>>({ q1: false, q2: false, q3: false });
   const [isRecording, setIsRecording]       = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isSubmitting, setIsSubmitting]     = useState(false);
-  const [isLoadingEntry, setIsLoadingEntry] = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [focusKey, setFocusKey] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [transcribeMode, setTranscribeMode] = useState<"whisper" | "device" | null>(null);
-  const [serverPhotoSources, setServerPhotoSources] = useState<Record<PhotoQuestion, { uri: string; headers: Record<string, string> } | null>>({ q1: null, q2: null, q3: null });
 
   useFocusEffect(
     useCallback(() => {
@@ -79,75 +71,20 @@ export default function KiloScreen() {
     return () => { subShow.remove(); subHide.remove(); };
   }, []);
 
-  // Load existing entry for edit mode
-  useEffect(() => {
-    if (!isEditMode) return;
-    let cancelled = false;
-    setIsLoadingEntry(true);
-    (async () => {
-      try {
-        const { entry } = await apiFetch<{
-          entry: { q1: string; q2: string | null; q3: string | null; q4: string | null; q1_photo_path: string | null; q2_photo_path: string | null; q3_photo_path: string | null };
-        }>(`/api/kilo?id=${editId}`);
-        if (cancelled) return;
-        setAnswers({
-          q1: entry.q1,
-          q2: entry.q2 ?? "",
-          q3: entry.q3 ?? "",
-          q4: entry.q4 ?? "",
-        });
-        const newExisting: Record<PhotoQuestion, boolean> = { q1: false, q2: false, q3: false };
-        const newSources: Record<PhotoQuestion, { uri: string; headers: Record<string, string> } | null> = { q1: null, q2: null, q3: null };
-        const session = await getToken();
-        for (const q of ["q1", "q2", "q3"] as PhotoQuestion[]) {
-          if (entry[`${q}_photo_path`]) {
-            newExisting[q] = true;
-            if (session && !cancelled) {
-              newSources[q] = {
-                uri: `${BASE_URL}/api/kilo/photo?id=${editId}&question=${q}`,
-                headers: {
-                  "x-session-token": session.token,
-                  "x-session-type": session.tokenType,
-                },
-              };
-            }
-          }
-        }
-        setExistingPhotos(newExisting);
-        setServerPhotoSources(newSources);
-        // Start in typing mode so user can see/edit the prefilled text
-        setShowTyping(true);
-      } catch {
-        if (!cancelled) setError("Failed to load entry.");
-      } finally {
-        if (!cancelled) setIsLoadingEntry(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [editId, isEditMode]);
-
   useFocusEffect(
     useCallback(() => {
-      // Only reset state for new entries (not edit mode)
-      if (isEditMode) {
-        setFocusKey((k) => k + 1);
-        return;
-      }
       setStep(0);
       setAnswers({ q1: "", q2: "", q3: "", q4: "" });
       setShowTyping(false);
       setPhotos({ q1: null, q2: null, q3: null });
-      setExistingPhotos({ q1: false, q2: false, q3: false });
-      setServerPhotoSources({ q1: null, q2: null, q3: null });
       setIsRecording(false);
       setIsTranscribing(false);
       setIsSubmitting(false);
-      setIsLoadingEntry(false);
       setError(null);
       setLiveTranscript("");
       setFocusKey((k) => k + 1);
       deviceTranscriptRef.current = "";
-    }, [isEditMode])
+    }, [])
   );
 
   const current = QUESTIONS[step];
@@ -166,34 +103,34 @@ export default function KiloScreen() {
   };
 
   // ── On-device speech recognition (runs alongside expo-av for live preview + offline fallback) ──
-  // useSpeechRecognitionEvent("result", (event) => {
-  //   const transcript = event.results[0]?.transcript ?? "";
-  //   if (event.isFinal) {
-  //     deviceTranscriptRef.current += (deviceTranscriptRef.current ? " " : "") + transcript;
-  //     setLiveTranscript(deviceTranscriptRef.current);
-  //   } else {
-  //     // Show accumulated + current interim
-  //     setLiveTranscript(
-  //       deviceTranscriptRef.current + (deviceTranscriptRef.current ? " " : "") + transcript
-  //     );
-  //   }
-  // });
+  useSpeechRecognitionEvent("result", (event) => {
+    const transcript = event.results[0]?.transcript ?? "";
+    if (event.isFinal) {
+      deviceTranscriptRef.current += (deviceTranscriptRef.current ? " " : "") + transcript;
+      setLiveTranscript(deviceTranscriptRef.current);
+    } else {
+      // Show accumulated + current interim
+      setLiveTranscript(
+        deviceTranscriptRef.current + (deviceTranscriptRef.current ? " " : "") + transcript
+      );
+    }
+  });
 
-  // useSpeechRecognitionEvent("end", () => {
-  //   // On-device recognition may auto-stop on silence with continuous mode;
-  //   // restart it if we're still recording audio
-  //   if (recordingRef.current) {
-  //     try {
-  //       ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
-  //     } catch {
-  //       // Ignore — recording may have just stopped
-  //     }
-  //   }
-  // });
+  useSpeechRecognitionEvent("end", () => {
+    // On-device recognition may auto-stop on silence with continuous mode;
+    // restart it if we're still recording audio
+    if (recordingRef.current) {
+      try {
+        ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
+      } catch {
+        // Ignore — recording may have just stopped
+      }
+    }
+  });
 
-  // useSpeechRecognitionEvent("error", () => {
-  //   // On-device error is non-fatal — we still have the audio file for Whisper
-  // });
+  useSpeechRecognitionEvent("error", () => {
+    // On-device error is non-fatal — we still have the audio file for Whisper
+  });
 
   // ── Start recording ──
   const handleStartRecording = async () => {
@@ -206,9 +143,9 @@ export default function KiloScreen() {
       }
 
       // Check network to show mode indicator
-      // const networkState = await Network.getNetworkStateAsync();
-      // const isOnline = networkState.isConnected && networkState.isInternetReachable;
-      // setTranscribeMode(isOnline ? "whisper" : "device");
+      const networkState = await Network.getNetworkStateAsync();
+      const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      setTranscribeMode(isOnline ? "whisper" : "device");
 
       // Configure audio session for recording
       await Audio.setAudioModeAsync({
@@ -242,14 +179,14 @@ export default function KiloScreen() {
       recordingRef.current = recording;
 
       // Start on-device speech recognition in parallel for live preview
-      // try {
-      //   const speechResult = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      //   if (speechResult.granted) {
-      //     ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
-      //   }
-      // } catch {
-      //   // On-device not available — that's fine, we still have the audio recording
-      // }
+      try {
+        const speechResult = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        if (speechResult.granted) {
+          ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
+        }
+      } catch {
+        // On-device not available — that's fine, we still have the audio recording
+      }
 
       deviceTranscriptRef.current = "";
       setLiveTranscript("");
@@ -266,11 +203,11 @@ export default function KiloScreen() {
     setIsTranscribing(true);
 
     // Stop on-device speech recognition
-    // try {
-    //   ExpoSpeechRecognitionModule.stop();
-    // } catch {
-    //   // Ignore
-    // }
+    try {
+      ExpoSpeechRecognitionModule.stop();
+    } catch {
+      // Ignore
+    }
 
     // Stop expo-av recording and get the audio file
     if (!recordingRef.current) {
@@ -300,10 +237,10 @@ export default function KiloScreen() {
       }
 
       // Check network at time of stop
-      // const networkState = await Network.getNetworkStateAsync();
-      // const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      const networkState = await Network.getNetworkStateAsync();
+      const isOnline = networkState.isConnected && networkState.isInternetReachable;
 
-      if (true) {
+      if (isOnline) {
         // ── Online: send to Whisper API ──
         setTranscribeMode("whisper");
         try {
@@ -364,8 +301,6 @@ export default function KiloScreen() {
 
   const currentPhotoQ = current.id as PhotoQuestion;
   const currentPhoto = (["q1", "q2", "q3"] as PhotoQuestion[]).includes(currentPhotoQ) ? photos[currentPhotoQ] : null;
-  const currentExistingPhoto = (["q1", "q2", "q3"] as PhotoQuestion[]).includes(currentPhotoQ) ? existingPhotos[currentPhotoQ] : false;
-  const currentServerPhotoSource = (["q1", "q2", "q3"] as PhotoQuestion[]).includes(currentPhotoQ) ? serverPhotoSources[currentPhotoQ] : null;
 
   // ── Photo ──
   const handleTakePhoto = async () => {
@@ -381,13 +316,10 @@ export default function KiloScreen() {
       const a = result.assets[0];
       const q = currentPhotoQ;
       setPhotos((prev) => ({ ...prev, [q]: { uri: a.uri, mimeType: a.mimeType ?? "image/jpeg" } }));
-      // Clear existing server photo when new photo is taken
-      setExistingPhotos((prev) => ({ ...prev, [q]: false }));
-      setServerPhotoSources((prev) => ({ ...prev, [q]: null }));
     }
   };
 
-  // ── Submit (create or update) ──
+  // ── Submit (create) ──
   const handleSubmit = async () => {
     setError(null);
     setIsSubmitting(true);
@@ -398,39 +330,21 @@ export default function KiloScreen() {
       if (answers.q3) formData.append("q3", answers.q3);
       if (answers.q4) formData.append("q4", answers.q4);
 
-      if (isEditMode) {
-        formData.append("id", String(editId));
-      }
-
-      // Handle per-question photos
       for (const q of ["q1", "q2", "q3"] as PhotoQuestion[]) {
         if (photos[q]) {
-          // New photo selected — upload it
           formData.append(`${q}_photo`, {
             uri: photos[q]!.uri,
             name: `${q}_photo.jpg`,
             type: photos[q]!.mimeType,
           } as never);
-        } else if (isEditMode && existingPhotos[q]) {
-          // Keep existing server photo
-          formData.append(`keep_${q}_photo`, "true");
         }
-        // If no photo and no existing, photo will be cleared
       }
 
-      if (isEditMode) {
-        await apiFetch("/api/kilo", {
-          method: "PUT",
-          body: formData,
-        });
-        router.replace("/(protected)/history");
-      } else {
-        await apiFetch("/api/kilo", {
-          method: "POST",
-          body: formData,
-        });
-        router.replace("/(protected)");
-      }
+      await apiFetch("/api/kilo", {
+        method: "POST",
+        body: formData,
+      });
+      router.replace("/(protected)");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
       setIsSubmitting(false);
@@ -456,14 +370,6 @@ export default function KiloScreen() {
     accent: theme.accent,
     icon: theme.icon,
   };
-
-  if (isEditMode && isLoadingEntry) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.gradientStart }}>
-        <ActivityIndicator size="large" color={theme.accent} />
-      </View>
-    );
-  }
 
   return (
     <ThemedBackground questionId={current.id}>
@@ -744,7 +650,6 @@ export default function KiloScreen() {
             {current.picture && (
               <View style={{ marginTop: 20, gap: 10 }}>
                 {currentPhoto ? (
-                  /* New local photo selected */
                   <View>
                     <Image
                       source={{ uri: currentPhoto.uri }}
@@ -767,36 +672,6 @@ export default function KiloScreen() {
                         Retake photo
                       </Text>
                     </TouchableOpacity>
-                  </View>
-                ) : currentExistingPhoto && currentServerPhotoSource ? (
-                  /* Existing server photo (edit mode) */
-                  <View>
-                    <Image
-                      source={currentServerPhotoSource}
-                      style={{ width: "100%", height: 200, borderRadius: 18 }}
-                      resizeMode="cover"
-                    />
-                    <View style={{ flexDirection: "row", justifyContent: "center", gap: 20, marginTop: 10 }}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setExistingPhotos((prev) => ({ ...prev, [currentPhotoQ]: false }));
-                          setServerPhotoSources((prev) => ({ ...prev, [currentPhotoQ]: null }));
-                        }}
-                        style={{ alignItems: "center" }}
-                      >
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#B91C1C" }}>
-                          Remove photo
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={handleTakePhoto}
-                        style={{ alignItems: "center" }}
-                      >
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: theme.accent }}>
-                          Replace photo
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
                   </View>
                 ) : (
                   <TouchableOpacity
@@ -903,7 +778,7 @@ export default function KiloScreen() {
             ) : (
               <>
                 <Text style={{ color: "white", fontSize: 15, fontWeight: "700" }}>
-                  {isLast ? (isEditMode ? "Save Changes" : "Save Entry") : "Next"}
+                  {isLast ? "Save Entry" : "Next"}
                 </Text>
                 {!isLast && <Ionicons name="chevron-forward" size={16} color="white" />}
               </>
