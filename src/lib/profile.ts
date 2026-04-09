@@ -1,4 +1,4 @@
-import { isProfileComplete } from "@/shared/lib";
+import { isProfileComplete } from "@/shared/profile-utils";
 import type { UserProfile } from "@/shared/types";
 import { apiFetch } from "@/lib/api";
 
