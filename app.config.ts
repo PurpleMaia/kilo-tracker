@@ -22,7 +22,7 @@ export default
         NSMicrophoneUsageDescription: "KILO needs microphone access to record your voice observations.",
         ITSAppUsesNonExemptEncryption: false
       },
-      bundleIdentifier: "org.purplemaia.kilotracker"
+      bundleIdentifier: process.env.IDENTIFIER
     },
     android: {
       adaptiveIcon: {
@@ -35,7 +35,7 @@ export default
       permissions: [
         "android.permission.RECORD_AUDIO"
       ],
-      package: "org.purplemaia.kilotracker"
+      package: process.env.IDENTIFIER
     },
     web: {
       bundler: "metro",

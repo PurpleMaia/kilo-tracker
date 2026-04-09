@@ -16,7 +16,7 @@ export default{
     production: {
       env: {
         NODE_ENV: "production",
-        API_URL: `${process.env.API_BASE_URL}:5000`,
+        API_URL: `${process.env.EXPO_PUBLIC_API_URL}:5000`,
       },
       autoIncrement: true
     }
