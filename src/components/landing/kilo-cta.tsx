@@ -14,7 +14,7 @@ export function KiloCta({ profileComplete, hasEntryToday }: KiloCtaProps) {
       <TouchableOpacity
         className={`rounded-2xl py-5 px-6 items-center ${
           profileComplete
-            ? "bg-green-700"
+            ? "bg-gray-50"
             : "bg-gray-50/50"
         }`}
         style={{
@@ -36,7 +36,7 @@ export function KiloCta({ profileComplete, hasEntryToday }: KiloCtaProps) {
           {label}
         </Text>
         {!hasEntryToday && (
-          <Text className="text-sm text-gray-500 mt-1">
+          <Text className="text-sm text-green-700 mt-1">
             {profileComplete ? (
               <Text style={{ color: "rgba(255,255,255,0.82)" }}>observe · reflect</Text>
             ) : (
