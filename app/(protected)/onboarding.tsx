@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { profileUpdateSchema } from "@kilo/shared/schemas";
+import { profileUpdateSchema } from "../../src/shared/schemas";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
 import { FadeIn } from "@/components/shared/fade-in";

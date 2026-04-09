@@ -1,8 +1,8 @@
 // Re-export shared types
-export type { SystemRole, UserRole, AuthUser, KiloEntry, UserProfile } from '@kilo/shared/types';
+export type { SystemRole, UserRole, AuthUser, KiloEntry, UserProfile } from '@/shared/types';
 
 // Alias for backwards compatibility
-export type { UserRole as OrgRole } from '@kilo/shared/types';
+export type { UserRole as OrgRole } from '@/shared/types';
 
 // Mobile-specific types
 export interface Profile {

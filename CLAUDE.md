@@ -5,16 +5,16 @@ This document helps AI assistants understand how to implement features, write te
 ## Project Overview
 
 KILO Tracker is a **pnpm monorepo** with three packages:
-- **`@kilo/shared`** (`packages/shared/`) — Shared types, Zod schemas, utilities, and database layer
-- **`@kilo/web`** (`web/`) — Next.js 16 API server + web client (App Router)
-- **`@kilo/mobile`** (`mobile/`) — React Native + Expo mobile app (primary client)
+- **`@/shared`** (`packages/shared/`) — Shared types, Zod schemas, utilities, and database layer
+- **`@/web`** (`web/`) — Next.js 16 API server + web client (App Router)
+- **`@/mobile`** (`mobile/`) — React Native + Expo mobile app (primary client)
 
 All data operations use **API routes** rather than server actions. The Expo app is the primary mobile-first client; Next.js serves as the backend API and optional web client.
 
 ### Key Architectural Decisions
 
 1. **API-first approach** - All CRUD operations go through `/api` routes (not server actions) for React Native compatibility
-2. **Shared package (`@kilo/shared`)** - Types, Zod schemas, errors, and DB layer live in one place, consumed as raw TypeScript (no build step)
+2. **Shared package (`@/shared`)** - Types, Zod schemas, errors, and DB layer live in one place, consumed as raw TypeScript (no build step)
 3. **Multi-tenant** - Organizations (tenants) with user roles (admin/worker)
 4. **Type-safe database** - Kysely ORM with auto-generated TypeScript types
 5. **Session-based auth** - Secure sessions with hashed tokens stored in DB
@@ -26,7 +26,7 @@ All data operations use **API routes** rather than server actions. The Expo app 
 ```
 kilo-tracker/
 ├── packages/
-│   └── shared/                     # @kilo/shared
+│   └── shared/                     # @/shared
 │       ├── package.json
 │       ├── tsconfig.json
 │       ├── .kysely-codegenrc.json
@@ -54,7 +54,7 @@ kilo-tracker/
 │           │   └── index.ts
 │           └── index.ts
 │
-├── web/                            # @kilo/web — Next.js (API server + web client)
+├── web/                            # @/web — Next.js (API server + web client)
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── next.config.ts
@@ -69,18 +69,18 @@ kilo-tracker/
 │   └── src/
 │       ├── app/                    # Pages + API routes
 │       ├── components/             # Web-only (Shadcn/React DOM)
-│       ├── db/                     # Re-exports from @kilo/shared
-│       ├── types/                  # Re-exports from @kilo/shared
+│       ├── db/                     # Re-exports from @/shared
+│       ├── types/                  # Re-exports from @/shared
 │       ├── lib/
 │       │   ├── auth/              # Server-only auth (session, login, password, etc.)
 │       │   ├── data/              # Data access helpers (admin, member, sysadmin, profile)
-│       │   ├── errors.ts          # Re-export from @kilo/shared
-│       │   ├── profile-utils.ts   # Re-export from @kilo/shared
+│       │   ├── errors.ts          # Re-export from @/shared
+│       │   ├── profile-utils.ts   # Re-export from @/shared
 │       │   └── utils.ts           # cn() Tailwind utility
 │       ├── hooks/                  # Web hooks (AuthContext, use-kilo, use-query)
 │       └── tests/
 │
-├── mobile/                         # @kilo/mobile — Expo app
+├── mobile/                         # @/mobile — Expo app
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── app.json
@@ -93,7 +93,7 @@ kilo-tracker/
 │       ├── components/             # React Native components
 │       ├── contexts/               # Mobile AuthContext (SecureStore-based)
 │       ├── lib/                    # Mobile API client
-│       └── types/                  # Re-exports from @kilo/shared
+│       └── types/                  # Re-exports from @/shared
 │
 ├── .env                            # Shared env vars (not in git)
 ├── package.json                    # Root workspace scripts
@@ -104,29 +104,29 @@ kilo-tracker/
 
 ## Import Conventions
 
-### In web (`@kilo/web`)
+### In web (`@/web`)
 ```typescript
-// Shared types, schemas, lib — import from @kilo/shared
-import { AuthUser, KiloEntry } from '@kilo/shared/types';
-import { kiloEntrySchema, registerSchema } from '@kilo/shared/schemas';
-import { AppError, Errors } from '@kilo/shared/lib';
-import { db } from '@kilo/shared/db';
+// Shared types, schemas, lib — import from @/shared
+import { AuthUser, KiloEntry } from '@/shared/types';
+import { kiloEntrySchema, registerSchema } from '@/shared/schemas';
+import { AppError, Errors } from '@/shared/lib';
+import { db } from '@/shared/db';
 
 // OR use the local re-exports (both work, @/ aliases still resolve)
-import { db } from '@/db/kysely/client';       // re-exports from @kilo/shared/db
-import { AppError } from '@/lib/errors';        // re-exports from @kilo/shared/lib
-import { AuthUser } from '@/types/auth';        // re-exports from @kilo/shared/types
+import { db } from '@/db/kysely/client';       // re-exports from @/shared/db
+import { AppError } from '@/lib/errors';        // re-exports from @/shared/lib
+import { AuthUser } from '@/types/auth';        // re-exports from @/shared/types
 
 // Web-only code — always use @/ alias
 import { validateSession } from '@/lib/auth/session';
 import { Button } from '@/components/ui/button';
 ```
 
-### In mobile (`@kilo/mobile`)
+### In mobile (`@/mobile`)
 ```typescript
-import { AuthUser, KiloEntry } from '@kilo/shared/types';
-import { kiloEntrySchema } from '@kilo/shared/schemas';
-import { AppError } from '@kilo/shared/lib';
+import { AuthUser, KiloEntry } from '@/shared/types';
+import { kiloEntrySchema } from '@/shared/schemas';
+import { AppError } from '@/shared/lib';
 ```
 
 ## Database Schema
@@ -172,7 +172,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/kysely/client";
 import { validateSession } from "@/lib/auth/session";
 import { AppError } from "@/lib/errors";
-import { exampleSchema } from "@kilo/shared/schemas";  // Define in shared
+import { exampleSchema } from "@/shared/schemas";  // Define in shared
 
 export async function POST(request: NextRequest) {
   try {
@@ -452,8 +452,8 @@ pnpm test:web:e2e
 ### Running from within a package
 
 ```bash
-pnpm --filter @kilo/web dev        # Same as pnpm dev:web
-pnpm --filter @kilo/mobile start   # Same as pnpm dev:mobile
+pnpm --filter @/web dev        # Same as pnpm dev:web
+pnpm --filter @/mobile start   # Same as pnpm dev:mobile
 ```
 
 ### Adding Shadcn Components
@@ -491,15 +491,15 @@ Shared `.env` lives at the repo root. Required:
 ## Tips for AI Assistants
 
 1. **Always use API routes** for data operations, not server actions
-2. **Define Zod schemas in `@kilo/shared/schemas`** so both web and mobile can use them
-3. **Define types in `@kilo/shared/types`** for shared data structures
+2. **Define Zod schemas in `@/shared/schemas`** so both web and mobile can use them
+3. **Define types in `@/shared/types`** for shared data structures
 4. **Validate sessions** in all protected API routes
 5. **Check `packages/shared/src/db/types.ts`** for available database types
 6. **Run `pnpm codegen`** after migration changes (from repo root)
 7. **Use existing Shadcn components** from `web/src/components/ui/`
 8. **Follow existing patterns** in similar files
 9. **Write tests** for new features (unit + E2E)
-10. **Handle errors** consistently with AppError from `@kilo/shared/lib`
+10. **Handle errors** consistently with AppError from `@/shared/lib`
 11. **Don't share components** between web (Shadcn/React DOM) and mobile (NativeWind/RN)
 12. **Don't share AuthContext** — web uses cookies, mobile uses SecureStore
 13. **Profile API uses upsert** - `ON CONFLICT (user_id) DO UPDATE`

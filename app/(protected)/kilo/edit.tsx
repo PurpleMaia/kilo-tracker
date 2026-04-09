@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/api";
 import { FadeIn } from "@/components/shared/fade-in";
 import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { getTheme } from "@/components/kilo/question-theme";
-import { QUESTIONS } from "@kilo/shared/types";
+import { QUESTIONS } from "@/shared/types";
 
 export default function EditKiloScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

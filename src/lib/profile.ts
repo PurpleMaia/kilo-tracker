@@ -1,5 +1,5 @@
-import { isProfileComplete } from "@kilo/shared/lib";
-import type { UserProfile } from "@kilo/shared/types";
+import { isProfileComplete } from "@/shared/lib";
+import type { UserProfile } from "@/shared/types";
 import { apiFetch } from "@/lib/api";
 
 export type MobileUserProfile = UserProfile | null;

@@ -19,7 +19,7 @@ config.resolver.nodeModulesPaths = [
 
 // Ensure React and related packages resolve to a single copy from mobile/node_modules
 // This prevents the "Invalid hook call" error caused by duplicate React instances
-// when Metro also watches the workspace root (which has react@19.2.4 from @kilo/web)
+// when Metro also watches the workspace root (which has react@19.2.4 from @/web)
 config.resolver.extraNodeModules = {
   react: path.resolve(projectRoot, "node_modules/react"),
   "react-native": path.resolve(projectRoot, "node_modules/react-native"),

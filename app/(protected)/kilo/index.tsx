@@ -25,7 +25,7 @@ import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { ThemedBackground } from "@/components/kilo/themed-background";
 import { StepIndicator } from "@/components/kilo/step-indicator";
 import { getTheme } from "@/components/kilo/question-theme";
-import { QUESTIONS } from "@kilo/shared/types";
+import { QUESTIONS } from "@/shared/types";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
 
