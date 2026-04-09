@@ -4,12 +4,11 @@ const path = require("path");
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "..");
-const sharedRoot = path.resolve(workspaceRoot, "packages/shared");
 
 const config = getDefaultConfig(projectRoot);
 
 // Tell Metro to watch the workspace root and shared package
-config.watchFolders = [workspaceRoot, sharedRoot];
+config.watchFolders = [workspaceRoot];
 
 // Resolve modules from both mobile/node_modules and the root node_modules
 config.resolver.nodeModulesPaths = [
