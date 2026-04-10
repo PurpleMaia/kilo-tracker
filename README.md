@@ -43,7 +43,8 @@ Create a `.env` file at the repo root:
 This builds the application for iOS and submits to TestFlight
 
 ```bash
-eas build --platform ios --local --auto-submit
+eas build --platform ios --local
+eas submit --platform ios
 ```
 
 1. Copy the `.ipa` file path generated in this project root
