@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "https://localhost:3000";
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? "https://localhost:3000" : "");
 
 const TOKEN_KEY = "session_token";
 const TOKEN_TYPE_KEY = "session_token_type";
@@ -56,6 +56,10 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  if (!BASE_URL) {
+    throw new Error("API URL is not configured.");
+  }
+
   const session = await getToken();
 
   const headers: Record<string, string> = {

@@ -228,7 +228,8 @@ export function TodaySummary() {
       const todayEntry = latest && isToday(latest.created_at) ? latest : null;
       setEntry(todayEntry);
       return todayEntry;
-    } catch {
+    } catch (err) {
+      if (__DEV__) console.error("Failed to fetch kilo entry:", err);
       setEntry(null);
       return null;
     }
@@ -240,7 +241,8 @@ export function TodaySummary() {
       const summaryRes = await apiFetch<SummaryData>("/api/tasks/summary");
       setSummary(summaryRes.summary);
       setTasks(summaryRes.tasks ?? []);
-    } catch {
+    } catch (err) {
+      if (__DEV__) console.error("Failed to fetch summary:", err);
       setSummary(null);
       setTasks([]);
     } finally {

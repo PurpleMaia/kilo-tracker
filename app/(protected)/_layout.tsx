@@ -4,6 +4,7 @@ import { useNetwork } from "@/contexts/NetworkContext";
 import { View, ActivityIndicator } from "react-native";
 import { TabBar } from "@/components/navigation/tab-bar";
 import { NoNetwork } from "@/components/shared/no-network";
+import { ErrorBoundary } from "@/components/shared/error-boundary";
 
 export default function ProtectedLayout() {
   const { isAuthenticated, isLoading, profileComplete } = useAuth();
@@ -38,22 +39,24 @@ export default function ProtectedLayout() {
   }
 
   return (
-    <Tabs
-      tabBar={(props) => <TabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tabs.Screen name="index" options={{ title: "Home" }} />
-      <Tabs.Screen name="history" options={{ title: "History" }} />
-      <Tabs.Screen name="learn" options={{ title: "Learn" }} />
-      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
-      <Tabs.Screen
-        name="onboarding"
-        options={{ href: null, tabBarStyle: { display: "none" } }}
-      />
-      <Tabs.Screen
-        name="kilo"
-        options={{ href: null, tabBarStyle: { display: "none" } }}
-      />
-    </Tabs>
+    <ErrorBoundary>
+      <Tabs
+        tabBar={(props) => <TabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
+        <Tabs.Screen name="index" options={{ title: "Home" }} />
+        <Tabs.Screen name="history" options={{ title: "History" }} />
+        <Tabs.Screen name="learn" options={{ title: "Learn" }} />
+        <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+        <Tabs.Screen
+          name="onboarding"
+          options={{ href: null, tabBarStyle: { display: "none" } }}
+        />
+        <Tabs.Screen
+          name="kilo"
+          options={{ href: null, tabBarStyle: { display: "none" } }}
+        />
+      </Tabs>
+    </ErrorBoundary>
   );
 }

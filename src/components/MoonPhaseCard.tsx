@@ -119,7 +119,9 @@ export function MoonPhaseCard() {
     useCallback(() => {
       apiFetch<{ data: MoonPhaseResult }>("/api/moon")
         .then((res) => setPhase(res.data))
-        .catch(() => {})
+        .catch((err) => {
+          if (__DEV__) console.error("Failed to fetch moon phase:", err);
+        })
         .finally(() => setLoading(false));
     }, [])
   );

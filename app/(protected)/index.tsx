@@ -45,7 +45,10 @@ export default function LandingScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      load().catch(() => setHasEntryToday(false));
+      load().catch((err) => {
+        if (__DEV__) console.error("Failed to load landing data:", err);
+        setHasEntryToday(false);
+      });
     }, [load])
   );
 

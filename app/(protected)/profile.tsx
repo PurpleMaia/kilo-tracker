@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -72,6 +72,11 @@ export default function ProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    return () => { clearTimeout(savedTimerRef.current); };
+  }, []);
 
   useEffect(() => {
     setForm({
@@ -131,7 +136,7 @@ export default function ProfileScreen() {
       await refreshProfile();
       setProfileHasUnsavedChanges(false);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to save profile"
