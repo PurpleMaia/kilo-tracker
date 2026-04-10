@@ -275,7 +275,7 @@ export default function KiloScreen() {
             setAnswer((answer ? answer + " " : "") + deviceTranscriptRef.current.trim());
             setShowTyping(true);
           } else {
-            setError(`Transcription error: ${e instanceof Error ? e.message : String(e)}`);
+            setError("Transcription failed. Try again or type your answer.");
             setShowTyping(true);
           }
         }
@@ -291,7 +291,7 @@ export default function KiloScreen() {
         }
       }
     } catch (e) {
-      setError(`Recording error: ${e instanceof Error ? e.message : String(e)}`);
+      setError("Recording failed. Please try again.");
       setShowTyping(true);
       recordingRef.current = null;
     } finally {

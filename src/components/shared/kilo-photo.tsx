@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { Image } from "react-native";
-import { getToken } from "@/lib/api";
-
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+import { getToken, BASE_URL } from "@/lib/api";
 
 export function KiloPhoto({ entryId, question = "q1" }: { entryId: number; question?: string }) {
   const [source, setSource] = useState<{ uri: string; headers: Record<string, string> } | null>(null);

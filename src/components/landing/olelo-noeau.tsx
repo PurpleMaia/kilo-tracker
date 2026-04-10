@@ -18,7 +18,7 @@ export function OleloNoeau() {
       apiFetch<OleloResponse>("/api/olelo-noeau/daily")
         .then((res) => setText(res.data?.text || null))
         .catch(() => {
-          console.error("Failed to fetch daily ʻOlelo Noʻeau");
+          if (__DEV__) console.error("Failed to fetch daily ʻOlelo Noʻeau");
         })
         .finally(() => setLoading(false));
     }, [])

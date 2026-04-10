@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { apiFetch, saveToken, clearToken, getToken } from "@/lib/api";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { apiFetch, saveToken, clearToken, getToken, setOnUnauthorized } from "@/lib/api";
 import { AuthUser } from "@/types";
 import { fetchProfile, isMobileProfileComplete, MobileUserProfile } from "@/lib/profile";
 
@@ -92,6 +92,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await clearToken();
     setUser(null);
     setProfile(null);
+  }, []);
+
+  // Register 401 handler so apiFetch can trigger logout on expired sessions
+  const logoutRef = useRef(logout);
+  logoutRef.current = logout;
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      logoutRef.current();
+    });
+    return () => setOnUnauthorized(null);
   }, []);
 
   return (

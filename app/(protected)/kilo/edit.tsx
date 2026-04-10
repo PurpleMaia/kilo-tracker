@@ -7,20 +7,19 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { apiFetch, getToken } from "@/lib/api";
+import { apiFetch, getToken, BASE_URL } from "@/lib/api";
 import { FadeIn } from "@/components/shared/fade-in";
 import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { AudioRecorder } from "@/components/kilo/audio-recorder";
 import { getTheme } from "@/components/kilo/question-theme";
 import { QUESTIONS } from "@/shared/types";
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
-
 type PhotoQuestion = "q1" | "q2" | "q3";
 type PhotoData = { uri: string; mimeType: string };
 
 export default function EditKiloScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: rawId } = useLocalSearchParams<{ id: string }>();
+  const id = rawId && /^\d+$/.test(rawId) ? rawId : null;
   const [answers, setAnswers] = useState({ q1: "", q2: "", q3: "", q4: "" });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,6 +31,11 @@ export default function EditKiloScreen() {
   const [serverPhotoSources, setServerPhotoSources] = useState<Record<PhotoQuestion, { uri: string; headers: Record<string, string> } | null>>({ q1: null, q2: null, q3: null });
 
   useEffect(() => {
+    if (!id) {
+      setError("Invalid entry ID.");
+      setIsLoading(false);
+      return;
+    }
     (async () => {
       try {
         const { entry } = await apiFetch<{
