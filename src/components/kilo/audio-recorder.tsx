@@ -1,164 +1,156 @@
-"use client";
-
 import { useState, useRef } from "react";
-import { Mic, Square, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-/** Ask browser what audio format it supports */
-function getSupportedMimeType(): string {
-  const types = ["audio/webm", "audio/mp4", "audio/ogg"];
-  return types.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
-}
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { Audio } from "expo-av";
+import { Ionicons } from "@expo/vector-icons";
+import { apiFetch } from "@/lib/api";
 
 interface AudioRecorderProps {
-  onTranscription?: (text: string) => void;
-  onRecordingStateChange?: (isRecording: boolean) => void;
-  compact?: boolean;
+  onTranscription: (text: string) => void;
+  accentColor?: string;
+  disabled?: boolean;
 }
 
-export function AudioRecorder({ onTranscription, onRecordingStateChange, compact }: AudioRecorderProps) {
-  const [recording, setRecording] = useState(false);
-  const [transcribing, setTranscribing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+export function AudioRecorder({
+  onTranscription,
+  accentColor = "#15803D",
+  disabled = false,
+}: AudioRecorderProps) {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const recordingRef = useRef<Audio.Recording | null>(null);
 
-  const sendAudio = async (fileBlob: Blob, mimeType: string) => {
+  const handleStart = async () => {
     try {
-      setTranscribing(true);
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Microphone access is required to record.");
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync({
+        android: {
+          extension: ".wav",
+          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: ".wav",
+          outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {},
+      });
+
+      recordingRef.current = recording;
+      setIsRecording(true);
+    } catch {
+      Alert.alert("Error", "Failed to start recording.");
+    }
+  };
+
+  const handleStop = async () => {
+    setIsRecording(false);
+    setIsTranscribing(true);
+
+    if (!recordingRef.current) {
+      setIsTranscribing(false);
+      return;
+    }
+
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+
+      if (!uri) {
+        Alert.alert("Error", "No recording found. Try again.");
+        setIsTranscribing(false);
+        return;
+      }
+
       const formData = new FormData();
+      formData.append("file", {
+        uri,
+        name: "audio.wav",
+        type: "audio/wav",
+      } as never);
 
-      const ext = mimeType.includes("mp4") ? "mp4" : mimeType.includes("ogg") ? "ogg" : "webm";
-      formData.append("file", fileBlob, `audio.${ext}`);
-
-      const resp = await fetch("/api/audio/transcribe", {
+      const { text } = await apiFetch<{ text: string }>("/api/audio/transcribe", {
         method: "POST",
         body: formData,
       });
 
-      if (!resp.ok) throw new Error("Server responded with " + resp.status);
-
-      const data = await resp.json();
-      const transcriptText = data.text ?? JSON.stringify(data);
-      onTranscription?.(transcriptText);
-      setTranscribing(false);
-    } catch (e) {
-      console.error(e);
-      setTranscribing(false);
-    }
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = getSupportedMimeType();
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-
-      mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType || "audio/mp4" });
-        await sendAudio(blob, mimeType);
-        stream.getTracks().forEach((t) => t.stop());
-      };
-
-      recorder.start();
-      setRecording(true);
-      onRecordingStateChange?.(true);
-    } catch (e: any) {
-      if (e?.name === "NotAllowedError") {
-        alert("Microphone permission was denied. Please allow access in your browser settings.");
-      } else if (e?.name === "NotFoundError") {
-        alert("No microphone found on this device.");
+      if (text) {
+        onTranscription(text);
       } else {
-        alert("Audio capture is not supported. Try opening this page in Safari 14.3+ and ensure the site is served over HTTPS.");
-        console.error(e);
+        Alert.alert("No text", "Transcription returned no text. Try again.");
       }
+    } catch (e) {
+      Alert.alert("Error", `Transcription failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setIsTranscribing(false);
     }
   };
 
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    setRecording(false);
-    onRecordingStateChange?.(false);
-  };
-
-  if (compact) {
+  if (isTranscribing) {
     return (
-      <button
-        type="button"
-        onClick={recording ? stopRecording : startRecording}
-        disabled={transcribing}
-        title={recording ? "Stop recording" : transcribing ? "Transcribing..." : "Record audio"}
-        className={cn(
-          "flex items-center justify-center w-9 h-9 rounded-full transition-colors shrink-0",
-          recording
-            ? "bg-red-500 hover:bg-red-600 text-white"
-            : transcribing
-            ? "bg-yellow-500 text-white cursor-not-allowed"
-            : "bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground",
-        )}
-      >
-        {transcribing ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : recording ? (
-          <Square className="h-4 w-4 fill-current" />
-        ) : (
-          <Mic className="h-4 w-4" />
-        )}
-      </button>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 }}>
+        <ActivityIndicator size="small" color={accentColor} />
+        <Text style={{ color: accentColor, fontSize: 13, fontWeight: "500" }}>
+          Transcribing...
+        </Text>
+      </View>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      {/* Recording button */}
-      <button
-        id='audio-recorder-button'
-        onClick={recording ? stopRecording : startRecording}
-        disabled={transcribing}
-        className={cn(
-          "cursor-pointer relative flex items-center justify-center w-20 h-20 rounded-full transition-all duration-200",
-          "touch-action-manipulation",
-          "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-offset-2",
-          recording
-            ? "bg-red-500 hover:bg-red-600 focus-visible:ring-red-300"
-            : transcribing
-            ? "bg-yellow-500 cursor-not-allowed"
-            : "bg-linear-to-br from-green-500 to-lime-800 hover:from-green-600 hover:to-lime-900 focus-visible:ring-lime-300 transition-colors",
-        )}
-        aria-label={recording ? "Stop recording" : "Start recording"}
+    <TouchableOpacity
+      onPress={isRecording ? handleStop : handleStart}
+      disabled={disabled}
+      activeOpacity={0.7}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 16,
+        backgroundColor: isRecording ? "#FEF2F2" : "#F5F5F4",
+        borderWidth: 1,
+        borderColor: isRecording ? "#FECACA" : "#E7E5E4",
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <Ionicons
+        name={isRecording ? "stop-circle" : "mic-outline"}
+        size={18}
+        color={isRecording ? "#B91C1C" : accentColor}
+      />
+      <Text
+        style={{
+          color: isRecording ? "#B91C1C" : accentColor,
+          fontSize: 13,
+          fontWeight: "600",
+        }}
       >
-        {recording ? (
-          <Square className="h-8 w-8 text-white fill-white" />
-        ) : transcribing ? (
-          <div className="flex gap-1">
-            <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-            <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-            <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-          </div>
-        ) : (
-          <Mic className="h-8 w-8 text-white" />
-        )}
-
-        {/* Pulse ring when recording */}
-        {recording && (
-          <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-25" />
-        )}
-      </button>
-
-      {/* Status text */}
-      <p className="text-sm text-muted-foreground">
-        {recording
-          ? "Recording... Tap to stop"
-          : transcribing
-          ? "Transcribing your audio..."
-          : "Tap to start recording"}
-      </p>
-    </div>
+        {isRecording ? "Stop recording" : "Record voice"}
+      </Text>
+    </TouchableOpacity>
   );
 }

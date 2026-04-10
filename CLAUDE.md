@@ -1,560 +1,162 @@
 # CLAUDE.md - AI Development Guide for KILO Tracker
 
-This document helps AI assistants understand how to implement features, write tests, make API calls, and work effectively with this codebase.
-
 ## Project Overview
 
-KILO Tracker is a Next.js 16 application using the **App Router**. It's designed to eventually become a React Native + Expo mobile app, so all data operations use **API routes** rather than server actions.
+KILO Tracker is a **React Native + Expo** mobile app that calls a **separate backend** API. This repo contains only the Expo frontend.
 
-### Key Architectural Decisions
+- **`src/shared/`** — Types, Zod schemas, and utilities **copied from the backend repo** to ensure type correctness on both sides. Keep these in sync manually.
+- **`src/components/`** — React Native components (NativeWind styling)
+- **`src/contexts/`** — AuthContext using SecureStore for token-based sessions
+- **`src/lib/`** — `apiFetch` helper that attaches `x-session-token` header
+- **`app/`** — Expo Router screens
 
-1. **API-first approach** - All CRUD operations go through `/api` routes (not server actions) for React Native compatibility
-2. **Multi-tenant** - Organizations (tenants) with user roles (admin/member)
-3. **Type-safe database** - Kysely ORM with auto-generated TypeScript types
-4. **Session-based auth** - Secure sessions with hashed tokens stored in DB
+There are **no tests** in this repo.
 
-## Directory Structure
+## Preferences
 
-```
-src/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes (all data operations)
-│   ├── (auth)/            # Auth pages (login, register)
-│   ├── dashboard/         # Dashboard pages
-│   └── kilo/              # KILO entry pages
-├── components/
-│   ├── ui/                # Shadcn primitives (don't modify)
-│   ├── kilo/              # KILO feature components
-│   ├── dashboard/         # Dashboard components
-│   └── auth/              # Auth components
-├── db/
-│   ├── kysely/            # Database client
-│   ├── migrations/        # SQL migration files
-│   └── types.ts           # Auto-generated types (don't edit manually)
-├── lib/
-│   ├── auth/              # Auth utilities
-│   └── errors.ts          # Error classes
-├── hooks/
-│   └── contexts/          # React context providers
-└── tests/
-    ├── e2e/               # Playwright tests
-    └── lib/               # Unit tests
-```
+1. **Use `frontend-design-pro` skill** when building new pages/components — apply agency-quality aesthetics
+2. **Preserve commented-out legacy code** when rewriting files
+3. **No derived fields in DB/types** — derive computed values in code, not in type definitions
+4. **NativeWind for styling** — use Tailwind classes via `className`, not inline `style` objects
+5. **All data operations go through API calls** to the separate backend
+6. **Auth uses SecureStore** — not cookies, not AsyncStorage
+7. **Zod schemas live in `src/shared/schemas/`** — validate on the client before sending to API
+8. **Types live in `src/shared/types/`** — shared with the backend for type safety
 
-## Database Schema
-
-### Core Tables
-
-| Table | Purpose |
-|-------|---------|
-| `users` | User accounts (email, username, password_hash, system_role) |
-| `sessions` | Session tokens with expiry |
-| `tenants` | Organizations |
-| `members` | User-tenant relationships with role |
-| `kilo` | KILO observation entries |
-| `profiles` | Extended user profiles |
-| `oauth_accounts` | OAuth provider links |
-| `login_attempts` | Security audit log |
-
-### User Roles
-
-- **System roles** (`sysrole`): `sysadmin` | `user`
-- **Org roles** (`role`): `admin` | `member`
-
-### Auto-Generated Types
-
-After modifying migrations, regenerate types:
-```bash
-pnpm migrate:up d && pnpm codegen
-```
-
-Types are in `src/db/types.ts` - never edit manually.
-
-## Implementing Features
-
-### Creating a New API Route
-
-API routes live in `src/app/api/`. Use this pattern:
+## Import Conventions
 
 ```typescript
-// src/app/api/example/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-import { db } from "@/db/kysely/client";
-import { validateSession } from "@/lib/auth/session";
-import { AppError } from "@/lib/errors";
+// Shared types & schemas (mirrored from backend)
+import { AuthUser, KiloEntry } from '@/shared/types';
+import { kiloEntrySchema } from '@/shared/schemas';
+import { AppError } from '@/shared/lib';
 
-// 1. Define input schema with Zod
-const exampleSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().nullable().optional(),
+// App code
+import { useAuth } from '@/contexts/AuthContext';
+import { apiFetch } from '@/lib/apiFetch';
+```
+
+## API Reference
+
+The app calls a separate backend. All requests go through `apiFetch` which handles the session token.
+
+### KILO API (`/api/kilo`)
+
+```typescript
+// POST - Create new entry
+const response = await fetch("/api/kilo", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    q1: "My internal weather is calm",
+    q2: "I see sunshine outside",
+    q3: "Excited to work on my project",
+    photo_path: "/api/uploads/kilo/user-id/timestamp.jpg", // optional
+  }),
 });
 
-// 2. Implement the handler
-export async function POST(request: NextRequest) {
-  try {
-    // 3. Validate session (throws if unauthorized)
-    const user = await validateSession(request);
+// GET - Paginated list
+const entries = await fetch("/api/kilo?page=1&limit=5");
+// Returns: { entries: [...], total, page, totalPages }
 
-    // 4. Parse and validate input
-    const body = await request.json();
-    const parsed = exampleSchema.safeParse(body);
+// GET - Single entry (for editing)
+const entry = await fetch("/api/kilo?id=123");
+// Returns: { entry: {...} }
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid input", issues: parsed.error.issues },
-        { status: 400 }
-      );
-    }
+// PUT - Update entry
+await fetch("/api/kilo", {
+  method: "PUT",
+  body: JSON.stringify({ id: 123, q1: "Updated answer", ... }),
+});
 
-    // 5. Perform database operation
-    const result = await db
-      .insertInto("your_table")
-      .values({
-        user_id: user.id,
-        name: parsed.data.name,
-        description: parsed.data.description ?? null,
-      })
-      .returning(["id", "name", "created_at"])
-      .executeTakeFirst();
-
-    return NextResponse.json({ data: result }, { status: 201 });
-
-  } catch (error) {
-    // 6. Handle errors
-    if (error instanceof AppError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.statusCode }
-      );
-    }
-
-    console.error("[POST /api/example]", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
-
-// GET example with query params
-export async function GET(request: NextRequest) {
-  try {
-    const user = await validateSession(request);
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") ?? "10");
-
-    const results = await db
-      .selectFrom("your_table")
-      .selectAll()
-      .where("user_id", "=", user.id)
-      .limit(limit)
-      .execute();
-
-    return NextResponse.json({ data: results });
-  } catch (error) {
-    // error handling...
-  }
-}
-```
-
-### Creating a New Database Migration
-
-```bash
-pnpm migrate:create add_example_table
-```
-
-This creates up/down migration files. Edit them:
-
-```sql
--- 000004_add_example_table.up.sql
-CREATE TABLE examples (
-    id SERIAL PRIMARY KEY,
-    user_id UUID REFERENCES users(id),
-    name TEXT NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 000004_add_example_table.down.sql
-DROP TABLE IF EXISTS examples;
-```
-
-Run migration and regenerate types:
-```bash
-pnpm migrate:up d && pnpm codegen
-```
-
-### Creating a Client Component
-
-Client components that call APIs follow this pattern:
-
-```typescript
-// src/components/example/example-form.tsx
-"use client";
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-
-export function ExampleForm() {
-  const [name, setName] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async () => {
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/example", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to save");
-      }
-
-      // Handle success
-      setName("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Enter name"
-        disabled={isSubmitting}
-      />
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      <Button onClick={handleSubmit} disabled={isSubmitting}>
-        {isSubmitting ? "Saving..." : "Save"}
-      </Button>
-    </div>
-  );
-}
-```
-
-### Creating a Page
-
-Pages use the App Router convention:
-
-```typescript
-// src/app/example/page.tsx
-import { ExampleForm } from "@/components/example/example-form";
-
-export default function ExamplePage() {
-  return (
-    <main className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Example</h1>
-      <ExampleForm />
-    </main>
-  );
-}
-```
-
-## Writing Tests
-
-### Unit Tests (Jest)
-
-Unit tests go in `src/tests/lib/`. Pattern:
-
-```typescript
-// src/tests/lib/example/Example.test.ts
-import { POST } from '@/app/api/example/route';
-import { NextRequest } from 'next/server';
-
-describe('Example API', () => {
-  test('should create example with valid input', async () => {
-    const request = new NextRequest('http://localhost:3000/api/example', {
-      method: 'POST',
-      body: JSON.stringify({ name: 'Test' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const response = await POST(request);
-    const data = await response.json();
-
-    expect(response.status).toBe(201);
-    expect(data.data.name).toBe('Test');
-  });
-
-  test('should return 400 for invalid input', async () => {
-    const request = new NextRequest('http://localhost:3000/api/example', {
-      method: 'POST',
-      body: JSON.stringify({}), // missing required field
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const response = await POST(request);
-    expect(response.status).toBe(400);
-  });
+// DELETE - Remove entry
+await fetch("/api/kilo", {
+  method: "DELETE",
+  body: JSON.stringify({ id: 123 }),
 });
 ```
 
-Run unit tests:
-```bash
-pnpm test:unit
-```
-
-### E2E Tests (Playwright)
-
-E2E tests go in `src/tests/e2e/`. Pattern:
+### Audio Transcription API (`/api/audio/transcribe`)
 
 ```typescript
-// src/tests/e2e/example.spec.ts
-import { db } from '@/db/kysely/client';
-import { hashPassword } from '@/lib/auth/password';
-import { test, expect } from '@playwright/test';
-import { testUser } from '../helpers';
+const formData = new FormData();
+formData.append("file", audioBlob);
 
-test.describe('Example Feature', () => {
-  // Setup: create test user
-  test.beforeAll(async () => {
-    const passwordHash = await hashPassword(testUser.password);
-    await db.insertInto('users').values({
-      id: testUser.id,
-      email: testUser.email,
-      username: testUser.username,
-      password_hash: passwordHash,
-      system_role: 'user',
-    }).execute();
-  });
+const response = await fetch("/api/audio/transcribe", {
+  method: "POST",
+  body: formData,
+});
 
-  // Cleanup: remove test data
-  test.afterAll(async () => {
-    await db.deleteFrom('users').where('id', '=', testUser.id).execute();
-  });
+const { text } = await response.json();
+```
 
-  test('user can create example', async ({ page }) => {
-    // Login
-    await page.goto('/login');
-    await page.fill('input#identifier', testUser.email);
-    await page.fill('input#password', testUser.password);
-    await page.click('button[type="submit"]');
+### Photo Upload API (`/api/photo`)
 
-    // Navigate and interact
-    await page.goto('/example');
-    await page.fill('input[placeholder="Enter name"]', 'My Example');
-    await page.click('text=Save');
+```typescript
+const formData = new FormData();
+formData.append("photo", file);
 
-    // Verify
-    await expect(page.locator('text=Success')).toBeVisible();
-  });
+const response = await fetch("/api/photo", {
+  method: "POST",
+  body: formData,
+});
+
+const { path } = await response.json();
+// path: "/api/uploads/kilo/{userId}/{timestamp}.jpg"
+```
+
+Constraints: max 5MB, images only.
+
+### Profile API (`/api/profile`)
+
+```typescript
+// GET - current user's profile
+const { profile } = await fetch("/api/profile").then(r => r.json());
+
+// PUT - create or update profile (upsert)
+await fetch("/api/profile", {
+  method: "PUT",
+  body: JSON.stringify({
+    first_name: "John",
+    last_name: "Doe",
+    dob: "1990-01-15",
+    mauna: "Mauna Kea",
+    aina: "Kailua",
+    wai: "Nuʻuanu",
+    kula: "Punahou",
+    role: "student",
+  }),
 });
 ```
 
-Run E2E tests:
-```bash
-pnpm test:e2e
-```
-
-### Test Helpers
-
-Use `src/tests/helpers.ts` for shared test utilities:
-
-```typescript
-export const testUser = {
-  id: 'test-user-uuid',
-  email: 'test@example.com',
-  username: 'testuser',
-  password: 'TestPassword123!',
-};
-```
-
-## Authentication
-
-### Protecting API Routes
-
-Always validate sessions in API routes:
-
-```typescript
-import { validateSession } from "@/lib/auth/session";
-
-export async function GET(request: NextRequest) {
-  const user = await validateSession(request); // Throws if unauthorized
-  // user.id, user.email, user.system_role available
-}
-```
-
-### Protecting Pages
-
-For protected pages, check auth in the component:
-
-```typescript
-"use client";
-
-import { useAuth } from "@/hooks/contexts/AuthContext";
-import { redirect } from "next/navigation";
-
-export default function ProtectedPage() {
-  const { user, isLoading, isAuthenticated } = useAuth();
-
-  if (isLoading) return <div>Loading...</div>;
-  if (!isAuthenticated) redirect("/login");
-
-  return <div>Welcome {user?.email}</div>;
-}
-```
-
-## Common Patterns
-
-### Error Handling
-
-Use `AppError` for consistent error responses:
-
-```typescript
-import { AppError } from "@/lib/errors";
-
-// In API route
-if (!resource) {
-  throw new AppError("Resource not found", 404);
-}
-```
-
-### Form Validation
-
-Always use Zod schemas:
-
-```typescript
-import { z } from "zod";
-
-const schema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(100),
-  age: z.number().int().positive().optional(),
-});
-
-const parsed = schema.safeParse(data);
-if (!parsed.success) {
-  // Handle validation errors
-}
-```
-
-### Database Queries
-
-Use Kysely's fluent API:
-
-```typescript
-import { db } from "@/db/kysely/client";
-
-// Insert
-const result = await db
-  .insertInto("table_name")
-  .values({ ... })
-  .returning(["id", "created_at"])
-  .executeTakeFirst();
-
-// Select
-const rows = await db
-  .selectFrom("table_name")
-  .selectAll()
-  .where("user_id", "=", userId)
-  .orderBy("created_at", "desc")
-  .limit(10)
-  .execute();
-
-// Update
-await db
-  .updateTable("table_name")
-  .set({ name: newName })
-  .where("id", "=", id)
-  .execute();
-
-// Delete
-await db
-  .deleteFrom("table_name")
-  .where("id", "=", id)
-  .execute();
-
-// Join
-const results = await db
-  .selectFrom("members")
-  .innerJoin("users", "users.id", "members.user_id")
-  .select(["members.id", "users.email", "members.user_role"])
-  .where("members.tenant_id", "=", tenantId)
-  .execute();
-```
-
-## UI Components
-
-### Using Shadcn Components
-
-Import from `@/components/ui/`:
-
-```typescript
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-```
-
-### Adding New Shadcn Components
-
-Use the Shadcn CLI:
-```bash
-npx shadcn@latest add [component-name]
-```
-
-## Environment Variables
-
-Access in server code:
-```typescript
-const apiKey = process.env.SPEACHES_API_KEY;
-```
-
-For client-side access, prefix with `NEXT_PUBLIC_`:
-```typescript
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-```
-
-## Commands Reference
+## Commands
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start dev server (HTTPS) |
-| `pnpm build` | Build for production |
-| `pnpm test:unit` | Run Jest unit tests |
-| `pnpm test:e2e` | Run Playwright E2E tests |
-| `pnpm migrate:create <name>` | Create new migration |
-| `pnpm migrate:up d` | Run migrations (dev) |
-| `pnpm migrate:up p` | Run migrations (prod) |
-| `pnpm codegen` | Regenerate DB types |
-| `pnpm lint` | Run ESLint |
+| `npx expo start` | Start Expo dev server |
+| `eas build --profile production --platform ios` | Production iOS build |
+| `eas build --profile production --platform android` | Production Android build |
+| `eas build --platform ios --local` | Local iOS build (no EAS cloud) |
 
-## File Naming Conventions
+## Environment Variables
 
-- **Pages**: `page.tsx` (App Router convention)
-- **Layouts**: `layout.tsx`
-- **API Routes**: `route.ts`
-- **Components**: `kebab-case.tsx` (e.g., `kilo-entry-form.tsx`)
-- **Tests**: `*.test.ts` (unit) or `*.spec.ts` (E2E)
-- **Types**: `types.ts` or in `src/types/`
+Set in `.env` at repo root:
+
+| Variable | Purpose |
+|----------|---------|
+| `EXPO_PUBLIC_API_URL` | Backend API base URL |
+| `IDENTIFIER` | App bundle identifier |
+
+Client-side access uses `EXPO_PUBLIC_` prefix:
+```typescript
+const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+```
 
 ## Tips for AI Assistants
 
-1. **Always use API routes** for data operations, not server actions
-2. **Validate sessions** in all protected API routes
-3. **Use Zod** for all input validation
-4. **Check `src/db/types.ts`** for available database types
-5. **Run `pnpm codegen`** after migration changes
-6. **Use existing Shadcn components** from `src/components/ui/`
-7. **Follow existing patterns** in similar files
-8. **Write tests** for new features (unit + E2E)
-9. **Handle errors** consistently with AppError
+1. **This is a frontend-only repo** — no database, no server code, no migrations
+2. **`src/shared/` is a copy from the backend** — don't add DB-related code here
+3. **Use `apiFetch`** for all API calls — it handles auth tokens
+4. **NativeWind components only** — no Shadcn, no React DOM
+5. **Follow existing patterns** in similar files
+6. **KILO questions** are defined in `src/shared/types/kilo.ts`

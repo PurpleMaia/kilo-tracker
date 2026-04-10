@@ -1,7 +1,0 @@
-
-
-DROP TABLE IF EXISTS members;
-DROP TABLE IF EXISTS activity_categories;
-DROP TYPE IF EXISTS role;
-DROP TABLE IF EXISTS tenants;
-
