@@ -34,8 +34,7 @@ export function NoNetwork() {
       <Text
         className="text-base text-gray-500 text-center leading-6"
       >
-        Check your Wi-Fi or cellular connection.{"\n"}
-        The Learn tab is still available offline.
+        Check your Wi-Fi or cellular connection.
       </Text>
     </View>
   );

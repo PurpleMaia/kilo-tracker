@@ -12,7 +12,7 @@ export default function ProtectedLayout() {
   const segments = useSegments();
   const onOnboardingRoute = segments.includes("onboarding");
   const onProfileRoute = segments.includes("profile");
-  const onLearnRoute = segments.includes("learn");
+
 
   if (isLoading) {
     return (
@@ -34,7 +34,7 @@ export default function ProtectedLayout() {
     return <Redirect href="/(protected)" />;
   }
 
-  if (!isConnected && !onLearnRoute) {
+  if (!isConnected) {
     return <NoNetwork />;
   }
 

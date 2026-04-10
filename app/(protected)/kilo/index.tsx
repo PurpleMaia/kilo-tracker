@@ -103,34 +103,34 @@ export default function KiloScreen() {
   };
 
   // ── On-device speech recognition (runs alongside expo-av for live preview + offline fallback) ──
-  useSpeechRecognitionEvent("result", (event) => {
-    const transcript = event.results[0]?.transcript ?? "";
-    if (event.isFinal) {
-      deviceTranscriptRef.current += (deviceTranscriptRef.current ? " " : "") + transcript;
-      setLiveTranscript(deviceTranscriptRef.current);
-    } else {
-      // Show accumulated + current interim
-      setLiveTranscript(
-        deviceTranscriptRef.current + (deviceTranscriptRef.current ? " " : "") + transcript
-      );
-    }
-  });
+  // useSpeechRecognitionEvent("result", (event) => {
+  //   const transcript = event.results[0]?.transcript ?? "";
+  //   if (event.isFinal) {
+  //     deviceTranscriptRef.current += (deviceTranscriptRef.current ? " " : "") + transcript;
+  //     setLiveTranscript(deviceTranscriptRef.current);
+  //   } else {
+  //     // Show accumulated + current interim
+  //     setLiveTranscript(
+  //       deviceTranscriptRef.current + (deviceTranscriptRef.current ? " " : "") + transcript
+  //     );
+  //   }
+  // });
 
-  useSpeechRecognitionEvent("end", () => {
-    // On-device recognition may auto-stop on silence with continuous mode;
-    // restart it if we're still recording audio
-    if (recordingRef.current) {
-      try {
-        ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
-      } catch {
-        // Ignore — recording may have just stopped
-      }
-    }
-  });
+  // useSpeechRecognitionEvent("end", () => {
+  //   // On-device recognition may auto-stop on silence with continuous mode;
+  //   // restart it if we're still recording audio
+  //   if (recordingRef.current) {
+  //     try {
+  //       ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
+  //     } catch {
+  //       // Ignore — recording may have just stopped
+  //     }
+  //   }
+  // });
 
-  useSpeechRecognitionEvent("error", () => {
-    // On-device error is non-fatal — we still have the audio file for Whisper
-  });
+  // useSpeechRecognitionEvent("error", () => {
+  //   // On-device error is non-fatal — we still have the audio file for Whisper
+  // });
 
   // ── Start recording ──
   const handleStartRecording = async () => {
@@ -179,14 +179,14 @@ export default function KiloScreen() {
       recordingRef.current = recording;
 
       // Start on-device speech recognition in parallel for live preview
-      try {
-        const speechResult = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-        if (speechResult.granted) {
-          ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
-        }
-      } catch {
-        // On-device not available — that's fine, we still have the audio recording
-      }
+      // try {
+      //   const speechResult = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      //   if (speechResult.granted) {
+      //     ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
+      //   }
+      // } catch {
+      //   // On-device not available — that's fine, we still have the audio recording
+      // }
 
       deviceTranscriptRef.current = "";
       setLiveTranscript("");
@@ -237,10 +237,10 @@ export default function KiloScreen() {
       }
 
       // Check network at time of stop
-      const networkState = await Network.getNetworkStateAsync();
-      const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      // const networkState = await Network.getNetworkStateAsync();
+      // const isOnline = networkState.isConnected && networkState.isInternetReachable;
 
-      if (isOnline) {
+      if (true) {
         // ── Online: send to Whisper API ──
         setTranscribeMode("whisper");
         try {
