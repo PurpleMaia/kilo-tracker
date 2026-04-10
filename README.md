@@ -40,38 +40,14 @@ Create a `.env` file at the repo root:
 
 ## Build Commands
 
-### Development build (internal distribution)
-```bash
-eas build --profile development --platform ios
-eas build --profile development --platform android
-```
-
-### Preview build (internal distribution)
-```bash
-eas build --profile preview --platform ios
-eas build --profile preview --platform android
-```
-
-### Production build
-```bash
-eas build --profile production --platform ios
-eas build --profile production --platform android
-```
-
-### Local build (no EAS cloud)
-```bash
-eas build --platform ios --local
-eas build --platform android --local
-```
-
-### Submit to App Store / Google Play
+This builds the application for iOS and submits to TestFlight
 
 ```bash
-eas submit --platform ios
-eas submit --platform android
+eas build --platform ios --local --auto-submit
 ```
 
 1. Copy the `.ipa` file path generated in this project root
+2. Select the `Provide a local binary file` option
 2. Paste into the prompt
 3. When done, put that file into the `build` folder
 
