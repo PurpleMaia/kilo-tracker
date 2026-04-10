@@ -21,11 +21,14 @@ A React Native mobile app built with **Expo** for recording daily KILO observati
 - Admin Privileges to Team
 
 ## Quick Start
-
+1. Plug in device
+2. 
 ```bash
 pnpm install
-npx expo start
+npx expo run:ios --device
 ```
+3. Select your device
+4. Make sure to ALLOW LOCAL NETWORK
 
 Scan the QR code with Expo Go on your phone.
 

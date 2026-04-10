@@ -1,19 +1,14 @@
 const { getDefaultConfig } = require("expo/metro-config");
 const { withNativeWind } = require("nativewind/metro");
+const { resolve } = require("metro-resolver");
 const path = require("path");
 
 const projectRoot = __dirname;
-const workspaceRoot = path.resolve(projectRoot, "..");
-
 const config = getDefaultConfig(projectRoot);
-
-// Tell Metro to watch the workspace root and shared package
-config.watchFolders = [workspaceRoot];
 
 // Resolve modules from both mobile/node_modules and the root node_modules
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
-  path.resolve(workspaceRoot, "node_modules"),
 ];
 
 // Ensure React and related packages resolve to a single copy from mobile/node_modules
@@ -27,11 +22,17 @@ config.resolver.extraNodeModules = {
 
 // Block server-only modules from being bundled by Metro
 // kysely and pg are only used at runtime by the web server
+const originalResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === "pg" || moduleName === "kysely") {
     return { type: "empty" };
   }
-  return context.resolveRequest(context, moduleName, platform);
+
+  if (typeof originalResolveRequest === "function") {
+    return originalResolveRequest(context, moduleName, platform);
+  }
+
+  return resolve(context, moduleName, platform);
 };
 
 module.exports = withNativeWind(config, { input: "./global.css" });
