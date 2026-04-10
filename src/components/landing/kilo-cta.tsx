@@ -29,8 +29,7 @@ export function KiloCta({ profileComplete, hasEntryToday }: KiloCtaProps) {
         <Text
           className="text-xl font-semibold text-green-700"
           style={{
-            fontFamily: "Newsreader_400Regular",
-            color: profileComplete ? "#FFFFFF" : "#78716C",
+            fontFamily: "Newsreader_400Regular",            
           }}
         >
           {label}

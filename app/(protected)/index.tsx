@@ -124,9 +124,9 @@ export default function LandingScreen() {
         <TodaySummary />
       </FadeIn>
 
-      <FadeIn delay={300}>
+      {/* <FadeIn delay={300}>
         <KiloCta profileComplete={profileComplete} hasEntryToday={hasEntryToday} />
-      </FadeIn>
+      </FadeIn> */}
     </ScrollView>
   );
 }
