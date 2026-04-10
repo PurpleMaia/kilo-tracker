@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { profileUpdateSchema } from "../../src/shared/schemas";
@@ -55,7 +56,6 @@ const STEPS: Step[] = [
     fields: [
       { key: "first_name", label: "First name", placeholder: "Enter your first name" },
       { key: "last_name", label: "Last name", placeholder: "Enter your last name" },
-      { key: "dob", label: "Date of birth", placeholder: "Enter your date of birth", keyboardType: "numeric" },
     ],
   },
   {
@@ -105,6 +105,7 @@ export default function OnboardingScreen() {
   const [stepIndex, setStepIndex] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDobPicker, setShowDobPicker] = useState(Platform.OS === "ios");
   const [consentChecked, setConsentChecked] = useState(profile?.consent_privacy_ack === true);
   const [sharingChoice, setSharingChoice] = useState<"private" | "shared" | null>(
     profile?.encrypt_kilo_entries === true && profile?.share_kilo_entries === false
@@ -143,6 +144,16 @@ export default function OnboardingScreen() {
   const updateField = (key: keyof ProfileForm, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
     setError(null);
+  };
+
+  const dobDate = form.dob ? new Date(form.dob + "T00:00:00") : new Date(2000, 0, 1);
+
+  const onDobChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === "android") setShowDobPicker(false);
+    if (selectedDate) {
+      const iso = selectedDate.toISOString().split("T")[0];
+      updateField("dob", iso);
+    }
   };
 
   const privateCardStyle = useAnimatedStyle(() => ({
@@ -295,7 +306,7 @@ export default function OnboardingScreen() {
               {step.description}
             </Text>
 
-            {step.fields.length > 0 ? (
+            {step.fields.length > 0 || step.key === "identity" ? (
               <View style={{ marginTop: 28, gap: 18 }}>
                 {step.fields.map((field) => (
                   <View key={field.key}>
@@ -317,13 +328,50 @@ export default function OnboardingScreen() {
                       placeholderTextColor="#9CA3AF"
                       value={form[field.key]}
                       onChangeText={(value) => updateField(field.key, value)}
-                      autoCapitalize={field.key === "dob" ? "none" : "words"}
+                      autoCapitalize="words"
                       autoCorrect={false}
                       keyboardType={field.keyboardType ?? "default"}
                       editable={!isSaving}
                     />
                   </View>
                 ))}
+
+                {step.key === "identity" && (
+                  <View>
+                    <Text style={{ marginBottom: 8, color: "#374151", fontSize: 14, fontWeight: "600" }}>
+                      Date of birth
+                    </Text>
+                    {Platform.OS === "android" && (
+                      <TouchableOpacity
+                        onPress={() => setShowDobPicker(true)}
+                        activeOpacity={0.7}
+                        style={{
+                          borderRadius: 18,
+                          borderWidth: 1,
+                          borderColor: "#D1D5DB",
+                          backgroundColor: "#F9FAFB",
+                          paddingHorizontal: 16,
+                          paddingVertical: 16,
+                        }}
+                      >
+                        <Text style={{ color: form.dob ? "#111827" : "#9CA3AF", fontSize: 16 }}>
+                          {form.dob || "Select your date of birth"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {showDobPicker && (
+                      <DateTimePicker
+                        value={dobDate}
+                        mode="date"
+                        display={Platform.OS === "ios" ? "spinner" : "default"}
+                        maximumDate={new Date()}
+                        minimumDate={new Date(1920, 0, 1)}
+                        onChange={onDobChange}
+                        style={Platform.OS === "ios" ? { alignSelf: "center" } : undefined}
+                      />
+                    )}
+                  </View>
+                )}
               </View>
             ) : (
               <View style={{ marginTop: 28, gap: 14 }}>
