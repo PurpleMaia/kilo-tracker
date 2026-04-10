@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Image, Alert,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Image, Alert, Linking,
   Keyboard as RNKeyboard,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
@@ -29,6 +29,13 @@ import { QUESTIONS } from "@/shared/types";
 
 type PhotoData = { uri: string; mimeType: string };
 type PhotoQuestion = "q1" | "q2" | "q3";
+type VoicePermissionState = {
+  checked: boolean;
+  microphoneGranted: boolean;
+  speechGranted: boolean;
+  microphoneCanAskAgain: boolean;
+  speechCanAskAgain: boolean;
+};
 
 export default function KiloScreen() {
   const { profileComplete, refreshProfile } = useAuth();
@@ -45,6 +52,13 @@ export default function KiloScreen() {
   const [focusKey, setFocusKey] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [transcribeMode, setTranscribeMode] = useState<"whisper" | "device" | null>(null);
+  const [voicePermissions, setVoicePermissions] = useState<VoicePermissionState>({
+    checked: false,
+    microphoneGranted: false,
+    speechGranted: false,
+    microphoneCanAskAgain: true,
+    speechCanAskAgain: true,
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -57,6 +71,31 @@ export default function KiloScreen() {
       router.replace("/(protected)/onboarding");
     }
   }, [profileComplete]);
+
+  const syncVoicePermissions = useCallback(async () => {
+    try {
+      const [microphone, speech] = await Promise.all([
+        Audio.getPermissionsAsync(),
+        ExpoSpeechRecognitionModule.getPermissionsAsync(),
+      ]);
+
+      setVoicePermissions({
+        checked: true,
+        microphoneGranted: microphone.granted,
+        speechGranted: speech.granted,
+        microphoneCanAskAgain: microphone.canAskAgain,
+        speechCanAskAgain: speech.canAskAgain,
+      });
+    } catch {
+      setVoicePermissions({
+        checked: true,
+        microphoneGranted: false,
+        speechGranted: false,
+        microphoneCanAskAgain: false,
+        speechCanAskAgain: false,
+      });
+    }
+  }, []);
 
   // expo-av recording ref (for Whisper path)
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -87,10 +126,19 @@ export default function KiloScreen() {
     }, [])
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      syncVoicePermissions();
+    }, [syncVoicePermissions])
+  );
+
   const current = QUESTIONS[step];
   const answer  = answers[current.id as keyof typeof answers];
   const isLast  = step === QUESTIONS.length - 1;
   const theme   = getTheme(current.id);
+  const hasVoicePermissions = voicePermissions.microphoneGranted && voicePermissions.speechGranted;
+  const canRequestVoicePermissions =
+    voicePermissions.microphoneCanAskAgain || voicePermissions.speechCanAskAgain;
 
   const setAnswer = (val: string) =>
     setAnswers((a) => ({ ...a, [current.id]: val }));
@@ -103,42 +151,82 @@ export default function KiloScreen() {
   };
 
   // ── On-device speech recognition (runs alongside expo-av for live preview + offline fallback) ──
-  // useSpeechRecognitionEvent("result", (event) => {
-  //   const transcript = event.results[0]?.transcript ?? "";
-  //   if (event.isFinal) {
-  //     deviceTranscriptRef.current += (deviceTranscriptRef.current ? " " : "") + transcript;
-  //     setLiveTranscript(deviceTranscriptRef.current);
-  //   } else {
-  //     // Show accumulated + current interim
-  //     setLiveTranscript(
-  //       deviceTranscriptRef.current + (deviceTranscriptRef.current ? " " : "") + transcript
-  //     );
-  //   }
-  // });
+  useSpeechRecognitionEvent("result", (event) => {
+    const transcript = event.results[0]?.transcript ?? "";
+    if (event.isFinal) {
+      deviceTranscriptRef.current += (deviceTranscriptRef.current ? " " : "") + transcript;
+      setLiveTranscript(deviceTranscriptRef.current);
+    } else {
+      // Show accumulated + current interim
+      setLiveTranscript(
+        deviceTranscriptRef.current + (deviceTranscriptRef.current ? " " : "") + transcript
+      );
+    }
+  });
 
-  // useSpeechRecognitionEvent("end", () => {
-  //   // On-device recognition may auto-stop on silence with continuous mode;
-  //   // restart it if we're still recording audio
-  //   if (recordingRef.current) {
-  //     try {
-  //       ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
-  //     } catch {
-  //       // Ignore — recording may have just stopped
-  //     }
-  //   }
-  // });
+  useSpeechRecognitionEvent("end", () => {
+    // On-device recognition may auto-stop on silence with continuous mode;
+    // restart it if we're still recording audio
+    if (recordingRef.current) {
+      try {
+        ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
+      } catch {
+        // Ignore — recording may have just stopped
+      }
+    }
+  });
 
-  // useSpeechRecognitionEvent("error", () => {
-  //   // On-device error is non-fatal — we still have the audio file for Whisper
-  // });
+  useSpeechRecognitionEvent("error", () => {
+    // On-device error is non-fatal — we still have the audio file for Whisper
+  });
+
+  const ensureVoicePermissions = useCallback(async () => {
+    const [microphoneCurrent, speechCurrent] = await Promise.all([
+      Audio.getPermissionsAsync(),
+      ExpoSpeechRecognitionModule.getPermissionsAsync(),
+    ]);
+
+    const microphone = microphoneCurrent.granted
+      ? microphoneCurrent
+      : await Audio.requestPermissionsAsync();
+    const speech = speechCurrent.granted
+      ? speechCurrent
+      : await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+
+    setVoicePermissions({
+      checked: true,
+      microphoneGranted: microphone.granted,
+      speechGranted: speech.granted,
+      microphoneCanAskAgain: microphone.canAskAgain,
+      speechCanAskAgain: speech.canAskAgain,
+    });
+
+    const granted = microphone.granted && speech.granted;
+    if (!granted) {
+      setError("Microphone and speech recognition must both be enabled before recording.");
+    }
+
+    return granted;
+  }, []);
+
+  const handleResolveVoicePermissions = useCallback(async () => {
+    try {
+      if (canRequestVoicePermissions) {
+        await ensureVoicePermissions();
+        return;
+      }
+
+      await Linking.openSettings();
+    } catch {
+      setError("Unable to open Settings. Please enable microphone and speech recognition access manually.");
+    }
+  }, [canRequestVoicePermissions, ensureVoicePermissions]);
 
   // ── Start recording ──
   const handleStartRecording = async () => {
     try {
-      // Request mic permission
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission needed", "Microphone access is required to record.");
+      const permissionsGranted = await ensureVoicePermissions();
+      if (!permissionsGranted) {
         return;
       }
 
@@ -179,14 +267,14 @@ export default function KiloScreen() {
       recordingRef.current = recording;
 
       // Start on-device speech recognition in parallel for live preview
-      // try {
-      //   const speechResult = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      //   if (speechResult.granted) {
-      //     ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
-      //   }
-      // } catch {
-      //   // On-device not available — that's fine, we still have the audio recording
-      // }
+      try {
+        const speechResult = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        if (speechResult.granted) {
+          ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: true, continuous: true });
+        }
+      } catch {
+        // On-device not available — that's fine, we still have the audio recording
+      }
 
       deviceTranscriptRef.current = "";
       setLiveTranscript("");
@@ -237,10 +325,11 @@ export default function KiloScreen() {
       }
 
       // Check network at time of stop
-      // const networkState = await Network.getNetworkStateAsync();
+      const networkState = await Network.getNetworkStateAsync();
       // const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      const isOnline = false; // Force offline for beta-testing
 
-      if (true) {
+      if (isOnline) {
         // ── Online: send to Whisper API ──
         setTranscribeMode("whisper");
         try {
@@ -475,6 +564,52 @@ export default function KiloScreen() {
                     <Text style={{ color: theme.stepLabel, fontSize: 15 }}>
                       Transcribing your response...
                     </Text>
+                  </View>
+                ) : voicePermissions.checked && !hasVoicePermissions ? (
+                  <View
+                    style={{
+                      width: "100%",
+                      gap: 14,
+                      backgroundColor: "#FFF7ED",
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: "#FDBA74",
+                      padding: 18,
+                    }}
+                  >
+                    <View style={{ gap: 6 }}>
+                      <Text
+                        style={{
+                          color: "#9A3412",
+                          fontSize: 16,
+                          fontWeight: "700",
+                        }}
+                      >
+                        Enable voice permissions
+                      </Text>
+                      <Text style={{ color: "#9A3412", fontSize: 14, lineHeight: 20 }}>
+                        KILO needs both microphone and speech recognition access before it can start recording.
+                      </Text>
+                      <Text style={{ color: "#9A3412", fontSize: 13, lineHeight: 18 }}>
+                        If either permission was denied earlier, enable both in Settings and return here.
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={handleResolveVoicePermissions}
+                      activeOpacity={0.8}
+                      style={{
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: 14,
+                        paddingVertical: 14,
+                        backgroundColor: theme.recordBg,
+                      }}
+                    >
+                      <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
+                        {canRequestVoicePermissions ? "Enable voice access" : "Open Settings"}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 ) : (
                   <>
