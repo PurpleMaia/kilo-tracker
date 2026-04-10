@@ -235,20 +235,20 @@ export function TodaySummary() {
     }
   }, []);
 
-  const fetchSummary = useCallback(async () => {
-    setIsLoadingSummary(true);
-    try {
-      const summaryRes = await apiFetch<SummaryData>("/api/tasks/summary");
-      setSummary(summaryRes.summary);
-      setTasks(summaryRes.tasks ?? []);
-    } catch (err) {
-      if (__DEV__) console.error("Failed to fetch summary:", err);
-      setSummary(null);
-      setTasks([]);
-    } finally {
-      setIsLoadingSummary(false);
-    }
-  }, []);
+  // const fetchSummary = useCallback(async () => {
+  //   setIsLoadingSummary(true);
+  //   try {
+  //     const summaryRes = await apiFetch<SummaryData>("/api/tasks/summary");
+  //     setSummary(summaryRes.summary);
+  //     setTasks(summaryRes.tasks ?? []);
+  //   } catch (err) {
+  //     if (__DEV__) console.error("Failed to fetch summary:", err);
+  //     setSummary(null);
+  //     setTasks([]);
+  //   } finally {
+  //     setIsLoadingSummary(false);
+  //   }
+  // }, []);
 
   const refreshCard = useCallback(async () => {
     setIsLoadingEntry(true);
@@ -265,10 +265,11 @@ export function TodaySummary() {
       return;
     }
 
-    if (entryChanged || !summary) {
-      await fetchSummary();
-    }
-  }, [fetchData, fetchSummary, summary]);
+    // if (entryChanged || !summary) {
+    //   await fetchSummary();
+    // }
+  }, [fetchData, summary]);
+  // }, [fetchData, fetchSummary, summary]);
 
   useFocusEffect(
     useCallback(() => {
@@ -290,7 +291,7 @@ export function TodaySummary() {
             return;
           }
 
-          await fetchSummary();
+          // await fetchSummary();
         }
       }, 15000);
 
@@ -298,21 +299,22 @@ export function TodaySummary() {
         active = false;
         clearInterval(interval);
       };
-    }, [refreshCard, fetchData, fetchSummary])
+    // }, [refreshCard, fetchData, fetchSummary])
+    }, [refreshCard, fetchData])
   );
 
-  const handleRegenerate = async () => {
-    setRegenerating(true);
-    const todayEntry = await fetchData();
-    latestEntryIdRef.current = todayEntry?.id ?? null;
-    if (todayEntry) {
-      await fetchSummary();
-    } else {
-      setSummary(null);
-      setTasks([]);
-    }
-    setRegenerating(false);
-  };
+  // const handleRegenerate = async () => {
+  //   setRegenerating(true);
+  //   const todayEntry = await fetchData();
+  //   latestEntryIdRef.current = todayEntry?.id ?? null;
+  //   if (todayEntry) {
+  //     await fetchSummary();
+  //   } else {
+  //     setSummary(null);
+  //     setTasks([]);
+  //   }
+  //   setRegenerating(false);
+  // };
 
   if (isLoadingEntry) {
     return <SkeletonBlock />;
