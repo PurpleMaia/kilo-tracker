@@ -12,32 +12,12 @@ const SECTIONS: { id: Section; title: string; icon: string; color: string }[] = 
   { id: "kau", title: "Kau (Seasons)", icon: "sunny-outline", color: "#D97706" },
 ];
 
-const CONTENT: Record<Section, { intro: string; items: { title: string; desc: string }[] }> = {
+const CONTENT: Record<Section, { intro: string; items: { title: string; desc: string }[]; comingSoon?: boolean }> = {
   papakū: {
     intro:
       "Papakū Makawalu is a Hawaiian framework for understanding the natural world through deep observation. It organizes knowledge into interconnected realms of the environment.",
-    items: [
-      {
-        title: "Papahānaumoku",
-        desc: "The realm of Earth — rocks, soil, land formations. Observing how the ʻāina (land) shapes life around you.",
-      },
-      {
-        title: "Papahānaumokupō",
-        desc: "The realm of the deep ocean and darkness — currents, tides, and the mysteries of the deep sea.",
-      },
-      {
-        title: "Papahulilani",
-        desc: "The realm of the skies — weather patterns, clouds, wind, rain, and celestial bodies.",
-      },
-      {
-        title: "Papahulihonua",
-        desc: "The realm of the earth's surface — rivers, valleys, mountains, and the dynamic landscape.",
-      },
-      {
-        title: "Papakūlanakila",
-        desc: "The realm of space and atmosphere — stars, moon phases, and navigational markers.",
-      },
-    ],
+    items: [],
+    comingSoon: true,
   },
   kilo: {
     intro:
@@ -189,6 +169,21 @@ export default function LearnScreen() {
                   <Text className="text-base text-gray-600 leading-6 mb-4">
                     {CONTENT[section.id].intro}
                   </Text>
+
+                  {CONTENT[section.id].comingSoon && (
+                    <View
+                      className="mb-3 rounded-xl bg-gray-50 p-5 items-center"
+                      style={{ borderWidth: 1, borderColor: "#E7E5E4" }}
+                    >
+                      <Ionicons name="time-outline" size={24} color={section.color} />
+                      <Text className="text-base font-bold text-gray-900 mt-2 mb-1 text-center">
+                        Stay Tuned
+                      </Text>
+                      <Text className="text-sm text-gray-500 leading-5 text-center">
+                        We are conducting further research and obtaining proper consent before sharing this resource in our application.
+                      </Text>
+                    </View>
+                  )}
 
                   {CONTENT[section.id].items.map((item, j) => (
                     <View
