@@ -27,8 +27,8 @@ import { StepIndicator } from "@/components/kilo/step-indicator";
 import { getTheme } from "@/components/kilo/question-theme";
 import { QUESTIONS } from "@/shared/types";
 
-type PhotoData = { uri: string; mimeType: string };
 type PhotoQuestion = "q1" | "q2" | "q3";
+type PhotoData = { uri: string; name: string; type: string };
 type VoicePermissionState = {
   checked: boolean;
   microphoneGranted: boolean;
@@ -402,9 +402,15 @@ export default function KiloScreen() {
       mediaTypes: "images", quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      const a = result.assets[0];
-      const q = currentPhotoQ;
-      setPhotos((prev) => ({ ...prev, [q]: { uri: a.uri, mimeType: a.mimeType ?? "image/jpeg" } }));
+      const asset = result.assets[0];
+      setPhotos((prev) => ({
+        ...prev,
+        [currentPhotoQ]: {
+          uri: asset.uri,
+          name: `${currentPhotoQ}_photo.jpg`,
+          type: asset.mimeType ?? "image/jpeg",
+        },
+      }));
     }
   };
 
@@ -413,26 +419,50 @@ export default function KiloScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("q1", answers.q1);
-      if (answers.q2) formData.append("q2", answers.q2);
-      if (answers.q3) formData.append("q3", answers.q3);
-      if (answers.q4) formData.append("q4", answers.q4);
+      // Step 1: Upload photos and collect their URLs
+      const photoUrls: Partial<Record<PhotoQuestion, string>> = {};
+      await Promise.all(
+        (["q1", "q2", "q3"] as PhotoQuestion[]).map(async (q) => {
+          if (photos[q]) {
+            const formData = new FormData();
+            formData.append("photo", photos[q]! as never);
+            formData.append("question", q);
+            const { url } = await apiFetch<{ url: string }>("/api/kilo/photo", {
+              method: "POST",
+              body: formData,
+            });
+            photoUrls[q] = url;
+          }
+        })
+      );
 
-      for (const q of ["q1", "q2", "q3"] as PhotoQuestion[]) {
-        if (photos[q]) {
-          formData.append(`${q}_photo`, {
-            uri: photos[q]!.uri,
-            name: `${q}_photo.jpg`,
-            type: photos[q]!.mimeType,
-          } as never);
-        }
-      }
-
+      // Step 2: Create entry with text answers + photo URLs
       await apiFetch("/api/kilo", {
         method: "POST",
-        body: formData,
+        body: JSON.stringify({
+          q1: answers.q1,
+          ...(answers.q2 && { q2: answers.q2 }),
+          ...(answers.q3 && { q3: answers.q3 }),
+          ...(answers.q4 && { q4: answers.q4 }),
+          ...(photoUrls.q1 && { q1_photo_path: photoUrls.q1 }),
+          ...(photoUrls.q2 && { q2_photo_path: photoUrls.q2 }),
+          ...(photoUrls.q3 && { q3_photo_path: photoUrls.q3 }),
+        }),
       });
+
+      // // ── Legacy: single FormData with text + photos ──
+      // const formData = new FormData();
+      // formData.append("q1", answers.q1);
+      // if (answers.q2) formData.append("q2", answers.q2);
+      // if (answers.q3) formData.append("q3", answers.q3);
+      // if (answers.q4) formData.append("q4", answers.q4);
+      // for (const q of ["q1", "q2", "q3"] as PhotoQuestion[]) {
+      //   if (photos[q]) {
+      //     formData.append(`${q}_photo`, photos[q]!);
+      //   }
+      // }
+      // await apiFetch("/api/kilo", { method: "POST", body: formData });
+
       router.replace("/(protected)");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry");
@@ -781,7 +811,7 @@ export default function KiloScreen() {
               </TouchableOpacity>
             )}
 
-            {/* ── Photo (picture-enabled questions) ── */}
+            {/* ── Per-question photo (q1, q2, q3 only) ── */}
             {current.picture && (
               <View style={{ marginTop: 20, gap: 10 }}>
                 {currentPhoto ? (

@@ -96,14 +96,22 @@ export async function apiFetch<T>(
   }
 
   // Handle 401 — notify AuthContext to logout
-  if (response.status === 401 && onUnauthorized) {
+  // Skip for auth endpoints to avoid logout loops (e.g. logout itself returning 401)
+  const isAuthEndpoint = path.startsWith("/api/auth/");
+  if (response.status === 401 && onUnauthorized && !isAuthEndpoint) {
     onUnauthorized();
     throw new Error("Session expired. Please log in again.");
   }
 
-  if (!response.ok) {
+  if (!response.ok) {    
     const data = await response.json().catch(() => ({ error: "Request failed" }));
     const raw = data.error ?? `HTTP ${response.status}`;
+    // throw new Error(`${ {    
+    //   error: raw,
+    //   status: response.status,
+    //   url: response.url
+    // }
+    // }`);
     throw new Error(sanitizeErrorMessage(raw, response.status));
   }
 
