@@ -101,9 +101,15 @@ export async function apiFetch<T>(
     throw new Error("Session expired. Please log in again.");
   }
 
-  if (!response.ok) {
+  if (!response.ok) {    
     const data = await response.json().catch(() => ({ error: "Request failed" }));
     const raw = data.error ?? `HTTP ${response.status}`;
+    // throw new Error(`${ {    
+    //   error: raw,
+    //   status: response.status,
+    //   url: response.url
+    // }
+    // }`);
     throw new Error(sanitizeErrorMessage(raw, response.status));
   }
 

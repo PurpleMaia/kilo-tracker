@@ -13,9 +13,8 @@ import { GuidingPrompts } from "@/components/kilo/guiding-prompts";
 import { AudioRecorder } from "@/components/kilo/audio-recorder";
 import { getTheme } from "@/components/kilo/question-theme";
 import { QUESTIONS } from "@/shared/types";
-
 type PhotoQuestion = "q1" | "q2" | "q3";
-type PhotoData = { uri: string; mimeType: string };
+type PhotoData = { uri: string; name: string; type: string };
 
 export default function EditKiloScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string }>();
@@ -91,8 +90,11 @@ export default function EditKiloScreen() {
       quality: 0.7,
     });
     if (!result.canceled && result.assets[0]) {
-      const a = result.assets[0];
-      setNewPhotos((prev) => ({ ...prev, [q]: { uri: a.uri, mimeType: a.mimeType ?? "image/jpeg" } }));
+      const asset = result.assets[0];
+      setNewPhotos((prev) => ({
+        ...prev,
+        [q]: { uri: asset.uri, name: `${q}_photo.jpg`, type: asset.mimeType ?? "image/jpeg" },
+      }));
       setExistingPhotos((prev) => ({ ...prev, [q]: false }));
       setServerPhotoSources((prev) => ({ ...prev, [q]: null }));
     }
@@ -112,30 +114,42 @@ export default function EditKiloScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("id", String(id));
-      formData.append("q1", answers.q1);
-      if (answers.q2) formData.append("q2", answers.q2);
-      if (answers.q3) formData.append("q3", answers.q3);
-      if (answers.q4) formData.append("q4", answers.q4);
+      // Step 1: Upload new photos and collect their URLs
+      const photoUrls: Partial<Record<PhotoQuestion, string>> = {};
+      await Promise.all(
+        (["q1", "q2", "q3"] as PhotoQuestion[]).map(async (q) => {
+          if (newPhotos[q]) {
+            const formData = new FormData();
+            formData.append("photo", newPhotos[q]! as never);
+            formData.append("question", q);
+            const { url } = await apiFetch<{ url: string }>("/api/kilo/photo", {
+              method: "POST",
+              body: formData,
+            });
+            photoUrls[q] = url;
+          }
+        })
+      );
 
-      for (const q of ["q1", "q2", "q3"] as PhotoQuestion[]) {
-        if (newPhotos[q]) {
-          formData.append(`${q}_photo`, {
-            uri: newPhotos[q]!.uri,
-            name: `${q}_photo.jpg`,
-            type: newPhotos[q]!.mimeType,
-          } as never);
-        } else if (existingPhotos[q]) {
-          formData.append(`keep_${q}_photo`, "true");
-        }
-      }
-
+      // Step 2: Update entry with text answers + photo URLs (JSON)
       await apiFetch("/api/kilo", {
         method: "PUT",
-        body: formData,
+        body: JSON.stringify({
+          id: Number(id),
+          q1: answers.q1,
+          ...(answers.q2 && { q2: answers.q2 }),
+          ...(answers.q3 && { q3: answers.q3 }),
+          ...(answers.q4 && { q4: answers.q4 }),
+          ...(photoUrls.q1 && { q1_photo_path: photoUrls.q1 }),
+          ...(photoUrls.q2 && { q2_photo_path: photoUrls.q2 }),
+          ...(photoUrls.q3 && { q3_photo_path: photoUrls.q3 }),
+          // Signal which existing photos to keep (no new upload and not removed)
+          ...(!photoUrls.q1 && existingPhotos.q1 && { keep_q1_photo: true }),
+          ...(!photoUrls.q2 && existingPhotos.q2 && { keep_q2_photo: true }),
+          ...(!photoUrls.q3 && existingPhotos.q3 && { keep_q3_photo: true }),
+        }),
       });
-      router.back();
+      router.replace("/(protected)");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save entry.");
     } finally {
