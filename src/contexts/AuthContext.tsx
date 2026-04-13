@@ -67,7 +67,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     await saveToken(data.token, data.tokenType);
     setUser(data.user);
-    await refreshProfile();
+    // Profile fetch is best-effort during login — don't let it kill the session
+    try {
+      await refreshProfile();
+    } catch {
+      // Profile will be fetched again when protected layout renders
+    }
   }, [refreshProfile]);
 
   const register = useCallback(async (email: string, username: string, password: string) => {
