@@ -53,9 +53,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshProfile]);
 
+  // Only run refreshSession on mount — not on every dependency change
+  const refreshSessionRef = useRef(refreshSession);
+  refreshSessionRef.current = refreshSession;
   useEffect(() => {
-    refreshSession().finally(() => setIsLoading(false));
-  }, [refreshSession]);
+    refreshSessionRef.current().finally(() => setIsLoading(false));
+  }, []);
 
   const login = useCallback(async (identifier: string, password: string) => {
     const data = await apiFetch<{ user: AuthUser; token: string; tokenType: string }>(

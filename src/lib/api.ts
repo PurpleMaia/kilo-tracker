@@ -96,7 +96,9 @@ export async function apiFetch<T>(
   }
 
   // Handle 401 — notify AuthContext to logout
-  if (response.status === 401 && onUnauthorized) {
+  // Skip for auth endpoints to avoid logout loops (e.g. logout itself returning 401)
+  const isAuthEndpoint = path.startsWith("/api/auth/");
+  if (response.status === 401 && onUnauthorized && !isAuthEndpoint) {
     onUnauthorized();
     throw new Error("Session expired. Please log in again.");
   }
