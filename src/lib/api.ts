@@ -106,12 +106,11 @@ export async function apiFetch<T>(
   if (!response.ok) {    
     const data = await response.json().catch(() => ({ error: "Request failed" }));
     const raw = data.error ?? `HTTP ${response.status}`;
-    throw new Error(`${ {    
+    throw new Error(`${JSON.stringify({    
       error: raw,
       status: response.status,
       url: response.url
-    }
-    }`);
+    })}`);
     // throw new Error(sanitizeErrorMessage(raw, response.status));
   }
 
