@@ -1,57 +1,56 @@
-import 'dotenv/config'
+import "dotenv/config";
 
-export default 
-{
+export default {
   expo: {
     name: "KILO Tracker",
     slug: "kilo-tracker",
     scheme: "kilo-tracker",
-    version: "1.0.0",
+    version: "1.0.1",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#ffffff"
+      backgroundColor: "#ffffff",
     },
     ios: {
       supportsTablet: true,
       infoPlist: {
-        NSSpeechRecognitionUsageDescription: "KILO uses speech recognition to transcribe your voice observations.",
-        NSMicrophoneUsageDescription: "KILO needs microphone access to record your voice observations.",
-        ITSAppUsesNonExemptEncryption: false
+        NSSpeechRecognitionUsageDescription:
+          "KILO uses speech recognition to transcribe your voice observations.",
+        NSMicrophoneUsageDescription:
+          "KILO needs microphone access to record your voice observations.",
+        ITSAppUsesNonExemptEncryption: false,
       },
-      bundleIdentifier: process.env.IDENTIFIER
+      bundleIdentifier: "org.purplemaia.kilotracker",
     },
     android: {
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/android-icon-foreground.png",
         backgroundImage: "./assets/android-icon-background.png",
-        monochromeImage: "./assets/android-icon-monochrome.png"
+        monochromeImage: "./assets/android-icon-monochrome.png",
       },
       predictiveBackGestureEnabled: false,
-      permissions: [
-        "android.permission.RECORD_AUDIO"
-      ],
-      package: process.env.IDENTIFIER
+      permissions: ["android.permission.RECORD_AUDIO"],
+      package: "org.purplemaia.kilotracker",
     },
     web: {
       bundler: "metro",
-      favicon: "./assets/favicon.png"
+      favicon: "./assets/favicon.png",
     },
     plugins: [
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      "expo-speech-recognition"
+      "expo-speech-recognition",
     ],
     extra: {
       router: {},
       eas: {
-        projectId: "c0e9a1f3-19d1-450d-a7eb-725505f117b3"
+        projectId: "6edaa094-9c7d-4883-9e17-dbea67e24fa1",
       },
-    }
-  }
-}
+    },
+  },
+};
