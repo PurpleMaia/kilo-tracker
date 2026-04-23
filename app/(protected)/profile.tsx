@@ -168,6 +168,29 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This will permanently delete your account, all KILO entries, photos, and profile data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiFetch("/api/account", { method: "DELETE" });
+              await logout();
+              router.replace("/(auth)/login");
+            } catch {
+              Alert.alert("Error", "Failed to delete account. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-white"
@@ -359,6 +382,18 @@ export default function ProfileScreen() {
             <Ionicons name="log-out-outline" size={18} color="#B91C1C" />
             <Text className="font-semibold text-lg" style={{ color: "#B91C1C" }}>
               Log Out
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="rounded-xl py-4 items-center flex-row justify-center gap-x-2 mt-3"
+            style={{ backgroundColor: "#B91C1C" }}
+            onPress={handleDeleteAccount}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+            <Text className="font-semibold text-lg text-white">
+              Delete my account
             </Text>
           </TouchableOpacity>
         </FadeIn>
