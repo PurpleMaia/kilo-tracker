@@ -124,7 +124,7 @@ No schema migrations. No new dependencies. No changes to auth plumbing, rate-lim
 
 ## Verification
 
-1. **Automated (backend):** `cd backend-kilo-tracker && pnpm test:unit -- --runInBand src/tests/lib/account/AccountDeletion.test.ts` — new route test passes.
+1. **Automated (backend):** `cd backend-kilo-tracker && pnpm exec jest --forceExit src/tests/lib/account/AccountDeletion.test.ts` — new route test passes. (`--forceExit` is required because the Kysely pg pool in `src/db/kysely/client.ts` does not close cleanly after tests, so jest hangs indefinitely without it. Invoke `jest` directly via `pnpm exec` — `pnpm test:unit -- <args>` forwards `--` to jest, which treats it as a test-path separator and silently ignores the flags that follow.)
 2. **Manual (backend via curl):**
    - `pnpm dev` in the backend.
    - Log in as a seeded user and capture the session cookie from devtools.
@@ -144,7 +144,7 @@ No schema migrations. No new dependencies. No changes to auth plumbing, rate-lim
 Because this PR moves `deletePhotoBlob` out of `src/app/api/kilo/route.ts`, re-run the existing kilo delete test to confirm nothing regressed:
 
 ```bash
-cd backend-kilo-tracker && pnpm test:unit -- src/tests/lib/kilo/Kilo.test.ts
+cd backend-kilo-tracker && pnpm exec jest --forceExit src/tests/lib/kilo/Kilo.test.ts
 ```
 
 The existing `DELETE /api/kilo` test already covers the blob-cleanup path, so any import or signature mistake in the extraction will surface here.
