@@ -8,25 +8,31 @@ This plan is the **smallest** change that satisfies the guideline end-to-end. No
 
 ## Approach
 
-Three changes: one new backend route, one new button in the Profile screen, one integration test.
+Three changes: one new backend route, one new button in the Profile screen, one route-level backend test.
 
 ### Change 1 — Backend: `DELETE /api/account`
 
 **New file:** `backend-kilo-tracker/src/app/api/account/route.ts`
 
-Structure it like the existing DELETE handler in `backend-kilo-tracker/src/app/api/kilo/route.ts:274–335`. Reuse, don't rewrite:
+Structure it like the existing DELETE handler in `backend-kilo-tracker/src/app/api/kilo/route.ts:274–335`. Reuse patterns, not abstractions:
 
 | Ingredient | Source |
 |---|---|
 | Session auth | `validateSession(request)` — `backend-kilo-tracker/src/lib/auth/session.ts:102` |
-| Azure blob cleanup | `deletePhotoBlob(url)` — `backend-kilo-tracker/src/app/api/kilo/route.ts:337–351` (swallows "already gone" errors) |
+| Session cookie type for response cleanup | `getSessionCookieFromBrowser(request)` — `backend-kilo-tracker/src/lib/auth/browser.ts:16–35` |
+| Azure blob cleanup | Duplicate the small `deletePhotoBlob(url)` helper from `backend-kilo-tracker/src/app/api/kilo/route.ts:337–351` for v1.0; defer extraction to follow-up issue [PurpleMaia/kilo-tracker-backend#1](https://github.com/PurpleMaia/kilo-tracker-backend/issues/1) |
 | DB transaction | `db.transaction().execute(async (trx) => { ... })` — example at `backend-kilo-tracker/src/app/api/auth/google/callback/route.ts:142–165` |
-| Web cookie clear | `deleteSessionCookieInBrowser(session, res)` — `backend-kilo-tracker/src/lib/auth/browser.ts:63–71` |
+| Web cookie clear | `deleteSessionCookieInBrowser(sessionCookie.type, res)` — `backend-kilo-tracker/src/lib/auth/browser.ts:63–71` |
 | Error-handling shape | Mirror the `try { ... } catch (AppError | else) { ... }` block at `backend-kilo-tracker/src/app/api/kilo/route.ts:321–334` |
 
 **Handler logic, in order:**
 
-1. `const user = await validateSession(request)` — 401s automatically if no session.
+1. Read the browser cookie type up front, then authenticate:
+   ```ts
+   const sessionCookie = getSessionCookieFromBrowser(request);
+   const user = await validateSession(request);
+   ```
+   `validateSession` still handles the 401 path; `sessionCookie` is just for clearing the cookie on the response.
 2. Collect all photo URLs **before** the transaction so we can clean Azure after commit:
    ```ts
    const entries = await db
@@ -42,22 +48,24 @@ Structure it like the existing DELETE handler in `backend-kilo-tracker/src/app/a
    - `trx.deleteFrom("tasks").where("user_id", "=", user.id).execute()` — `tasks.user_id` has no CASCADE.
    - `trx.deleteFrom("kilo").where("user_id", "=", user.id).execute()` — `kilo.user_id` has no CASCADE. Remaining `tasks` rows keyed by `kilo_id` would cascade on their own via the `tasks.kilo_id ON DELETE CASCADE` FK, but step 1 already removed them.
    - `trx.deleteFrom("profiles").where("user_id", "=", user.id).execute()` — `profiles.user_id` has no CASCADE.
-   - `trx.deleteFrom("product_events").where("user_id", "=", user.id).execute()` — `user_id` is `TEXT` with no FK. Include this deletion for a clean "all associated data removed" story. Confirm the comparison works (verify the stored format matches `user.id` as a string) during implementation; if the column stores user UUIDs as strings it's a straight match.
+   - `trx.deleteFrom("product_events").where("user_id", "=", user.id).execute()` — `user_id` is `TEXT` with no FK, but the app writes `user.id` directly into it, so this is a straight match.
+   - `trx.deleteFrom("login_attempts").where("identifier", "in", [user.email, user.username]).execute()` — these are security logs keyed by identifier strings, not by FK. Delete them unless counsel or policy requires retaining them longer.
    - `trx.deleteFrom("users").where("id", "=", user.id).execute()` — this cascades to `sessions`, `oauth_accounts`, and `members` via their existing `ON DELETE CASCADE` FKs (verified in migrations `000001_create_initial_tables.up.sql` and `000002_create_multi_tenant_tables.up.sql`).
-4. After the transaction commits, fire-and-forget blob cleanup — same fan-out pattern as the kilo DELETE:
+4. After the transaction commits, clean Azure blobs using a duplicated local helper in this route — same fan-out pattern as the kilo DELETE:
    ```ts
    await Promise.all(photoPaths.map(p => deletePhotoBlob(p)));
    ```
-   `deletePhotoBlob` already swallows errors, so a missing blob is a no-op.
-5. Build the response and, if straightforward, clear the web session cookie:
+   Keep the helper behavior identical: swallow "already gone" errors so missing blobs are a no-op. Do **not** widen the scope with a shared-helper refactor in this release; that follow-up is tracked in [PurpleMaia/kilo-tracker-backend#1](https://github.com/PurpleMaia/kilo-tracker-backend/issues/1).
+5. Build the response and clear the browser cookie if one was present:
    ```ts
    const res = NextResponse.json({ success: true });
-   // If session object is accessible (see note below), also call:
-   // deleteSessionCookieInBrowser(session, res);
+   if (sessionCookie) {
+     deleteSessionCookieInBrowser(sessionCookie.type, res);
+   }
    return res;
    ```
 
-**Implementation note on the web cookie:** `validateSession` returns an `AuthUser`, not the `session` shape that `deleteSessionCookieInBrowser` wants. Cleanest path is to mirror how `invalidateSession(request)` in `backend-kilo-tracker/src/lib/auth/session.ts:134–146` obtains the session. If that turns out to be awkward, it's acceptable to skip the explicit cookie clear: the session row is destroyed by the `users` cascade, so the cookie is invalidated on next request. On the mobile app this is moot — the token lives in SecureStore and the frontend clears it (see Change 2).
+**Implementation note on auth/session cleanup:** do **not** call `invalidateSession(request)` inside account deletion. Deleting the `users` row already cascades `sessions`, so the only remaining reason to inspect the cookie is to know which cookie name to clear on the response.
 
 **Rate limiting:** skip. The endpoint is auth-gated; volumetric abuse risk is negligible for v1.0.
 
@@ -81,24 +89,24 @@ Insert a new `TouchableOpacity` immediately **below** the existing Log Out butto
    );
    ```
 2. Inside `handleDeleteAccount`:
-   - `await apiFetch("/api/account", { method: "DELETE" })` — reuses `expo-kilo-tracker-frontend/src/lib/api.ts:55–124`, which injects the `x-session-token` / `x-session-type` headers automatically.
-   - `await logout()` — reuses `logout` from `useAuth()` in `expo-kilo-tracker-frontend/src/contexts/AuthContext.tsx:94–103`. It clears both SecureStore keys (`session_token`, `session_token_type`) and zeros `user` / `profile` state. Its internal `/api/auth/logout` call will 401 (the session is already gone) but that call is wrapped in `try/catch`, so it's safe.
+   - `await apiFetch("/api/account", { method: "DELETE" })` — reuse the existing mobile API wrapper in `expo-kilo-tracker-frontend/src/lib/api.ts:55–124` so the delete request goes through the same authenticated client path the app already uses elsewhere.
+   - `await logout()` — reuses `logout` from `useAuth()` in `expo-kilo-tracker-frontend/src/contexts/AuthContext.tsx:94–103`, but treat it as **client cleanup**, not as part of backend deletion. It clears both SecureStore keys (`session_token`, `session_token_type`) and zeros `user` / `profile` state. Its internal `/api/auth/logout` call is already wrapped in `try/catch`, so it can no-op or fail safely after the account and session rows are gone.
    - `router.replace("/(auth)/login")` — same call already used post-logout at `profile.tsx:165`.
 3. On error, `Alert.alert("Error", "Failed to delete account. Please try again.")` — matches history.tsx's fallback at `history.tsx:124`.
 
 No changes needed to `AuthContext`, `apiFetch`, routing, or any other screen.
 
-### Change 3 — One integration-style test (recommended)
+### Change 3 — One route-level backend test (recommended)
 
-**New file:** `backend-kilo-tracker/src/tests/e2e/account-deletion.spec.ts`
+**New file:** `backend-kilo-tracker/src/tests/lib/account/AccountDeletion.test.ts`
 
-Follow the structure of `backend-kilo-tracker/src/tests/e2e/auth-flow.spec.ts`:
+Follow the existing route-test pattern in `backend-kilo-tracker/src/tests/lib/kilo/Kilo.test.ts` and the request helpers in `backend-kilo-tracker/src/tests/helpers.ts`:
 
-- `beforeAll`: insert a throwaway user + profile + one kilo entry + a session row.
-- One happy-path test: call `DELETE /api/account` with the session cookie, assert 200, then assert zero rows in `users`, `profiles`, `kilo`, `sessions` for that user id.
+- `beforeAll`: insert a throwaway user + profile + one kilo entry + one task + one `product_events` row + one `login_attempts` row + a session row.
+- One happy-path test: import `DELETE` from the route, create an authenticated `NextRequest`, call `DELETE /api/account`, assert 200, then assert zero rows in `users`, `profiles`, `kilo`, `tasks`, `sessions`, `product_events`, and `login_attempts` for that user.
 - `afterAll`: idempotent cleanup.
 
-Skip frontend automation — the Expo repo has no test harness (its `CLAUDE.md` explicitly says "There are no tests in this repo"). Verify the button via the manual steps below.
+This is smaller and less brittle than adding a Playwright path for the release-critical change. Skip frontend automation — the Expo repo has no test harness (its `CLAUDE.md` explicitly says "There are no tests in this repo"). Verify the button via the manual steps below.
 
 ## Files touched
 
@@ -106,18 +114,18 @@ Skip frontend automation — the Expo repo has no test harness (its `CLAUDE.md` 
 |---|---|
 | `backend-kilo-tracker/src/app/api/account/route.ts` | **New** — DELETE handler |
 | `expo-kilo-tracker-frontend/app/(protected)/profile.tsx` | **Edit** — add button + handler below Log Out at lines 354–363 |
-| `backend-kilo-tracker/src/tests/e2e/account-deletion.spec.ts` | **New** — one happy-path test |
+| `backend-kilo-tracker/src/tests/lib/account/AccountDeletion.test.ts` | **New** — one route-level happy-path test |
 
 No schema migrations. No new dependencies. No changes to auth plumbing, rate-limiting, other API routes, or other screens.
 
 ## Verification
 
-1. **Automated (backend):** `cd backend-kilo-tracker && pnpm test:e2e -- account-deletion` — new test passes.
+1. **Automated (backend):** `cd backend-kilo-tracker && pnpm test:unit -- --runInBand src/tests/lib/account/AccountDeletion.test.ts` — new route test passes.
 2. **Manual (backend via curl):**
    - `pnpm dev` in the backend.
    - Log in as a seeded user and capture the session cookie from devtools.
    - `curl -i -X DELETE http://localhost:3000/api/account -H "Cookie: <cookie>"` → expect `{ success: true }`.
-   - `psql $DATABASE_URL -c "SELECT count(*) FROM users WHERE id = '<user-id>'"` → 0. Same for `profiles`, `kilo`, `sessions`, `oauth_accounts` (if any existed), `members` (if any), `tasks` (if any), `product_events` (if any).
+   - `psql $DATABASE_URL -c "SELECT count(*) FROM users WHERE id = '<user-id>'"` → 0. Same for `profiles`, `kilo`, `sessions`, `oauth_accounts` (if any existed), `members` (if any), `tasks`, `product_events`, and `login_attempts` (using `email` / `username` as the identifiers).
    - Spot-check Azure Blob container — the user's photos should be gone, or the backend log should show `deletePhotoBlob` attempts with swallowed "already gone" errors.
 3. **Manual (iOS simulator):**
    - `cd expo-kilo-tracker-frontend && npx expo run:ios`.
@@ -127,7 +135,6 @@ No schema migrations. No new dependencies. No changes to auth plumbing, rate-lim
    - Attempt to log in with the deleted credentials → expect auth failure.
 4. **Reviewer dry run:** Before submitting the TestFlight build, run the full flow once on a physical device to confirm no residual state (photos, entries, profile) survives.
 
-## Open questions to resolve during implementation
+## Follow-up after initial release
 
-- Exact storage format of `product_events.user_id` (TEXT) — confirm a Kysely `.where("user_id", "=", user.id)` comparison works with the UUID value. If the column is used inconsistently, skip the delete on that table and note it in the app's privacy policy instead.
-- Whether to explicitly clear the web session cookie (Change 1, step 5 note). Immaterial for the iOS-only submission; decide before merging so the web surface stays tidy.
+- Extract the duplicated `deletePhotoBlob` helper from `backend-kilo-tracker/src/app/api/kilo/route.ts` and `backend-kilo-tracker/src/app/api/account/route.ts` into a shared server utility. Tracked in [PurpleMaia/kilo-tracker-backend#1](https://github.com/PurpleMaia/kilo-tracker-backend/issues/1).
