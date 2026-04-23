@@ -290,6 +290,13 @@ export default function KiloScreen() {
     setIsRecording(false);
     setIsTranscribing(true);
 
+    // Snapshot live transcript before stopping — speech recognition may not
+    // emit a final result for the last interim segment when stop() is called,
+    // so deviceTranscriptRef could be empty even though liveTranscript showed text.
+    if (!deviceTranscriptRef.current.trim() && liveTranscript.trim()) {
+      deviceTranscriptRef.current = liveTranscript.trim();
+    }
+
     // Stop on-device speech recognition
     try {
       ExpoSpeechRecognitionModule.stop();
@@ -326,8 +333,8 @@ export default function KiloScreen() {
 
       // Check network at time of stop
       const networkState = await Network.getNetworkStateAsync();
-      // const isOnline = networkState.isConnected && networkState.isInternetReachable;
-      const isOnline = false; // Force offline for beta-testing
+      const isOnline = networkState.isConnected && networkState.isInternetReachable;
+      // const isOnline = false; // Force offline for beta-testing
 
       if (isOnline) {
         // ── Online: send to Whisper API ──
