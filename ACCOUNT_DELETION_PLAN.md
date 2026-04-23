@@ -20,7 +20,7 @@ Structure it like the existing DELETE handler in `backend-kilo-tracker/src/app/a
 |---|---|
 | Session auth | `validateSession(request)` — `backend-kilo-tracker/src/lib/auth/session.ts:102` |
 | Session cookie type for response cleanup | `getSessionCookieFromBrowser(request)` — `backend-kilo-tracker/src/lib/auth/browser.ts:16–35` |
-| Azure blob cleanup | Duplicate the small `deletePhotoBlob(url)` helper from `backend-kilo-tracker/src/app/api/kilo/route.ts:337–351` for v1.0; defer extraction to follow-up issue [PurpleMaia/kilo-tracker-backend#1](https://github.com/PurpleMaia/kilo-tracker-backend/issues/1) |
+| Azure blob cleanup | Extract `deletePhotoBlob(url)` from `backend-kilo-tracker/src/app/api/kilo/route.ts:337–351` into a new shared helper at `backend-kilo-tracker/src/lib/azure/photos.ts`, and import it from both the kilo route and the new account route. Resolves [PurpleMaia/kilo-tracker-backend#1](https://github.com/PurpleMaia/kilo-tracker-backend/issues/1). |
 | DB transaction | `db.transaction().execute(async (trx) => { ... })` — example at `backend-kilo-tracker/src/app/api/auth/google/callback/route.ts:142–165` |
 | Web cookie clear | `deleteSessionCookieInBrowser(sessionCookie.type, res)` — `backend-kilo-tracker/src/lib/auth/browser.ts:63–71` |
 | Error-handling shape | Mirror the `try { ... } catch (AppError | else) { ... }` block at `backend-kilo-tracker/src/app/api/kilo/route.ts:321–334` |
@@ -51,11 +51,13 @@ Structure it like the existing DELETE handler in `backend-kilo-tracker/src/app/a
    - `trx.deleteFrom("product_events").where("user_id", "=", user.id).execute()` — `user_id` is `TEXT` with no FK, but the app writes `user.id` directly into it, so this is a straight match.
    - `trx.deleteFrom("login_attempts").where("identifier", "in", [user.email, user.username]).execute()` — these are security logs keyed by identifier strings, not by FK. Delete them unless counsel or policy requires retaining them longer.
    - `trx.deleteFrom("users").where("id", "=", user.id).execute()` — this cascades to `sessions`, `oauth_accounts`, and `members` via their existing `ON DELETE CASCADE` FKs (verified in migrations `000001_create_initial_tables.up.sql` and `000002_create_multi_tenant_tables.up.sql`).
-4. After the transaction commits, clean Azure blobs using a duplicated local helper in this route — same fan-out pattern as the kilo DELETE:
+4. After the transaction commits, clean Azure blobs using the shared `deletePhotoBlob` helper — same fan-out pattern as the kilo DELETE:
    ```ts
+   import { deletePhotoBlob } from "@/lib/azure/photos";
+   // ...
    await Promise.all(photoPaths.map(p => deletePhotoBlob(p)));
    ```
-   Keep the helper behavior identical: swallow "already gone" errors so missing blobs are a no-op. Do **not** widen the scope with a shared-helper refactor in this release; that follow-up is tracked in [PurpleMaia/kilo-tracker-backend#1](https://github.com/PurpleMaia/kilo-tracker-backend/issues/1).
+   The helper must preserve the current behavior: swallow "already gone" / not-in-container errors so missing blobs are a no-op. This extraction (from `src/app/api/kilo/route.ts:337–351` into `src/lib/azure/photos.ts`) resolves issue [PurpleMaia/kilo-tracker-backend#1](https://github.com/PurpleMaia/kilo-tracker-backend/issues/1) in the same PR. Update the kilo route's DELETE handler to import the shared helper instead of defining its own.
 5. Build the response and clear the browser cookie if one was present:
    ```ts
    const res = NextResponse.json({ success: true });
@@ -112,6 +114,8 @@ This is smaller and less brittle than adding a Playwright path for the release-c
 
 | File | Change |
 |---|---|
+| `backend-kilo-tracker/src/lib/azure/photos.ts` | **New** — shared `deletePhotoBlob` helper extracted from the kilo route |
+| `backend-kilo-tracker/src/app/api/kilo/route.ts` | **Edit** — remove local `deletePhotoBlob`, import from `@/lib/azure/photos` |
 | `backend-kilo-tracker/src/app/api/account/route.ts` | **New** — DELETE handler |
 | `expo-kilo-tracker-frontend/app/(protected)/profile.tsx` | **Edit** — add button + handler below Log Out at lines 354–363 |
 | `backend-kilo-tracker/src/tests/lib/account/AccountDeletion.test.ts` | **New** — one route-level happy-path test |
@@ -135,6 +139,12 @@ No schema migrations. No new dependencies. No changes to auth plumbing, rate-lim
    - Attempt to log in with the deleted credentials → expect auth failure.
 4. **Reviewer dry run:** Before submitting the TestFlight build, run the full flow once on a physical device to confirm no residual state (photos, entries, profile) survives.
 
-## Follow-up after initial release
+## Regression check for the kilo route
 
-- Extract the duplicated `deletePhotoBlob` helper from `backend-kilo-tracker/src/app/api/kilo/route.ts` and `backend-kilo-tracker/src/app/api/account/route.ts` into a shared server utility. Tracked in [PurpleMaia/kilo-tracker-backend#1](https://github.com/PurpleMaia/kilo-tracker-backend/issues/1).
+Because this PR moves `deletePhotoBlob` out of `src/app/api/kilo/route.ts`, re-run the existing kilo delete test to confirm nothing regressed:
+
+```bash
+cd backend-kilo-tracker && pnpm test:unit -- src/tests/lib/kilo/Kilo.test.ts
+```
+
+The existing `DELETE /api/kilo` test already covers the blob-cleanup path, so any import or signature mistake in the extraction will surface here.
