@@ -345,7 +345,7 @@ export default function ProfileScreen() {
                 className="text-sm mt-2 leading-6"
                 style={{ color: !form.encrypt_kilo_entries && form.share_kilo_entries ? "rgba(255,255,255,0.88)" : "#6B7280" }}
               >
-                This opts you out of app-level encrypted handling so entries can be shared more directly.
+                Coming in a future version. All entries are encrypted at rest in this release.
               </Text>
             </TouchableOpacity>            
           </View>

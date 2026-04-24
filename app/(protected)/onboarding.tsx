@@ -422,7 +422,7 @@ export default function OnboardingScreen() {
                     Share my KILO with others
                   </Text>
                   <Text style={{ marginTop: 8, color: sharingChoice === "shared" ? "rgba(255,255,255,0.88)" : "#6B7280", fontSize: 14, lineHeight: 24 }}>
-                    Choosing sharing opts you out of app-level encrypted handling for those entries so they can be shared more directly with others.
+                    Coming in a future version. All entries are encrypted at rest in this release.
                   </Text>
                   </Animated.View>
                 </TouchableOpacity>
