@@ -1,8 +1,23 @@
 # KILO Tracker — Apple App Store Submission Data Sheet
 
-> Source material for App Store Connect iOS App Version 1.0 submission. Gathered from a review of `expo-kilo-tracker-frontend/` and `backend-kilo-tracker/` on **Wednesday, April 22, 2026 at 12:45pm HST**.
+> Source material for App Store Connect iOS App Version 1.0.1 submission. Originally gathered from a review of `expo-kilo-tracker-frontend/` and `backend-kilo-tracker/` on **Wednesday, April 22, 2026 at 12:45pm HST**. Status updated **Friday, April 24, 2026**.
 >
 > This document does **not** attempt to fill out the marketing copy for you — it gives you everything you need to fill it out accurately. Copy sections into the App Store Connect form; refine the tone to taste.
+
+---
+
+## Status — what's done since the original audit (2026-04-22 → 2026-04-24)
+
+All code-level and infrastructure-level blockers identified in §6 are resolved:
+
+- ✅ **Account deletion** — `DELETE /api/account` (backend) + "Delete my account" button in Profile (frontend), with cascade across `users`, `sessions`, `profiles`, `kilo`, `tasks`, `product_events`, `login_attempts`, plus Azure photo blob cleanup.
+- ✅ **Camera + Photo Library Info.plist usage strings** — added to `expo-kilo-tracker-frontend/app.config.ts`.
+- ✅ **Privacy UI honesty** — sharing card on Profile and Onboarding now reads "Coming in a future version. All entries are encrypted at rest in this release.", removing the misleading opt-out copy.
+- ✅ **Version alignment** — App Store Connect record bumped to `1.0.1` to match `app.config.ts` / `package.json`. EAS still uses `appVersionSource: "remote"`, so the EAS-stored version is the source of truth at build time.
+- ✅ **Support page** — `/support` published in `backend-kilo-tracker` (`src/app/support/page.tsx`), gated through `<PublicGate>` so it bypasses the coming-soon wall. URL once deployed: `https://<backend-domain>/support`.
+- ✅ **Privacy Policy page** — `/privacy` published in `backend-kilo-tracker` (`src/app/privacy/page.tsx`), same gating. URL once deployed: `https://<backend-domain>/privacy`.
+
+**What's left is App Store Connect form-filling and one production-environment confirmation.** See §8 at the bottom for the consolidated remaining checklist.
 
 ---
 
@@ -12,7 +27,7 @@
 |---|---|
 | App name | KILO Tracker |
 | Bundle identifier (iOS) | `org.purplemaia.kilotracker` |
-| App version | 1.0.1 (per `app.config.ts`) — Apple form shows "1.0"; align these before submission |
+| App version | 1.0.1 (per `app.config.ts`, EAS, and App Store Connect — aligned ✅) |
 | Slug | `kilo-tracker` |
 | URL scheme | `kilo-tracker` |
 | Orientation | Portrait |
@@ -92,11 +107,13 @@ Avoid duplicating words already in the app name ("KILO" / "Tracker" are indexed 
 
 ### 1.5 Support URL
 
-**Not defined in the codebase.** You need to supply one before submitting. Candidates, in order of preference:
-- A dedicated page under `https://purplemaia.org/` (e.g. `https://purplemaia.org/kilo-tracker/support`).
-- A `mailto:` is **not** accepted by Apple in this field — must be an HTTPS URL.
+✅ **Resolved.** A support page is now published in the backend repo at `src/app/support/page.tsx`. Once the backend is deployed, the URL to enter into App Store Connect is:
 
-Any page you choose must minimally describe how to get help and include a contact email.
+```
+https://<backend-domain>/support
+```
+
+The page covers app overview, contact (`kokua@purplemaia.org`), and a small FAQ (account deletion, password reset, voice transcription, permissions, storage, link to privacy).
 
 ### 1.6 Marketing URL (optional)
 
@@ -104,7 +121,7 @@ Any page you choose must minimally describe how to get help and include a contac
 
 ### 1.7 Version
 
-Form shows `1.0`. The code ships `1.0.1` (both `app.config.ts` and `package.json`). Reconcile before submission — either bump App Store Connect to `1.0.1` or downgrade the Expo config to `1.0`.
+✅ **Resolved.** App Store Connect record bumped to `1.0.1`, matching `app.config.ts`, `package.json`, and (most importantly, since `appVersionSource: "remote"`) the EAS-stored version.
 
 ### 1.8 Copyright (200 chars)
 
@@ -185,7 +202,7 @@ Paste and adapt:
 > - Voice audio is sent to a backend transcription endpoint (self-hosted OpenAI-compatible Whisper model) and returned as text; audio is not persisted in KILO's database.
 > - The app does not use any third-party analytics, advertising, or attribution SDKs.
 >
-> **Account deletion.** The app includes a "Delete my account" flow in Profile → Settings, which permanently removes the user record, profile, KILO entries, photos, and sessions. (⚠️ See action items at the bottom of this document — this flow needs to be in place before submission.)
+> **Account deletion.** The app includes a "Delete my account" flow in Profile, which permanently removes the user record, profile, KILO entries, photos, and sessions.
 >
 > **Backend / infrastructure.** The iOS client talks to a Next.js backend operated by the Purple Maiʻa Foundation over HTTPS. No third-party analytics or ad networks.
 >
@@ -289,30 +306,28 @@ No feature is present that is **not** on this list. In particular, the v1.0.1 ap
 
 ---
 
-## 6. ⚠️ Action items before you hit "Submit for Review"
+## 6. Action items — status as of 2026-04-24
 
-These are things the research surfaced that are likely to either block review or invite rejection. Ordered: hard blockers first, then metadata-required, then nice-to-haves.
+Original list of things likely to block review or invite rejection, with current status. Ordered: hard blockers first, then metadata-required, then nice-to-haves.
 
 ### Hard blockers (will cause rejection)
 
-1. **Account deletion flow.** Apple guideline 5.1.1(v) requires apps that support account creation to also let users initiate account deletion in-app. The current codebase has **no account deletion UI in the mobile app and no deletion endpoint in the backend** (confirmed by grepping `backend-kilo-tracker/src/app/api/` for delete-account routes). You need both:
-   - Backend: a `DELETE /api/account` (or equivalent) that cascades across `users`, `sessions`, `profiles`, `kilo` (including Azure blob cleanup for photos), `oauth_accounts`, `members`, and `product_events` for that user.
-   - Frontend: a "Delete my account" button in Profile with a confirmation alert that calls that endpoint, then clears SecureStore and routes to `/login`.
+1. ✅ **Account deletion flow.** Done. `DELETE /api/account` (`backend-kilo-tracker/src/app/api/account/route.ts`) cascades across `tasks`, `kilo`, `profiles`, `product_events`, `login_attempts`, and `users` in a single transaction, then deletes Azure photo blobs. Frontend "Delete my account" button is in `expo-kilo-tracker-frontend/app/(protected)/profile.tsx` with a confirmation alert; on success it calls `logout()` and routes back to `/login`.
 
 ### Required by the submission form or adjacent Apple sections
 
-2. **Support URL.** Required by App Store Connect; nothing in the repo today. Publish a minimal support page (even a single page on `purplemaia.org`) and put that URL in.
-3. **Privacy Policy URL.** Apple requires one for apps that handle user accounts. Not present in the repo — you will need to publish one that accurately reflects Section 3 of this document and supply it in App Store Connect → App Privacy.
-4. **Version number mismatch.** App Store Connect form says `1.0`; `app.config.ts` + `package.json` say `1.0.1`. Pick one and align.
-5. **Camera / photo library usage descriptions.** Add explicit `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` strings to `app.config.ts` — do not rely on Expo defaults. Generic or missing strings are a common reviewer flag.
-6. **Reviewer test account.** Create a fresh production account specifically for Apple review — do **not** hand over the seed-script demo credentials (`jdoe` / `password123!`) since those are in source control.
-7. **Production backend URL.** Apple reviewers are on the public internet. Confirm the backend (`EXPO_PUBLIC_API_URL`) the TestFlight/App Store build points to is the public production deployment, not a dev environment.
+2. ✅ **Support URL.** Done in code. `backend-kilo-tracker/src/app/support/page.tsx` is published and routed through `<PublicGate>` so it bypasses the coming-soon wall. Enter `https://<backend-domain>/support` in App Store Connect after the backend is deployed.
+3. ✅ **Privacy Policy URL.** Done in code. `backend-kilo-tracker/src/app/privacy/page.tsx` covers everything in §3 of this document — what's collected, how it's used, encryption posture, third-party services (Azure, transcription endpoint), no tracking, account deletion, contact (`kokua@purplemaia.org`). Enter `https://<backend-domain>/privacy` in App Store Connect after deployment.
+4. ✅ **Version number alignment.** Done. App Store Connect record is now `1.0.1`, matching `app.config.ts`, `package.json`, and the EAS-stored version (which is the source of truth at build time given `appVersionSource: "remote"`).
+5. ✅ **Camera / photo library usage descriptions.** Done. `expo-kilo-tracker-frontend/app.config.ts` now declares both `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` with KILO-specific copy.
+6. ⏳ **Reviewer test account.** Still required. Create a fresh production account specifically for Apple review — do **not** hand over the seed-script demo credentials (`jdoe` / `password123!`) since those are in source control. Pre-onboard it and add at least one historical KILO entry so the reviewer can immediately exercise edit/delete and the calendar.
+7. ⏳ **Production backend URL.** Still required. Confirm the `EXPO_PUBLIC_API_URL` in your EAS production environment points to the public production deployment, not a LAN/dev host. Run `eas env:list --environment production` to verify before the next build.
 
 ### Nice-to-haves (won't block review, but worth doing)
 
-8. **Seed script in production.** Verify `scripts/init/helpers/seed.ts` is not run against the production database, and that the three demo accounts (`jdoe`, `jsmith`, `ajohnson`) do not exist on the production backend the App Store build talks to.
-9. **Encryption toggle enforcement.** `profiles.encrypt_kilo_entries` is offered as a user choice in the UI, but the backend currently encrypts unconditionally in `src/app/api/kilo/route.ts`. Not an Apple concern, but a UI-honesty concern — either enforce the toggle or rephrase the UI to say "All entries are encrypted at rest" and remove the choice.
-10. **Accessibility pass.** Most custom buttons (mic, next/back, calendar cells) lack explicit `accessibilityLabel` / `accessibilityRole`. Apple does not usually reject for this, but VoiceOver usability on a voice-heavy app is the kind of thing reviewers notice.
+8. ⏳ **Seed script in production.** Verify `scripts/init/helpers/seed.ts` is not run against the production database, and that the three demo accounts (`jdoe`, `jsmith`, `ajohnson`) do not exist on the production backend the App Store build talks to.
+9. ✅ **Encryption-toggle UI honesty.** Done as a copy-only fix. The "Share my KILO with others" card on both Profile and Onboarding now reads "Coming in a future version. All entries are encrypted at rest in this release.", removing the misleading opt-out implication. Backend behavior (always encrypt) is unchanged. If sharing ever ships for real, the card copy and backend behavior need to be wired together at that point.
+10. ⏳ **Accessibility pass.** Still open. Most custom buttons (mic, next/back, calendar cells) lack explicit `accessibilityLabel` / `accessibilityRole`. Apple does not usually reject for this, but VoiceOver usability on a voice-heavy app is the kind of thing reviewers notice.
 
 ### Deliberately deferred — not a v1.0 blocker
 
@@ -330,7 +345,55 @@ These are things the research surfaced that are likely to either block review or
 | "Does the app require an account?" | Yes — all functionality beyond the login screen requires authentication. |
 | "Do you offer Sign in with Apple?" | No. Not required for this release — the iOS client offers email/password only, so Apple guideline 4.8 does not apply. If a future release adds Google or another third-party sign-in, Sign in with Apple will ship alongside it. |
 | "Is there a subscription or IAP?" | No. Free app. |
-| "Do you have a privacy policy?" | See action item #5. |
+| "Do you have a privacy policy?" | Yes — `https://<backend-domain>/privacy` (see §1.5 / §6 #3). |
 | "Where are user photos stored?" | Azure Blob Storage, accessed via our backend API. |
 | "Is audio retained?" | No — audio is streamed to the transcription endpoint for processing and is not persisted in our database. |
 | "Encryption?" | AES-256-GCM for KILO text content at rest; Argon2id for passwords; iOS Keychain via `expo-secure-store` for the session token on-device. `ITSAppUsesNonExemptEncryption: false`. |
+
+---
+
+## 8. Remaining work before "Submit for Review"
+
+All code and infra changes are landed. Everything below is either App Store Connect form-filling, asset creation, or a one-time production environment confirmation.
+
+### A. App Store Connect — text fields you still need to write or paste
+
+Use §1 of this document as raw material; refine to taste.
+
+- [ ] **Promotional Text** (≤170 chars) — pick / edit one of the drafts in §1.2.
+- [ ] **Description** (≤4,000 chars) — assemble from §1.3 raw material into final marketing copy.
+- [ ] **Keywords** (≤100 chars, comma-separated, no spaces) — pick a subset from §1.4.
+- [ ] **Marketing URL** *(optional)* — leave blank unless you publish a landing page on `purplemaia.org`.
+- [ ] **Support URL** — paste `https://<backend-domain>/support` once the backend is deployed.
+- [ ] **Privacy Policy URL** — paste `https://<backend-domain>/privacy` once the backend is deployed.
+- [ ] **Copyright** — `© 2026 Purple Maiʻa Foundation` (confirm exact legal entity name).
+- [ ] **Primary / Secondary category** — Education / Lifestyle (or Reference) per §at-a-glance.
+- [ ] **Age rating** — answer the questionnaire to land at 4+.
+- [ ] **Reviewer notes** (≤4,000 chars) — paste / adapt the draft in §2.3.
+- [ ] **Reviewer contact info** (§2.2) — name, phone in international format, email.
+
+### B. App Store Connect — Privacy "Nutrition Label"
+
+Use §3 as the source of truth. Apple asks the questions in App Store Connect → App Privacy.
+
+- [ ] Answer "Does this app collect data?" → **Yes**, then enumerate per §3.1.
+- [ ] Answer "Does this app track users?" → **No**.
+- [ ] For each data type collected, mark linked-to-user / used-for-tracking per the table.
+
+### C. Assets to create
+
+- [ ] **Screenshots** — 0 of 3 minimum required (6.7" iPhone) and additional sizes per Apple's current matrix. Suggested shot list in §1.1.
+- [ ] **Optional attachment** (§2.4) — a short demo video of the voice-recording → save → reopen flow is the most useful single artifact if you want one.
+
+### D. Production environment
+
+- [ ] **Reviewer test account** — create a fresh production account with `kokua@purplemaia.org`-style support visibility, pre-onboarded, with at least one historical KILO entry. Record credentials in App Store Connect → App Review Information → Sign-In Information. **Do not** use seed-script accounts (`jdoe` / `password123!`).
+- [ ] **`EXPO_PUBLIC_API_URL` in EAS production** — verify with `eas env:list --environment production`. Should be the public production backend URL, not LAN/dev.
+- [ ] **Seed accounts in prod DB** — confirm `jdoe`, `jsmith`, `ajohnson` do not exist on the production database the App Store build talks to.
+
+### E. Build + submit
+
+- [ ] Push the two outstanding commits on `expo-kilo-tracker-frontend@dev` (Info.plist additions + sharing copy clarification) and the one outstanding commit on `backend-kilo-tracker@dev` (support + privacy pages).
+- [ ] Deploy the backend so `/support` and `/privacy` return 200 over HTTPS.
+- [ ] `eas build --profile production --platform ios` → upload to TestFlight → smoke-test the full account creation, KILO entry (voice + photo), edit, delete, and account-deletion flows.
+- [ ] In App Store Connect, attach the new build to the 1.0.1 version record and submit for review.
