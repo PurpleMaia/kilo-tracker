@@ -21,6 +21,10 @@ export default {
           "KILO uses speech recognition to transcribe your voice observations.",
         NSMicrophoneUsageDescription:
           "KILO needs microphone access to record your voice observations.",
+        NSCameraUsageDescription:
+          "KILO uses the camera to attach a photo to your observation.",
+        NSPhotoLibraryUsageDescription:
+          "KILO accesses your photo library so you can attach a photo to an observation.",
         ITSAppUsesNonExemptEncryption: false,
       },
       bundleIdentifier: "org.purplemaia.kilotracker",
