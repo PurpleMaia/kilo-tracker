@@ -397,3 +397,290 @@ Use §3 as the source of truth. Apple asks the questions in App Store Connect �
 - [ ] Deploy the backend so `/support` and `/privacy` return 200 over HTTPS.
 - [ ] `eas build --profile production --platform ios` → upload to TestFlight → smoke-test the full account creation, KILO entry (voice + photo), edit, delete, and account-deletion flows.
 - [ ] In App Store Connect, attach the new build to the 1.0.1 version record and submit for review.
+
+---
+
+## 9. Polished App Store Description (paste-ready)
+
+The text below fits within Apple's 4,000-character Description field (currently ~2,200 chars including whitespace, leaving plenty of headroom). Plain-text — Apple's listing does not render Markdown. Newlines and bullet markers (`•`) display as written. Edit tone to taste before pasting; everything stated below is verifiably true of the v1.0.1 build (no over-promising of features that are not in the app).
+
+```
+KILO Tracker is a voice-first daily observation journal grounded in the Hawaiian practice of kilo — the deep, intentional observation of the world around and within us — and the Papakū Makawalu framework.
+
+A DAILY KILO
+
+Each day, KILO guides you through four structured observation questions:
+
+• Papahulilani — the space above your head to where the stars sit (sky, wind, temperature, air)
+• Papahulihonua — the earth and oceans (ground, water, shoreline, land)
+• Papahānaumoku — all things that give birth, regenerate, and procreate (plants, birds, insects, cycles)
+• Naʻau — how you are feeling internally and what you are grateful for today
+
+Answer each question by voice, by typing, or both. Tap the microphone to speak what you observed and KILO will transcribe it for you — using online transcription when you have signal, and on-device speech recognition when you don't. You can also attach a photo to the first three questions.
+
+REVIEW YOUR PRACTICE
+
+A calendar-backed history view shows every entry you've made. Open any past day to read, edit, or delete it.
+
+LEARN THE FOUNDATIONS
+
+An in-app reference section explains:
+
+• Papakū Makawalu — the framework that organizes the four daily questions
+• Kilo — the practice itself
+• Kaulana Mahina — the Hawaiian lunar calendar, with all 18 moon phases across the three anahulu
+• Kau — the two primary seasons, Kau Wela and Hoʻoilo
+
+PLACE-BASED IDENTITY
+
+Set up your profile with the place identifiers meaningful to a kilo practice: your mauna, ʻāina/moku, wai, and kula.
+
+PRIVACY YOU CAN VERIFY
+
+• All entries are encrypted at rest using AES-256-GCM.
+• KILO is free, ad-free, and contains no third-party trackers, analytics, or attribution SDKs.
+• Your KILO is yours alone — there is no public feed and no sharing with other users in this release.
+• You can delete your account, including all entries and photos, from inside the app at any time.
+
+WHO IT'S FOR
+
+Students, educators, cultural practitioners, and community members who want to build a daily observation practice rooted in Hawaiian epistemology.
+
+KILO Tracker is built and maintained by the Purple Maiʻa Foundation.
+
+Mahalo to the Edith Kanakaʻole Foundation and the cultural practitioners whose teachings inform the Papakū Makawalu content shown in the app.
+
+Support: kokua@purplemaia.org
+```
+
+**Notes for the App Store Connect form:**
+
+- The first ~3 lines of the description are visible on the listing before the user taps "more" — the opening sentence is intentionally a strong, complete pitch so it stands alone if a user doesn't tap to expand.
+- Promotional Text (separate 170-char field, can be updated *without* a new app submission): see §1.2 for drafts. A safe one to start with: *"A voice-first journal for daily kilo — the Hawaiian practice of deep observation of sky, land, living systems, and naʻau. Grounded in Papakū Makawalu."*
+- "What's New in This Version" (1.0.1 changelog field): for the initial release, something brief like *"Initial release."* is the convention.
+
+---
+
+## 10. Screenshot capture script — implementation plan
+
+This is a **plan**, not the script. It defines what the script should do, what it should not do, and the open decisions that need answers before I write code.
+
+### 10.1 Goals
+
+- Make capturing the App Store screenshot set a low-friction, repeatable operation.
+- Produce PNGs at the correct pixel dimensions for the device sizes Apple requires for new 2026 submissions.
+- Ensure every shot uses the same idealized status bar (Apple's "9:41" marketing convention) so the set looks consistent.
+- Use a predictable, ordered file-naming scheme so the upload order in App Store Connect matches the intended narrative.
+
+### 10.2 Non-goals (and why)
+
+- **Not full end-to-end automation.** The script will not log in, type into fields, navigate between screens, or simulate voice recording. Full UI automation in iOS Simulator typically requires Xcode UI tests or a tool like Maestro / Detox, which is a much bigger investment and brittle for small UI changes. For a v1.0 submission, an interactive helper that handles the *capture* step and lets a human drive the *navigation* step is the right tradeoff.
+- **No device-frame compositing.** Apple no longer requires device frames around screenshots and accepts raw simulator output. Adding frames is a polish step that can happen later in Figma if desired.
+
+### 10.3 Apple's required device sizes (best current understanding)
+
+For 2026 new submissions, Apple's iOS App Screenshot requirements have consolidated to:
+
+| Slot | Device the simulator should boot | Pixel resolution |
+|---|---|---|
+| 6.9" iPhone (required) | iPhone 16 Pro Max | 1320 × 2868 |
+| 13" iPad Pro (required because `supportsTablet: true`) | iPad Pro 13-inch (M4) | 2064 × 2752 |
+
+App Store Connect will scale the 6.9" set down for smaller iPhone display classes automatically. Older 6.5" / 5.5" / 12.9" sets are no longer required when the modern equivalents are present. **Confirm against the current App Store Connect upload UI before final submission** — Apple has changed this page mid-year before.
+
+### 10.4 Shot list (ordered for upload)
+
+Based on §1.1. The first 3 are the most important — Apple shows only the first 3 in many search/discovery contexts, so they must stand alone as a pitch.
+
+1. `01-home.png` — Home dashboard with greeting + ʻŌlelo Noʻeau (sells the daily-practice value proposition)
+2. `02-wizard-papahulilani.png` — Wizard Q1, mic visible (sells the voice-first hook)
+3. `03-wizard-naau.png` — Wizard Q4, gratitude reflection (sells the holistic framing)
+4. `04-history-calendar.png` — Calendar with several marked days
+5. `05-entry-detail.png` — A past entry opened, showing text + photo
+6. `06-learn-papaku-makawalu.png` — Learn tab, Papakū Makawalu section
+7. `07-learn-kaulana-mahina.png` — Learn tab, Kaulana Mahina (lunar) section
+8. `08-profile.png` — Profile with privacy section visible
+9. `09-login.png` — Login screen with brand + tagline (last because it's the least exciting standalone)
+
+A 10th shot is optional — strong candidates: a wizard step with a photo attached (showing the camera integration), or an entry being created live. Skipping shots beyond 3 is fine; more than 3 is purely additive.
+
+### 10.5 Status bar override
+
+Before any captures, the script will run:
+
+```
+xcrun simctl status_bar booted override \
+  --time "9:41" \
+  --batteryState charged \
+  --batteryLevel 100 \
+  --cellularBars 4 \
+  --wifiBars 3 \
+  --dataNetwork wifi \
+  --operatorName ""
+```
+
+`9:41` is Apple's marketing-shot convention. `--operatorName ""` removes the carrier label so the bar looks clean. The override is reset by the script on exit (or with `xcrun simctl status_bar booted clear`).
+
+### 10.6 Output layout
+
+Decided: out-of-repo, on the Desktop. Keeps the working tree pristine and matches the user's existing screenshot habit.
+
+```
+~/Desktop/kilo-screenshots/
+  iphone-6.9/
+    01-home.png
+    02-wizard-papahulilani.png
+    ...
+  ipad-13/
+    01-home.png
+    ...
+```
+
+The script must `mkdir -p` the device-specific subdirectory at startup.
+
+### 10.7 Script behavior (interactive flow)
+
+```
+$ ./scripts/capture-screenshots.sh --device iphone
+[1/9] Boot iPhone 16 Pro Max simulator ............. ok
+[2/9] Apply marketing status bar override .......... ok
+[3/9] Open simulator window ........................ ok
+
+The simulator is now ready. Make sure the app is running and you are
+signed in as the reviewer/screenshot account.
+
+About to capture: [01-home.png] Home dashboard with greeting + ʻŌlelo Noʻeau
+   - Navigate to the home tab in the app
+   - Press [Enter] when the screen is ready, or [s] to skip, or [q] to quit
+> _
+
+  saved → screenshots/iphone-6.9/01-home.png  (1320×2868)
+
+About to capture: [02-wizard-papahulilani.png] Wizard Q1 with mic visible
+   - Tap "Start your KILO" → land on Q1 with the mic button visible
+   - Press [Enter] when the screen is ready, or [s] to skip, or [q] to quit
+> _
+...
+```
+
+Capture command per shot:
+```
+xcrun simctl io booted screenshot screenshots/iphone-6.9/01-home.png
+```
+
+Verification step: after each capture, the script reads the PNG header and confirms the dimensions match the expected resolution for the chosen device. If not, it warns and offers a re-capture.
+
+### 10.8 Manual prerequisites (script will check / instruct)
+
+Decided: **auto-launch + hands-off navigation** — the script launches the app at startup via `xcrun simctl launch booted org.purplemaia.kilotracker` (saves one manual tap), but does not perform any in-app navigation. The user signs in (if not already signed in from a previous session) and navigates between screens for each shot.
+
+1. **Xcode + Simulator installed** — script verifies `xcrun simctl` is on PATH; exits with a clear error otherwise.
+2. **Target simulator runtime installed** — script verifies the iPhone 16 Pro Max / iPad Pro 13" runtime is downloaded; if not, prints the "Open Xcode → Settings → Platforms → install iOS X.X" instruction.
+3. **Build installed on the simulator** — script does NOT install the build, but DOES launch it. Before running, install with: `npx expo run:ios --device "iPhone 16 Pro Max"` (or for iPad: `--device "iPad Pro 13-inch (M4)"`). The script will then bring it to the foreground via `xcrun simctl launch booted org.purplemaia.kilotracker`. If launch fails (app not installed), the script exits with a clear error pointing back to the install command.
+4. **Test account pre-staged on prod** — same account as the App Store reviewer credentials (§8.D). Pre-onboarded with 2–3 historical KILO entries hand-created so the calendar and entry-detail shots have realistic content. Decided: hand-create, no data-seeding script needed.
+
+### 10.9 Re-running and idempotency
+
+- Re-running the script overwrites existing PNGs with the same name. Safe.
+- A `--from N` flag lets the user resume at shot N (useful if shot 7 came out wrong: `--from 7`).
+- A `--single 04-history-calendar` flag captures just one shot by name (useful for fixing a single bad shot).
+
+### 10.10 Decisions (all open questions resolved)
+
+| Decision | Answer |
+|---|---|
+| iPad support | **Keep.** Already tested by external beta testers; dropping `supportsTablet` would regress them. Capture both iPhone and iPad sets. |
+| Output directory | `~/Desktop/kilo-screenshots/{iphone-6.9,ipad-13}/` (out of repo) |
+| App launch | **Auto-launch + hands-off navigation.** Script launches the app at startup via `xcrun simctl launch`. User signs in (if needed) and navigates between screens manually for each shot. |
+| Test data | Hand-created on the production reviewer account. No seeding script. |
+| Shell | **zsh** (`#!/usr/bin/env zsh`) — macOS default, works on user's machine. |
+
+### 10.11 Handoff to the implementing developer (or Claude session on the Xcode machine)
+
+This subsection is written so a fresh Claude session on the user's Xcode machine can pick this up cold without needing the chat history. **It is the spec the script must satisfy.**
+
+#### Where the script lives
+
+Create the script at:
+
+```
+expo-kilo-tracker-frontend/scripts/capture-screenshots.sh
+```
+
+Make it executable (`chmod +x`). The `scripts/` directory does not currently exist in this repo — create it.
+
+#### CLI surface
+
+```
+./scripts/capture-screenshots.sh --device <iphone|ipad> [--from N] [--single NAME]
+```
+
+| Flag | Behavior |
+|---|---|
+| `--device iphone` | Targets iPhone 16 Pro Max simulator, expects 1320×2868 output, writes to `~/Desktop/kilo-screenshots/iphone-6.9/` |
+| `--device ipad` | Targets iPad Pro 13-inch (M4) simulator, expects 2064×2752 output, writes to `~/Desktop/kilo-screenshots/ipad-13/` |
+| `--from N` | Resume capture starting at shot number N (1-indexed). Useful if shot 7 came out wrong: `--from 7`. |
+| `--single NAME` | Capture only the named shot (e.g. `--single 04-history-calendar`) and exit. Useful for one-shot fixes. |
+| `--help` | Print usage and exit. |
+
+If neither `--device` is provided, error out with usage.
+
+#### What the script must do
+
+1. **Preflight checks (fail fast with clear messages):**
+   - `xcrun` must be on PATH. If missing → "Xcode Command Line Tools not installed; run `xcode-select --install`."
+   - `xcrun simctl list devices available` must list the requested device. If missing → print "Install the iPhone 16 Pro Max simulator runtime via Xcode → Settings → Platforms → iOS." (substitute device name).
+   - `~/Desktop` must be writable.
+
+2. **Boot the simulator.** `xcrun simctl boot "<device-name>"` (silently OK if already booted; check with `xcrun simctl list devices booted` first to avoid the "already booted" stderr).
+
+3. **Open the Simulator UI.** `open -a Simulator` so the user can see the device window.
+
+4. **Wait for boot.** `xcrun simctl bootstatus "<device-name>" -b`.
+
+5. **Apply the marketing status bar override** (see §10.5 for the exact command).
+
+6. **Launch the app** with `xcrun simctl launch booted org.purplemaia.kilotracker`. If this fails (typically because the build isn't installed on the simulator), exit with a clear error pointing the user at the `npx expo run:ios` command from the prerequisites.
+
+7. **Print clear instructions** to the user about the hands-off-navigation model: "The KILO Tracker app is now open on the simulator. Sign in as the reviewer account if needed, then navigate to each screen as prompted."
+
+8. **Walk the shot list (§10.4).** For each shot:
+   - Print: `[N/9] About to capture: [<filename>] <human description>`
+   - Print one or two lines of navigation hint (e.g. *"Tap 'Start your KILO' from Home → land on Q1 with the mic visible."*)
+   - Prompt: `Press [Enter] when ready, [s] to skip, [q] to quit > `
+   - On Enter → `xcrun simctl io booted screenshot "$OUTDIR/<filename>.png"`.
+   - Verify dimensions with `sips -g pixelWidth -g pixelHeight "$OUTDIR/<filename>.png"`. If they don't match expected, print a warning but keep the file.
+   - Print `  saved → <path> (WxH)`.
+
+9. **On clean exit or interrupt (`trap`):** clear the status bar override with `xcrun simctl status_bar booted clear`. Do NOT shut down the simulator and do NOT terminate the app; the user may want to keep using either.
+
+10. **Final report:** print the output directory path and a count of files saved vs skipped.
+
+#### Shot list (single source of truth — copy this into the script as a zsh array)
+
+```
+01-home                       Home dashboard with greeting + ʻŌlelo Noʻeau
+02-wizard-papahulilani        Wizard Q1 (Papahulilani), mic button visible
+03-wizard-naau                Wizard Q4 (Naʻau), gratitude reflection
+04-history-calendar           History view with several marked days on the calendar
+05-entry-detail               A past entry opened, showing text and an attached photo
+06-learn-papaku-makawalu      Learn tab, Papakū Makawalu section
+07-learn-kaulana-mahina       Learn tab, Kaulana Mahina (lunar) section
+08-profile                    Profile screen with Privacy section visible
+09-login                      Login screen with brand and tagline (capture by signing out)
+```
+
+#### Test plan (run on the Xcode machine before doing real captures)
+
+The script must pass these four manual tests before being used for real screenshots:
+
+1. **Smoke test**: `./scripts/capture-screenshots.sh --device iphone`. Without opening the app, just press Enter through the first 2-3 prompts. Verify PNGs land in `~/Desktop/kilo-screenshots/iphone-6.9/` with the right dimensions (open one in Preview → Tools → Show Inspector). Quit with `q`. Confirm the status bar override is cleared on exit.
+2. **`--from` resume test**: `./scripts/capture-screenshots.sh --device iphone --from 5`. Verify the script starts at shot 5 (skips 1-4). Quit immediately.
+3. **`--single` test**: `./scripts/capture-screenshots.sh --device iphone --single 04-history-calendar`. Verify it captures only that one and exits.
+4. **iPad test**: `./scripts/capture-screenshots.sh --device ipad`. Verify it boots the iPad sim, captures at 2064×2752, and writes to the iPad subdirectory.
+
+If all four pass, the script is ready. Then proceed to actual screenshot capture with the production-reviewer account signed in on the simulator.
+
+#### Estimated complexity
+
+Roughly 100–150 lines of zsh. The `xcrun simctl` calls are well-documented; the only non-trivial part is the prompt loop and the dimension-verification helper. No third-party deps needed (`sips` ships with macOS).
