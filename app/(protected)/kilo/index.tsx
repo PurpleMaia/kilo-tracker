@@ -622,7 +622,7 @@ export default function KiloScreen() {
                           fontWeight: "700",
                         }}
                       >
-                        Enable voice permissions
+                        Voice permissions needed
                       </Text>
                       <Text style={{ color: "#9A3412", fontSize: 14, lineHeight: 20 }}>
                         KILO needs both microphone and speech recognition access before it can start recording.
@@ -644,7 +644,7 @@ export default function KiloScreen() {
                       }}
                     >
                       <Text style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}>
-                        {canRequestVoicePermissions ? "Enable voice access" : "Open Settings"}
+                        {canRequestVoicePermissions ? "Continue" : "Open Settings"}
                       </Text>
                     </TouchableOpacity>
                   </View>
